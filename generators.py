@@ -51,7 +51,7 @@ def generate_types(base='static') -> t.List[t.List[Type]]:
             for values in [[x, y, z] for x in base_types for y in base_types for z in base_types]
             if random.randint(0, 10) < 5
         ],
-        [('->', y) for x in base_types for y in base_types],
+        [('->', x) for x in base_types],
         [(x, '->', y) for x in base_types for y in base_types],
         [(x, y, '->', z) for x in base_types for y in base_types for z in base_types],
     ])
@@ -77,7 +77,7 @@ def generate_types(base='static') -> t.List[t.List[Type]]:
             for values in [[x, y] for x in composite_types_1 for y in composite_types_1]
             if random.randint(0, 10) == 1
         ],
-        [('->', y) for x in base_types for y in composite_types_1 if random.randint(0, 10) == 2],
+        [('->', x) for x in composite_types_1 if random.randint(0, 10) == 2],
         [(x, '->', y) for x in base_types for y in composite_types_1 if random.randint(0, 10) == 2],
         [(x, '->', y) for x in composite_types_1 for y in base_types if random.randint(0, 10) == 2],
         [(x, '->', y) for x in composite_types_1 for y in composite_types_1 if random.randint(0, 100) == 2],
@@ -153,22 +153,6 @@ def generate_materializations(base='gradual', pivot=None):
             tau = pivot or next(gen)
             sigma = next(gen)
             if is_materialization(tau, sigma):
-                yield tau, sigma
-
-    return generator
-
-
-def generate_msubtypes(base='static', polarity='+'):
-
-    def generator(weights=None):
-        gen = types_generator(base=base)(weights)
-        while True:
-            tau, sigma = next(gen), next(gen)
-            if (
-                polarity == '+' and is_msubtype_plus(tau, sigma)
-                or
-                polarity == '-' and is_msubtype_minus(tau, sigma)
-            ):
                 yield tau, sigma
 
     return generator
