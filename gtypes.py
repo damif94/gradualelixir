@@ -177,7 +177,7 @@ def is_subtype(tau: Type, sigma: Type) -> bool:
     if isinstance(tau, TermType):
         return isinstance(sigma, TermType)
     if isinstance(sigma, TermType):
-        return is_static_type(tau)
+        return True
     if tau in base_types and sigma in base_types:
         return is_base_subtype(tau, sigma)
     if isinstance(tau, ElistType) and isinstance(sigma, ElistType):
@@ -206,8 +206,8 @@ def is_subtype(tau: Type, sigma: Type) -> bool:
 def is_materialization(tau: Type, sigma: Type) -> bool:
     if isinstance(tau, AnyType):
         return True
-    elif tau in base_types:
-        return sigma == tau
+    elif tau == sigma:
+        return True
     elif isinstance(tau, ListType):
         return isinstance(sigma, ListType) and is_materialization(tau.type, sigma.type)
     elif isinstance(tau, TupleType):
@@ -219,10 +219,12 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
             is_materialization(tau.map_type[k], sigma.map_type[k]) for k in tau.map_type.keys()
         ])
     elif isinstance(tau, FunctionType):
-        return isinstance(sigma, FunctionType) and len(tau.arg_types) == len(sigma.arg_types) and all([
-            is_materialization(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
-        ]) and is_materialization(tau.ret_type, sigma.ret_type)
-
+        if isinstance(sigma, FunctionType):
+            return len(tau.arg_types) == len(sigma.arg_types) and all([
+                is_materialization(tau.arg_types[i], sigma.arg_types[i])
+                for i in range(len(tau.arg_types))
+            ]) and is_materialization(tau.ret_type, sigma.ret_type)
+    return False
 
 def supremum(tau: Type, sigma: Type) -> Type:
     if tau == sigma:
