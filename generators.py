@@ -63,39 +63,41 @@ def generate_types(base='static') -> t.List[t.List[Type]]:
         [(x, y) for x in composite_types_1 for y in base_types if random.randint(0, 10) == 2],
         [
             dict(list(zip(keys, values)))
-            for keys in [[1], [2]]
+            for keys in [[1], [2], [3]]
             for values in [[x] for x in composite_types_1]
             if random.randint(0, 10) == 2
         ],
         [
-            dict(list(zip([1, 2], values)))
+            dict(list(zip(keys, values)))
+            for keys in [[1, 2], [1, 3], [2, 3]]
             for values in [[x, y] for x in base_types for y in composite_types_1]
             if random.randint(0, 10) == 1
         ],
         [
-            dict(list(zip([1, 2], values)))
+            dict(list(zip([1, 2, 3], values)))
             for values in [[x, y] for x in composite_types_1 for y in composite_types_1]
             if random.randint(0, 10) == 1
         ],
         [('->', x) for x in composite_types_1 if random.randint(0, 10) == 2],
         [(x, '->', y) for x in base_types for y in composite_types_1 if random.randint(0, 10) == 2],
         [(x, '->', y) for x in composite_types_1 for y in base_types if random.randint(0, 10) == 2],
-        [(x, '->', y) for x in composite_types_1 for y in composite_types_1 if random.randint(0, 100) == 2],
-        [(x, '->', y) for x in composite_types_1 for y in composite_types_1 if random.randint(0, 100) == 2],
-        # [(x, y, '->', z) for x in composite_types_1 for y in base_types for z in base_types if
-        #  random.randint(0, 100) == 1],
-        # [(x, y, '->', z) for x in base_types for y in composite_types_1 for z in base_types if
-        #  random.randint(0, 100) == 1],
-        # [(x, y, '->', z) for x in base_types for y in base_types for z in composite_types_1 if
-        #  random.randint(0, 100) == 1],
-        # [(x, y, '->', z) for x in composite_types_1 for y in composite_types_1 for z in base_types if
-        #  random.randint(0, 1000) == 1],
-        # [(x, y, '->', z) for x in composite_types_1 for y in base_types for z in composite_types_1 if
-        #  random.randint(0, 1000) == 1],
-        # [(x, y, '->', z) for x in base_types for y in composite_types_1 for z in composite_types_1 if
-        #  random.randint(0, 1000) == 1],
+        [(x, '->', y) for x in composite_types_1 for y in composite_types_1 if random.randint(0, 10) == 0],
+        [(x, '->', y) for x in composite_types_1 for y in composite_types_1 if random.randint(0, 10) == 0],
+        [(x, y, '->', z) for x in composite_types_1 for y in base_types for z in base_types if
+         random.randint(0, 10) == 1],
+        [(x, y, '->', z) for x in base_types for y in composite_types_1 for z in base_types if
+         random.randint(0, 10) == 1],
+        [(x, y, '->', z) for x in base_types for y in base_types for z in composite_types_1 if
+         random.randint(0, 10) == 1],
+        [(x, y, '->', z) for x in composite_types_1 for y in composite_types_1 for z in base_types if
+         random.randint(0, 10) == 1],
+        [(x, y, '->', z) for x in composite_types_1 for y in base_types for z in composite_types_1 if
+         random.randint(0, 10) == 1],
+        [(x, y, '->', z) for x in base_types for y in composite_types_1 for z in composite_types_1 if
+         random.randint(0, 10) == 1],
     ])
 
+    print(len(composite_types_2))
     return [
         [parse_type(x) for x in base_types],
         [parse_type(x) for x in composite_types_1],
@@ -110,7 +112,7 @@ def types_generator(base='static', force_recreate=False):
             types_lists = pickle.load(f)
             f.close()
         except FileNotFoundError:
-            return types_generator(base=base, force_recreate=True)
+            return types_generator(base=base, force_recreate=False)
     else:
         types_lists = generate_types(base=base)
         f = open(f'types/{base}.pickle', 'wb')

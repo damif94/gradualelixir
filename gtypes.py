@@ -120,6 +120,19 @@ class MapType(Type):
         return '%{' + ','.join([f'{k}: {v}' for (k, v) in zip(keys, str_values)]) + '}'
 
 
+def depth(tau):
+    if tau in [AnyType(), TermType(), FloatType(), IntegerType(), NumberType(), ElistType()]:
+        return 0
+    elif isinstance(ListType, tau):
+        return depth(tau.type) + 1
+    elif isinstance(TupleType, tau):
+        return max([depth(sigma) for sigma in tau.types])
+    elif isinstance(MapType, tau):
+        return max([depth(tau.map_type[k]) for k in tau.map_type])
+    elif isinstance(FunctionType, tau):
+        return max([depth(sigma) for sigma in tau.arg_types] + [depth(tau.ret_type)])
+
+
 def grounding(tau: t.Union[AnyType, TermType], sigma: Type) -> Type:
     if isinstance(sigma, ListType):
         return ListType(tau)
@@ -225,6 +238,69 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
                 for i in range(len(tau.arg_types))
             ]) and is_materialization(tau.ret_type, sigma.ret_type)
     return False
+
+
+def is_msubtype_plus(tau: Type, sigma: Type) -> bool:
+    if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
+        return isinstance(tau, AnyType)
+    elif isinstance(tau, TermType):
+        return isinstance(sigma, TermType)
+    elif isinstance(sigma, TermType):
+        return True
+    elif tau in base_types and sigma in base_types:
+        return is_base_subtype(tau, sigma)
+    elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
+        return True
+    elif isinstance(tau, ElistType) and isinstance(sigma, ListType):
+        return is_static_type(sigma)
+    elif isinstance(tau, ListType) and isinstance(sigma, ElistType):
+        return isinstance(tau.type, AnyType)
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return is_msubtype_plus(tau.type, sigma.type)
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        return len(tau.types) == len(sigma.types) and all([
+            is_msubtype_plus(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
+        ])
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        return all([(k in tau.map_type) for k in sigma.map_type]) and all([
+            is_msubtype_plus(tau.map_type[k], sigma.map_type[k]) for k in sigma.map_type
+        ])
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        return is_msubtype_minus(
+            TupleType(types=tau.arg_types), TupleType(types=sigma.arg_types)
+        ) and is_msubtype_plus(tau.ret_type, sigma.ret_type)
+    return False
+
+
+def is_msubtype_minus(tau: Type, sigma: Type) -> bool:
+    if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
+        return isinstance(tau, AnyType)
+    elif isinstance(tau, TermType):
+        return is_static_type(sigma)
+    elif isinstance(sigma, TermType):
+        return isinstance(tau, AnyType)
+    elif tau in base_types and sigma in base_types:
+        return is_base_subtype(sigma, tau)
+    elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
+        return True
+    elif isinstance(tau, ElistType) and isinstance(sigma, ListType):
+        return is_static_type(sigma)
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return is_msubtype_minus(tau.type, sigma.type)
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        return len(tau.types) == len(sigma.types) and all([
+            is_msubtype_minus(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
+        ])
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        return all([(k in sigma.map_type) for k in tau.map_type]) and all([
+            is_msubtype_minus(tau.map_type[k], sigma.map_type[k]) for k in tau.map_type
+        ])
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        return is_msubtype_plus(
+            TupleType(types=tau.arg_types), TupleType(types=sigma.arg_types)
+        ) and is_msubtype_minus(tau.ret_type, sigma.ret_type)
+    return False
+
 
 def supremum(tau: Type, sigma: Type) -> Type:
     if tau == sigma:

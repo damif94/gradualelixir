@@ -6,6 +6,18 @@ gtypes.base_types += [gtypes.AnyType()]
 
 base_types = ['integer', 'float', 'number', 'term', 'any']
 
+#
+# def test_subtype_is_msubtype_plus():
+#     subtypes_generator = generators.generate_subtypes(base='gradual')()
+#     for _ in range(1000):
+#         tau, sigma = next(subtypes_generator)
+#         try:
+#             assert is_msubtype_plus(tau, sigma)
+#         except AssertionError as e:
+#             print(tau)
+#             print(sigma)
+#             raise e
+
 
 def test_lattice_relations():
     subtypes_generator = generators.generate_subtypes(base='gradual')()
@@ -166,7 +178,7 @@ def test_lazy_equate_materialization_invariant_lemma():
 
 def test_lazy_equate_materialization_invariant():
     materializations_generator = generators.generate_materializations(base='gradual')(weights=[40, 40, 20])
-    for _ in range(10000):
+    for _ in range(100000):
         tau1, tau2 = next(materializations_generator)
         sigma1, sigma2 = next(materializations_generator)
 
@@ -176,7 +188,15 @@ def test_lazy_equate_materialization_invariant():
         assert is_materialization(tau3, tau4)
         assert is_materialization(sigma3, sigma4)
 
+        try:
+            assert is_materialization(supremum(tau3, sigma3), supremum(tau4, sigma4))
+        except AssertionError as e:
+            print(f'({str(tau1)}, {str(sigma1)}) -> ({str(tau3), str(sigma3)}) | {str(supremum(tau3, sigma3))}')
+            print(f'({str(tau2)}, {str(sigma2)}) -> ({str(tau4), str(sigma4)}) | {str(supremum(tau4, sigma4))}')
+            print("----------------------------------------------------")
+            raise e
 
+# test_subtype_is_msubtype_plus()
 # test_lattice_relations()
 # test_supremum_is_defined_or_blame_any_and_something_else()
 # test_infimum_is_defined_or_blame_incompatibility_or_blame_any_and_something_else()
@@ -186,4 +206,5 @@ def test_lazy_equate_materialization_invariant():
 # test_supremum_on_functions()
 # test_lazy_equate_identity_on_static_types()
 # test_lazy_equate_materializes()
+test_lazy_equate_materialization_invariant()
 # test_lazy_equate_materialization_invariant_lemma()
