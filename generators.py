@@ -6,8 +6,8 @@ import random
 from utils import parse_type, flatten
 
 seeds = {
-    'static': ['integer', 'float', 'number', 'term'],
-    'gradual': ['integer', 'float', 'number', 'term', 'any'],  # type: ignore
+    'static': ['integer', 'float', 'number', 'term', 'none'],
+    'gradual': ['integer', 'float', 'number', 'term', 'none', 'any'],  # type: ignore
 }
 
 

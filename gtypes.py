@@ -13,7 +13,6 @@ def concat(lists):
 
 class TypeExceptionEnum(Enum):
     supremum_does_not_exist_for_any_and_something_else = 'supremum_does_not_exist_for_any_and_something_else'
-    supremum_does_not_exist_for_infimum_incompatibility = 'supremum_does_not_exist_for_infimum_incompatibility'
     cannot_apply_grounding = "cannot_apply_grounding"
     type_is_not_base = "type_is_not_base"
 
@@ -69,6 +68,13 @@ class TermType(Type):
 
     def __hash__(self):
         return 4
+
+
+@dataclass
+class NoneType(Type):
+
+    def __str__(self):
+        return 'none'
 
 
 @dataclass
@@ -152,6 +158,7 @@ def is_base_subtype(tau: Type, sigma: Type) -> bool:
     if any(
             [
                 tau == sigma,
+                isinstance(tau, NoneType),
                 isinstance(sigma, TermType),
                 isinstance(tau, IntegerType) and isinstance(sigma, NumberType),
                 isinstance(tau, FloatType) and isinstance(sigma, NumberType)
@@ -309,6 +316,8 @@ def supremum(tau: Type, sigma: Type) -> Type:
         raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
     elif TermType() in [tau, sigma]:
         return TermType()
+    elif NoneType() in [tau, sigma]:
+        return tau if sigma == NoneType() else sigma
     elif (tau, sigma) in [
         (IntegerType(), FloatType()), (IntegerType(), NumberType()), (FloatType(), NumberType()),
         (FloatType(), IntegerType()), (NumberType(), IntegerType()), (NumberType(), FloatType()),
@@ -331,14 +340,9 @@ def supremum(tau: Type, sigma: Type) -> Type:
         return MapType({k: supremum(tau.map_type[k], sigma.map_type[k]) for k in inter_keys})
     elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
         if len(tau.arg_types) == len(sigma.arg_types):
-            try:
-                return FunctionType([
-                        infimum(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
-                    ], supremum(tau.ret_type, sigma.ret_type))
-            except TypeException as e:
-                if e.reason == TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility:
-                    return TermType()
-                raise e
+            return FunctionType([
+                    infimum(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
+            ], supremum(tau.ret_type, sigma.ret_type))
     return TermType()
 
 
@@ -350,7 +354,7 @@ def infimum(tau: Type, sigma: Type) -> Type:
     elif TermType() in [tau, sigma]:
         return tau if isinstance(sigma, TermType) else sigma
     elif tau in [IntegerType(), FloatType()] and sigma in [IntegerType(), FloatType()]:
-        raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility)
+        return NoneType()
     elif tau in [IntegerType(), NumberType()] and sigma in [IntegerType(), NumberType()]:
         return IntegerType()
     elif tau in [FloatType(), NumberType()] and sigma in [FloatType(), NumberType()]:
@@ -378,7 +382,7 @@ def infimum(tau: Type, sigma: Type) -> Type:
             return FunctionType([
                     supremum(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
             ], infimum(tau.ret_type, sigma.ret_type))
-    raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility)
+    return NoneType()
 
 
 def lazy_equate(tau: Type, sigma: Type, modality: bool) -> t.Tuple[Type, Type]:
@@ -425,4 +429,4 @@ def lazy_equate(tau: Type, sigma: Type, modality: bool) -> t.Tuple[Type, Type]:
     return tau, sigma
 
 
-base_types: t.List[t.Type[Type]] = [IntegerType(), FloatType(), NumberType(), TermType()]  # type: ignore
+base_types: t.List[t.Type[Type]] = [IntegerType(), FloatType(), NumberType(), TermType(), NoneType()]  # type: ignore

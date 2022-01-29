@@ -4,7 +4,7 @@ import generators
 
 gtypes.base_types += [gtypes.AnyType()]
 
-base_types = ['integer', 'float', 'number', 'term', 'any']
+base_types = ['integer', 'float', 'number', 'term', 'none', 'any']
 
 #
 # def test_subtype_is_msubtype_plus():
@@ -26,12 +26,9 @@ def test_lattice_relations():
         sigma1, sigma2 = next(subtypes_generator)
         try:
             assert is_subtype(supremum(tau1, sigma1), supremum(tau2, sigma2))
-            assert is_subtype(infimum(tau2, sigma2,), infimum(tau2, sigma2))
+            assert is_subtype(infimum(tau1, sigma1), infimum(tau2, sigma2))
         except TypeException as e:
-            assert e.reason in [
-                TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility,
-                TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-            ]
+            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
 
 
 def test_supremum_is_defined_or_blame_any_and_something_else():
@@ -44,17 +41,14 @@ def test_supremum_is_defined_or_blame_any_and_something_else():
             assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
 
 
-def test_infimum_is_defined_or_blame_incompatibility_or_blame_any_and_something_else():
+def test_infimum_is_defined_or_blame_any_and_something_else():
     types_generator = generators.types_generator(base='gradual')()
     for _ in range(5000):
         tau1, tau2 = next(types_generator), next(types_generator)
         try:
             infimum(tau1, tau2)
         except TypeException as e:
-            assert e.reason in [
-                TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility,
-                TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-            ]
+            assert e.reason is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
 
 
 def test_supremum_is_diagonal_identity():
@@ -67,31 +61,27 @@ def test_supremum_is_diagonal_identity():
 
 def test_supremum_is_commutative():
     types_generator = generators.types_generator(base='gradual')()
-    for _ in range(300):
+    for _ in range(5000):
         tau, sigma = next(types_generator), next(types_generator)
-        for m in [True, False]:
-            try:
-                supremum(tau, sigma)
-            except TypeException as e:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-                assert not m
-            else:
-                assert supremum(tau, sigma) == supremum(sigma, tau)
+        try:
+            supremum(tau, sigma)
+        except TypeException as e:
+            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+        else:
+            assert supremum(tau, sigma) == supremum(sigma, tau)
 
 
 def test_supremum_on_tuples():
     types_generator = generators.types_generator(base='gradual')()
-    for _ in range(300):
+    for _ in range(5000):
         tau1, sigma1 = next(types_generator), next(types_generator)
         tau2, sigma2 = next(types_generator), next(types_generator)
-        for m in [True, False]:
-            try:
-                s1 = supremum(tau1, sigma1)
-                s2 = supremum(tau2, sigma2)
-                assert TupleType([s1, s2]) == supremum(TupleType([tau1, tau2]), TupleType([sigma1, sigma2]))
-            except TypeException as e:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-                assert not m
+        try:
+            s1 = supremum(tau1, sigma1)
+            s2 = supremum(tau2, sigma2)
+            assert TupleType([s1, s2]) == supremum(TupleType([tau1, tau2]), TupleType([sigma1, sigma2]))
+        except TypeException as e:
+            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
 
 
 def test_supremum_on_functions():
@@ -103,21 +93,18 @@ def test_supremum_on_functions():
         try:
             s1 = infimum(tau1, sigma1)
             s2 = infimum(tau2, sigma2)
+            s3 = supremum(tau3, sigma3)
             print(str(tau1) + ' ' + str(sigma1) + ' ' + str(s1))
             print(str(tau2) + ' ' + str(sigma2) + ' ' + str(s2))
             print("-------------------")
         except TypeException as e:
-            if e.reason == TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility:
-                assert supremum(FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3)) == TermType()
-            else:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert e.reason is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
         else:
-            try:
-                s3 = supremum(tau3, sigma3)
-            except TypeException as e:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-            else:
-                assert FunctionType([s1, s2], s3) == supremum(FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3))
+            assert (
+                FunctionType([s1, s2], s3)
+                ==
+                supremum(FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3))
+            )
 
 
 def test_lazy_equate_identity_on_static_types():
@@ -146,21 +133,16 @@ def test_lazy_equate_materializes():
         assert is_subtype(tau2, supremum(tau2, sigma2))
         assert is_subtype(sigma2, supremum(tau2, sigma2))
 
-        try:
-            assert is_subtype(infimum(tau1, sigma1), tau1)
-            assert is_subtype(infimum(tau1, sigma1), sigma1)
+        assert is_subtype(infimum(tau1, sigma1), tau1)
+        assert is_subtype(infimum(tau1, sigma1), sigma1)
 
-            assert is_subtype(infimum(tau2, sigma2), tau2)
-            assert is_subtype(infimum(tau2, sigma2), sigma2)
-
-        except TypeException as e:
-            if not e.reason == TypeExceptionEnum.supremum_does_not_exist_for_infimum_incompatibility:
-                raise e
+        assert is_subtype(infimum(tau2, sigma2), tau2)
+        assert is_subtype(infimum(tau2, sigma2), sigma2)
 
 
 def test_lazy_equate_materialization_invariant_lemma():
-    materializations_generator = generators.generate_materializations(base='gradual')(weights=[40, 40, 20])
-    types_generator = generators.types_generator(base='gradual', force_recreate=True)(weights=[40, 40, 20])
+    materializations_generator = generators.generate_materializations(base='gradual')()
+    types_generator = generators.types_generator(base='gradual')()
     for _ in range(10000):
         tau1, tau2 = next(materializations_generator)
         mu = next(types_generator)
@@ -171,14 +153,15 @@ def test_lazy_equate_materialization_invariant_lemma():
         assert is_materialization(tau3, tau4)
         assert is_materialization(mu1, mu2)
 
-        print(f'({str(tau1)}, {str(mu)}) -> ({str(tau3), str(mu1)})')
-        print(f'({str(tau2)}, {str(mu)}) -> ({str(tau4), str(mu1)})')
-        print("----------------------------------------------------")
+        # if mu1 != AnyType() and mu1 != mu2:
+        #     print(f'({str(tau1)}, {str(mu)}) -> ({str(tau3), str(mu1)})')
+        #     print(f'({str(tau2)}, {str(mu)}) -> ({str(tau4), str(mu1)})')
+        #     print("----------------------------------------------------")
 
 
 def test_lazy_equate_materialization_invariant():
     materializations_generator = generators.generate_materializations(base='gradual')(weights=[40, 40, 20])
-    for _ in range(100000):
+    for _ in range(10000):
         tau1, tau2 = next(materializations_generator)
         sigma1, sigma2 = next(materializations_generator)
 
@@ -188,23 +171,22 @@ def test_lazy_equate_materialization_invariant():
         assert is_materialization(tau3, tau4)
         assert is_materialization(sigma3, sigma4)
 
-        try:
-            assert is_materialization(supremum(tau3, sigma3), supremum(tau4, sigma4))
-        except AssertionError as e:
-            print(f'({str(tau1)}, {str(sigma1)}) -> ({str(tau3), str(sigma3)}) | {str(supremum(tau3, sigma3))}')
-            print(f'({str(tau2)}, {str(sigma2)}) -> ({str(tau4), str(sigma4)}) | {str(supremum(tau4, sigma4))}')
-            print("----------------------------------------------------")
-            raise e
+        print(f'({str(tau1)}, {str(sigma1)}) -> ({str(tau3), str(sigma3)}) | {str(supremum(tau3, sigma3))}')
+        print(f'({str(tau2)}, {str(sigma2)}) -> ({str(tau4), str(sigma4)}) | {str(supremum(tau4, sigma4))}')
+        print("----------------------------------------------------")
+
+        assert is_materialization(supremum(tau3, sigma3), supremum(tau4, sigma4))
+
 
 # test_subtype_is_msubtype_plus()
 # test_lattice_relations()
 # test_supremum_is_defined_or_blame_any_and_something_else()
-# test_infimum_is_defined_or_blame_incompatibility_or_blame_any_and_something_else()
+# test_infimum_is_defined_or_blame_any_and_something_else()
 # test_supremum_is_diagonal_identity()
 # test_supremum_is_commutative()
 # test_supremum_on_tuples()
 # test_supremum_on_functions()
 # test_lazy_equate_identity_on_static_types()
 # test_lazy_equate_materializes()
-test_lazy_equate_materialization_invariant()
 # test_lazy_equate_materialization_invariant_lemma()
+# test_lazy_equate_materialization_invariant()
