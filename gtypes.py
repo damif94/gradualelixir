@@ -139,15 +139,20 @@ def depth(tau):
         return max([depth(sigma) for sigma in tau.arg_types] + [depth(tau.ret_type)])
 
 
-def grounding(tau: t.Union[AnyType, TermType], sigma: Type) -> Type:
+def grounding(tau: t.Union[AnyType, TermType, NoneType], sigma: Type) -> Type:
     if isinstance(sigma, ListType):
         return ListType(tau)
     elif isinstance(sigma, TupleType):
         return TupleType([tau for _ in sigma.types])
     elif isinstance(sigma, MapType):
         return MapType({k: tau for k in sigma.map_type})
-    elif isinstance(sigma, FunctionType) and isinstance(tau, AnyType):
-        return FunctionType([tau for _ in sigma.arg_types], tau)
+    elif isinstance(sigma, FunctionType):
+        tau1 = tau
+        if isinstance(tau, TermType):
+            tau1 = NoneType()
+        elif isinstance(tau, NoneType):
+            tau1 = TermType()
+        return FunctionType([tau1 for _ in sigma.arg_types], tau)
     else:
         raise TypeException(reason=TypeExceptionEnum.cannot_apply_grounding)
 
@@ -166,6 +171,34 @@ def is_base_subtype(tau: Type, sigma: Type) -> bool:
     ):
         return True
     return False
+
+
+def base_supremum(tau: Type, sigma: Type) -> Type:
+    if tau not in base_types or sigma not in base_types:
+        raise TypeException(reason=TypeExceptionEnum.type_is_not_base)
+    if is_base_subtype(tau, sigma):
+        return sigma
+    if is_base_subtype(sigma, tau):
+        return tau
+    if isinstance(tau, NoneType) or isinstance(sigma, NoneType):
+        return tau if isinstance(sigma, NoneType) else sigma
+    if isinstance(tau, IntegerType) and isinstance(sigma, FloatType):
+        return NumberType()
+    if isinstance(tau, FloatType) and isinstance(sigma, IntegerType):
+        return NumberType()
+    return TermType()
+
+
+def base_infimum(tau: Type, sigma: Type) -> Type:
+    if tau not in base_types or sigma not in base_types:
+        raise TypeException(reason=TypeExceptionEnum.type_is_not_base)
+    if is_base_subtype(tau, sigma):
+        return tau
+    if is_base_subtype(sigma, tau):
+        return sigma
+    if isinstance(tau, TermType) or isinstance(sigma, TermType):
+        return tau if isinstance(sigma, TermType) else sigma
+    return NoneType()
 
 
 def is_static_type(tau: Type) -> bool:
@@ -192,14 +225,14 @@ def is_static_type(tau: Type) -> bool:
 
 
 def is_subtype(tau: Type, sigma: Type) -> bool:
-    if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
-        return isinstance(tau, AnyType) and isinstance(sigma, AnyType)
-    if isinstance(tau, TermType):
-        return isinstance(sigma, TermType)
-    if isinstance(sigma, TermType):
-        return True
     if tau in base_types and sigma in base_types:
         return is_base_subtype(tau, sigma)
+    if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
+        return isinstance(tau, AnyType) and isinstance(sigma, AnyType)
+    if isinstance(tau, NoneType):
+        return is_subtype(grounding(tau, sigma), sigma)
+    if isinstance(sigma, TermType):
+        return is_subtype(tau, grounding(sigma, tau))
     if isinstance(tau, ElistType) and isinstance(sigma, ElistType):
         return True
     if isinstance(tau, ElistType) and isinstance(sigma, ListType):
@@ -248,10 +281,12 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
 
 
 def is_msubtype_plus(tau: Type, sigma: Type) -> bool:
+    if tau in base_types and sigma in base_types:
+        return is_base_subtype(tau, sigma)
     if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
         return isinstance(tau, AnyType)
-    elif isinstance(tau, TermType):
-        return isinstance(sigma, TermType)
+    elif isinstance(tau, NoneType):
+        return is_static_type(sigma)
     elif isinstance(sigma, TermType):
         return True
     elif tau in base_types and sigma in base_types:
@@ -280,12 +315,14 @@ def is_msubtype_plus(tau: Type, sigma: Type) -> bool:
 
 
 def is_msubtype_minus(tau: Type, sigma: Type) -> bool:
+    if tau in base_types and sigma in base_types:
+        return is_base_subtype(sigma, tau)
     if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
         return isinstance(tau, AnyType)
     elif isinstance(tau, TermType):
         return is_static_type(sigma)
-    elif isinstance(sigma, TermType):
-        return isinstance(tau, AnyType)
+    elif isinstance(sigma, NoneType):
+        return True
     elif tau in base_types and sigma in base_types:
         return is_base_subtype(sigma, tau)
     elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
@@ -312,17 +349,18 @@ def is_msubtype_minus(tau: Type, sigma: Type) -> bool:
 def supremum(tau: Type, sigma: Type) -> Type:
     if tau == sigma:
         return tau
-    if AnyType() in [tau, sigma]:
+    elif tau in base_types and sigma in base_types:
+        return base_supremum(tau, sigma)
+    elif AnyType() in [tau, sigma]:
         raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
     elif TermType() in [tau, sigma]:
-        return TermType()
+        if is_subtype(tau if isinstance(sigma, TermType) else sigma, TermType()):
+            return TermType()
+        raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
     elif NoneType() in [tau, sigma]:
-        return tau if sigma == NoneType() else sigma
-    elif (tau, sigma) in [
-        (IntegerType(), FloatType()), (IntegerType(), NumberType()), (FloatType(), NumberType()),
-        (FloatType(), IntegerType()), (NumberType(), IntegerType()), (NumberType(), FloatType()),
-    ]:
-        return NumberType()
+        if is_subtype(NoneType(), mu := tau if isinstance(sigma, NoneType) else sigma):
+            return mu
+        raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
     elif ElistType() in [tau, sigma]:
         if isinstance(tau, ListType):
             return tau
@@ -335,6 +373,10 @@ def supremum(tau: Type, sigma: Type) -> Type:
             return TupleType([
                 supremum(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
             ])
+        else:
+            assert supremum(TermType(), tau) == TermType()
+            assert supremum(TermType(), sigma) == TermType()
+            return TermType()
     elif isinstance(tau, MapType) and isinstance(sigma, MapType):
         inter_keys = [k for k in tau.map_type if k in sigma.map_type]
         return MapType({k: supremum(tau.map_type[k], sigma.map_type[k]) for k in inter_keys})
@@ -343,22 +385,42 @@ def supremum(tau: Type, sigma: Type) -> Type:
             return FunctionType([
                     infimum(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
             ], supremum(tau.ret_type, sigma.ret_type))
-    return TermType()
+        else:
+            assert supremum(TermType(), tau) == TermType()
+            assert supremum(TermType(), sigma) == TermType()
+            return TermType()
+    else:
+        assert any([
+            tau in base_types and sigma not in base_types,
+            sigma in base_types and tau not in base_types
+        ]) or all([
+            not tau in base_types,
+            not sigma in base_types,
+            type(tau) != type(sigma)
+        ])
+        return TermType()
 
 
 def infimum(tau: Type, sigma: Type) -> Type:
     if tau == sigma:
         return tau
+    elif tau in base_types and sigma in base_types:
+        return base_infimum(tau, sigma)
     elif AnyType() in [tau, sigma]:
         raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
+    elif NoneType() in [tau, sigma]:
+        if is_subtype(NoneType(), tau if isinstance(sigma, NoneType) else sigma):
+            return NoneType()
+        raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
     elif TermType() in [tau, sigma]:
-        return tau if isinstance(sigma, TermType) else sigma
-    elif tau in [IntegerType(), FloatType()] and sigma in [IntegerType(), FloatType()]:
-        return NoneType()
-    elif tau in [IntegerType(), NumberType()] and sigma in [IntegerType(), NumberType()]:
-        return IntegerType()
-    elif tau in [FloatType(), NumberType()] and sigma in [FloatType(), NumberType()]:
-        return FloatType()
+        if is_subtype(mu := tau if isinstance(sigma, TermType) else sigma, TermType()):
+            return mu
+        raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
+    elif ElistType() in [tau, sigma]:
+        if isinstance(tau, ListType):
+            return sigma
+        elif isinstance(sigma, ListType):
+            return tau
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return ListType(infimum(tau.type, sigma.type))
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -366,6 +428,10 @@ def infimum(tau: Type, sigma: Type) -> Type:
             return TupleType([
                 infimum(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
             ])
+        else:
+            assert infimum(NoneType(), tau) == NoneType()
+            assert infimum(NoneType(), sigma) == NoneType()
+            return NoneType()
     elif isinstance(tau, MapType) and isinstance(sigma, MapType):
         union_keys = [k for k in tau.map_type if k not in sigma.map_type] + list(sigma.map_type)
         map_type = {
@@ -382,6 +448,111 @@ def infimum(tau: Type, sigma: Type) -> Type:
             return FunctionType([
                     supremum(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
             ], infimum(tau.ret_type, sigma.ret_type))
+        else:
+            assert infimum(NoneType(), tau) == NoneType()
+            assert infimum(NoneType(), sigma) == NoneType()
+            return NoneType()
+    else:
+        assert any([
+            tau in base_types and sigma not in base_types,
+            sigma in base_types and tau not in base_types
+        ]) or all([
+            not tau in base_types,
+            not sigma in base_types,
+            type(tau) != type(sigma)
+        ])
+        return NoneType()
+
+
+def msupremum_plus(tau: Type, sigma: Type) -> Type:
+    if tau == sigma:
+        return tau
+    if tau in base_types and sigma in base_types:
+        return base_supremum(tau, sigma)
+    if AnyType() in [tau, sigma]:
+        return tau if sigma == AnyType() else sigma
+    elif isinstance(tau, NoneType):
+        if isinstance(sigma, ElistType):
+            tau1 = ElistType()
+        elif isinstance(sigma, ListType):
+            tau1 = ListType(NoneType())
+        elif isinstance(sigma, TupleType):
+            tau1 = TupleType([NoneType() for _ in sigma.types])
+        elif isinstance(sigma, MapType):
+            tau1 = MapType({k: NoneType() for k in sigma.map_type})
+        elif isinstance(sigma, FunctionType) and isinstance(tau, AnyType):
+            tau1 = FunctionType([TermType() for _ in sigma.arg_types], NoneType())
+        else:
+            raise TypeException(reason=TypeExceptionEnum.cannot_apply_grounding)
+        return msupremum_plus(tau1, sigma)
+    elif NoneType() in [tau, sigma]:
+        return tau if isinstance(sigma, NoneType) else sigma
+    elif ElistType() in [tau, sigma]:
+        if isinstance(tau, ListType):
+            return tau
+        elif isinstance(sigma, ListType):
+            return sigma
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return ListType(msupremum_plus(tau.type, sigma.type))
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        if len(tau.types) == len(sigma.types):
+            return TupleType([
+                msupremum_plus(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
+            ])
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        inter_keys = [k for k in tau.map_type if k in sigma.map_type]
+        return MapType({k: msupremum_plus(tau.map_type[k], sigma.map_type[k]) for k in inter_keys})
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        if len(tau.arg_types) == len(sigma.arg_types):
+            return FunctionType([
+                    msupremum_minus(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
+            ], msupremum_plus(tau.ret_type, sigma.ret_type))
+    return TermType()
+
+
+def msupremum_minus(tau: Type, sigma: Type) -> Type:
+    if tau == sigma:
+        return tau
+    if tau in base_types and sigma in base_types:
+        return base_infimum(tau, sigma)
+    if AnyType() in [tau, sigma]:
+        return tau if sigma == AnyType() else sigma
+    elif isinstance(tau, TermType):
+        if isinstance(sigma, ElistType):
+            tau1 = ElistType()
+        elif isinstance(sigma, ListType):
+            tau1 = ListType(TermType())
+        elif isinstance(sigma, TupleType):
+            tau1 = TupleType([TermType() for _ in sigma.types])
+        elif isinstance(sigma, MapType):
+            tau1 = MapType({k: TermType() for k in sigma.map_type})
+        elif isinstance(sigma, FunctionType) and isinstance(tau, AnyType):
+            tau1 = FunctionType([NoneType() for _ in sigma.arg_types], TermType())
+        else:
+            raise TypeException(reason=TypeExceptionEnum.cannot_apply_grounding)
+        return msupremum_minus(tau1, sigma)
+    elif TermType() in [tau, sigma]:
+        return tau if isinstance(sigma, TermType) else sigma
+    elif ElistType() in [tau, sigma]:
+        if isinstance(tau, ListType):
+            return sigma
+        elif isinstance(sigma, ListType):
+            return tau
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return ListType(msupremum_minus(tau.type, sigma.type))
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        if len(tau.types) == len(sigma.types):
+            return TupleType([
+                msupremum_minus(tau.types[i], sigma.types[i]) for i in range(len(tau.types))
+            ])
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        inter_keys = [k for k in tau.map_type if k in sigma.map_type]
+        return MapType({k: msupremum_minus(tau.map_type[k], sigma.map_type[k]) for k in inter_keys})
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        if len(tau.arg_types) == len(sigma.arg_types):
+            return FunctionType([
+                    msupremum_plus(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))
+            ], msupremum_minus(tau.ret_type, sigma.ret_type))
     return NoneType()
 
 

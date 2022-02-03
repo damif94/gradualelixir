@@ -146,14 +146,28 @@ def generate_subtypes(base='static', polarity='+'):
     return generator
 
 
-def generate_materializations(base='gradual', pivot=None):
+def generate_msubtypes(base='static', polarity='+'):
 
     def generator(weights=None):
         gen = types_generator(base=base)(weights)
         while True:
-            nonlocal pivot
-            tau = pivot or next(gen)
-            sigma = next(gen)
+            tau, sigma = next(gen), next(gen)
+            if (
+                polarity == '+' and is_msubtype_plus(tau, sigma)
+                or
+                polarity == '-' and is_msubtype_minus(tau, sigma)
+            ):
+                yield tau, sigma
+
+    return generator
+
+
+def generate_materializations(base='gradual'):
+
+    def generator(weights=None):
+        gen = types_generator(base=base)(weights)
+        while True:
+            tau, sigma = next(gen), next(gen)
             if is_materialization(tau, sigma):
                 yield tau, sigma
 

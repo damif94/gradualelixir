@@ -28,5 +28,30 @@ def parse_type(x):
             return gtypes.ListType(parse_type(x[0]))
 
 
+def unparse_type(x):
+    if isinstance(x, gtypes.IntegerType):
+        return 'integer'
+    if isinstance(x, gtypes.FloatType):
+        return 'float'
+    if isinstance(x, gtypes.NumberType):
+        return 'number'
+    if isinstance(x, gtypes.TermType):
+        return 'term'
+    if isinstance(x, gtypes.NoneType):
+        return 'none'
+    if isinstance(x, gtypes.AnyType):
+        return 'none'
+    if isinstance(x, gtypes.TupleType):
+        return tuple([unparse_type(y) for y in x.types])
+    if isinstance(x, gtypes.FunctionType):
+        return tuple([unparse_type(y) for y in x.arg_types] + ['->'] + [unparse_type(x.ret_type)])
+    if isinstance(x, gtypes.MapType):
+        return {k: unparse_type(x.map_type[k]) for k in x.map_type}
+    if isinstance(x, gtypes.ListType):
+        return [unparse_type(x.type)]
+    if isinstance(x, gtypes.ElistType):
+        return []
+
+
 def flatten(t):
     return [item for sublist in t for item in sublist]
