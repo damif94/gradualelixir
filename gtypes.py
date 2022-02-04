@@ -127,7 +127,7 @@ class MapType(Type):
 
 
 def depth(tau):
-    if tau in [AnyType(), TermType(), FloatType(), IntegerType(), NumberType(), ElistType()]:
+    if tau in [AnyType(), TermType(), FloatType(), IntegerType(), NumberType()]:
         return 0
     elif isinstance(ListType, tau):
         return depth(tau.type) + 1
@@ -206,8 +206,6 @@ def is_static_type(tau: Type) -> bool:
         return False
     elif tau in base_types:
         return True
-    elif isinstance(tau, ElistType):
-        return True
     elif isinstance(tau, ListType):
         return is_static_type(tau.type)
     elif isinstance(tau, TupleType):
@@ -233,12 +231,6 @@ def is_subtype(tau: Type, sigma: Type) -> bool:
         return is_subtype(grounding(tau, sigma), sigma)
     if isinstance(sigma, TermType):
         return is_subtype(tau, grounding(sigma, tau))
-    if isinstance(tau, ElistType) and isinstance(sigma, ElistType):
-        return True
-    if isinstance(tau, ElistType) and isinstance(sigma, ListType):
-        return True
-    if isinstance(tau, ListType) and isinstance(sigma, ElistType):
-        return False
     if isinstance(tau, ListType) and isinstance(sigma, ListType):
         return is_subtype(tau.type, sigma.type)
     if isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -291,12 +283,6 @@ def is_msubtype_plus(tau: Type, sigma: Type) -> bool:
         return True
     elif tau in base_types and sigma in base_types:
         return is_base_subtype(tau, sigma)
-    elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
-        return True
-    elif isinstance(tau, ElistType) and isinstance(sigma, ListType):
-        return is_static_type(sigma)
-    elif isinstance(tau, ListType) and isinstance(sigma, ElistType):
-        return isinstance(tau.type, AnyType)
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return is_msubtype_plus(tau.type, sigma.type)
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -325,10 +311,6 @@ def is_msubtype_minus(tau: Type, sigma: Type) -> bool:
         return True
     elif tau in base_types and sigma in base_types:
         return is_base_subtype(sigma, tau)
-    elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
-        return True
-    elif isinstance(tau, ElistType) and isinstance(sigma, ListType):
-        return is_static_type(sigma)
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return is_msubtype_minus(tau.type, sigma.type)
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -361,11 +343,6 @@ def supremum(tau: Type, sigma: Type) -> Type:
         if is_subtype(NoneType(), mu := tau if isinstance(sigma, NoneType) else sigma):
             return mu
         raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
-    elif ElistType() in [tau, sigma]:
-        if isinstance(tau, ListType):
-            return tau
-        elif isinstance(sigma, ListType):
-            return sigma
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return ListType(supremum(tau.type, sigma.type))
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -416,11 +393,6 @@ def infimum(tau: Type, sigma: Type) -> Type:
         if is_subtype(mu := tau if isinstance(sigma, TermType) else sigma, TermType()):
             return mu
         raise TypeException(reason=TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else)
-    elif ElistType() in [tau, sigma]:
-        if isinstance(tau, ListType):
-            return sigma
-        elif isinstance(sigma, ListType):
-            return tau
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return ListType(infimum(tau.type, sigma.type))
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -472,9 +444,7 @@ def msupremum_plus(tau: Type, sigma: Type) -> Type:
     if AnyType() in [tau, sigma]:
         return tau if sigma == AnyType() else sigma
     elif isinstance(tau, NoneType):
-        if isinstance(sigma, ElistType):
-            tau1 = ElistType()
-        elif isinstance(sigma, ListType):
+        if isinstance(sigma, ListType):
             tau1 = ListType(NoneType())
         elif isinstance(sigma, TupleType):
             tau1 = TupleType([NoneType() for _ in sigma.types])
@@ -487,11 +457,6 @@ def msupremum_plus(tau: Type, sigma: Type) -> Type:
         return msupremum_plus(tau1, sigma)
     elif NoneType() in [tau, sigma]:
         return tau if isinstance(sigma, NoneType) else sigma
-    elif ElistType() in [tau, sigma]:
-        if isinstance(tau, ListType):
-            return tau
-        elif isinstance(sigma, ListType):
-            return sigma
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return ListType(msupremum_plus(tau.type, sigma.type))
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -518,9 +483,7 @@ def msupremum_minus(tau: Type, sigma: Type) -> Type:
     if AnyType() in [tau, sigma]:
         return tau if sigma == AnyType() else sigma
     elif isinstance(tau, TermType):
-        if isinstance(sigma, ElistType):
-            tau1 = ElistType()
-        elif isinstance(sigma, ListType):
+        if isinstance(sigma, ListType):
             tau1 = ListType(TermType())
         elif isinstance(sigma, TupleType):
             tau1 = TupleType([TermType() for _ in sigma.types])
@@ -533,11 +496,6 @@ def msupremum_minus(tau: Type, sigma: Type) -> Type:
         return msupremum_minus(tau1, sigma)
     elif TermType() in [tau, sigma]:
         return tau if isinstance(sigma, TermType) else sigma
-    elif ElistType() in [tau, sigma]:
-        if isinstance(tau, ListType):
-            return sigma
-        elif isinstance(sigma, ListType):
-            return tau
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
         return ListType(msupremum_minus(tau.type, sigma.type))
     elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
@@ -563,14 +521,8 @@ def lazy_equate(tau: Type, sigma: Type, modality: bool) -> t.Tuple[Type, Type]:
         else:
             return AnyType(), AnyType()
     if isinstance(tau, ListType) and isinstance(sigma, ListType):
-        if ListType(type=AnyType()) in [tau, sigma] and ElistType() in [tau, sigma]:
-            if modality:
-                return ElistType(), ElistType()
-            else:
-                return ListType(type=AnyType()), ListType(type=AnyType())
-        else:
-            tau_1, sigma_1 = lazy_equate(tau.type, sigma.type, modality)
-            return ListType(type=tau_1), ListType(type=sigma_1)
+        tau_1, sigma_1 = lazy_equate(tau.type, sigma.type, modality)
+        return ListType(type=tau_1), ListType(type=sigma_1)
     if isinstance(tau, TupleType) and isinstance(sigma, TupleType):
         if len(tau.types) == len(sigma.types):
             aux = [lazy_equate(tau.types[i], sigma.types[i], modality) for i in range(len(tau.types))]

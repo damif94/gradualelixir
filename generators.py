@@ -12,9 +12,7 @@ seeds = {
 
 
 def type_builder(cls: t.Type[Type], arity, *args):
-    if cls == ElistType:
-        return ElistType()
-    elif cls == ListType:
+    if cls == ListType:
         return ListType(type=args[0])
     elif cls == TupleType:
         return TupleType(types=list(args)[:arity])
@@ -108,7 +106,7 @@ def generate_types(base='static') -> t.List[t.List[Type]]:
 def types_generator(base='static', force_recreate=False):
     if not force_recreate:
         try:
-            f = open(f'types/{base}.pickle', 'rb')
+            f = open(f'/Users/damian/PycharmProjects/lazy-equate-script/types/{base}.pickle', 'rb')
             types_lists = pickle.load(f)
             f.close()
         except FileNotFoundError:

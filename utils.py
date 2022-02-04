@@ -22,10 +22,8 @@ def parse_type(x):
     if type(x) == dict:
         return gtypes.MapType({k: parse_type(x[k]) for k in x})
     if type(x) == list:
-        if len(x) == 0:
-            return gtypes.ElistType()
-        if len(x) == 1:
-            return gtypes.ListType(parse_type(x[0]))
+        assert len(x) == 1
+        return gtypes.ListType(parse_type(x[0]))
 
 
 def unparse_type(x):
@@ -49,8 +47,6 @@ def unparse_type(x):
         return {k: unparse_type(x.map_type[k]) for k in x.map_type}
     if isinstance(x, gtypes.ListType):
         return [unparse_type(x.type)]
-    if isinstance(x, gtypes.ElistType):
-        return []
 
 
 def flatten(t):
