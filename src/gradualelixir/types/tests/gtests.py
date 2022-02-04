@@ -1,5 +1,9 @@
-from gtypes import *
-import generators
+from gradualelixir.types import generators
+from gradualelixir.types.definitions import (FunctionType, NoneType, TermType,
+                                             TupleType, TypeException,
+                                             TypeExceptionEnum, infimum,
+                                             is_msubtype_plus, is_static_type,
+                                             is_subtype, supremum)
 
 
 def test_subtype_is_msubtype_plus():
@@ -22,7 +26,10 @@ def test_lattice_relations():
             assert is_subtype(supremum(tau1, sigma1), supremum(tau2, sigma2))
             assert is_subtype(infimum(tau1, sigma1), infimum(tau2, sigma2))
         except TypeException as e:
-            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert (
+                e.reason
+                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            )
         except AssertionError as e:
             print(tau1)
             print(sigma1)
@@ -31,6 +38,7 @@ def test_lattice_relations():
             print(sigma2)
             print(infimum(tau2, sigma2))
             raise e
+
 
 def test_top_and_bottom_of_lattice():
     types_generator = generators.types_generator(base='gradual')()
@@ -43,11 +51,18 @@ def test_top_and_bottom_of_lattice():
             try:
                 is_subtype(tau, TermType())
             except TypeException as e:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                assert (
+                    e.reason
+                    == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                )
             try:
                 is_subtype(NoneType(), tau)
             except TypeException as e:
-                assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                assert (
+                    e.reason
+                    == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                )
+
 
 def test_supremum_is_defined_or_blame_any_and_something_else():
     types_generator = generators.types_generator(base='gradual')()
@@ -56,7 +71,10 @@ def test_supremum_is_defined_or_blame_any_and_something_else():
         try:
             supremum(tau1, tau2)
         except TypeException as e:
-            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert (
+                e.reason
+                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            )
 
 
 def test_infimum_is_defined_or_blame_any_and_something_else():
@@ -66,7 +84,10 @@ def test_infimum_is_defined_or_blame_any_and_something_else():
         try:
             infimum(tau1, tau2)
         except TypeException as e:
-            assert e.reason is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert (
+                e.reason
+                is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            )
 
 
 def test_supremum_is_diagonal_identity():
@@ -84,7 +105,10 @@ def test_supremum_is_commutative():
         try:
             supremum(tau, sigma)
         except TypeException as e:
-            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert (
+                e.reason
+                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            )
         else:
             print(tau)
             print(sigma)
@@ -104,13 +128,20 @@ def test_supremum_on_tuples():
         try:
             s1 = supremum(tau1, sigma1)
             s2 = supremum(tau2, sigma2)
-            assert TupleType([s1, s2]) == supremum(TupleType([tau1, tau2]), TupleType([sigma1, sigma2]))
+            assert TupleType([s1, s2]) == supremum(
+                TupleType([tau1, tau2]), TupleType([sigma1, sigma2])
+            )
         except TypeException as e:
-            assert e.reason == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            assert (
+                e.reason
+                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+            )
 
 
 def test_supremum_on_functions():
-    types_generator = generators.types_generator(base='gradual', force_recreate=False)(weights=[50, 50, 0])
+    types_generator = generators.types_generator(base='gradual', force_recreate=False)(
+        weights=[50, 50, 0]
+    )
     for _ in range(10000):
         tau1, sigma1 = next(types_generator), next(types_generator)
         tau2, sigma2 = next(types_generator), next(types_generator)
@@ -121,23 +152,13 @@ def test_supremum_on_functions():
             s3 = supremum(tau3, sigma3)
             print(str(tau1) + ' ' + str(sigma1) + ' ' + str(s1))
             print(str(tau2) + ' ' + str(sigma2) + ' ' + str(s2))
-            print("-------------------")
+            print('-------------------')
         except TypeException as e:
-            assert e.reason is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
-        else:
             assert (
-                FunctionType([s1, s2], s3)
-                ==
-                supremum(FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3))
+                e.reason
+                is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
             )
-
-
-test_subtype_is_msubtype_plus()
-test_lattice_relations()
-test_top_and_bottom_of_lattice()
-test_supremum_is_defined_or_blame_any_and_something_else()
-test_infimum_is_defined_or_blame_any_and_something_else()
-test_supremum_is_diagonal_identity()
-test_supremum_is_commutative()
-test_supremum_on_tuples()
-test_supremum_on_functions()
+        else:
+            assert FunctionType([s1, s2], s3) == supremum(
+                FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3)
+            )
