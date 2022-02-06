@@ -2,12 +2,12 @@ import pickle
 import random
 import typing as t
 
-from gradualelixir.types.definitions import (FunctionType, ListType, MapType,
-                                             TupleType, Type,
-                                             is_materialization,
-                                             is_msubtype_minus,
-                                             is_msubtype_plus, is_subtype)
-from gradualelixir.types.utils import flatten, parse_type
+from gradualelixir.gtypes.definitions import (FunctionType, ListType, MapType,
+                                              TupleType, Type,
+                                              is_materialization,
+                                              is_msubtype_minus,
+                                              is_msubtype_plus, is_subtype)
+from gradualelixir.gtypes.utils import flatten, parse_type
 
 seeds = {
     'static': ['integer', 'float', 'number', 'term', 'none'],

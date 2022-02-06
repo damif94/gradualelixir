@@ -1,9 +1,10 @@
-from gradualelixir.types import generators
-from gradualelixir.types.definitions import (FunctionType, NoneType, TermType,
-                                             TupleType, TypeException,
-                                             TypeExceptionEnum, infimum,
-                                             is_msubtype_plus, is_static_type,
-                                             is_subtype, supremum)
+from gradualelixir.gtypes import generators
+from gradualelixir.gtypes.definitions import (FunctionType, NoneType, TermType,
+                                              TupleType, TypeException,
+                                              TypeExceptionEnum, infimum,
+                                              is_msubtype_plus, is_static_type,
+                                              is_subtype, msupremum_minus,
+                                              supremum)
 
 
 def test_subtype_is_msubtype_plus():
@@ -162,3 +163,26 @@ def test_supremum_on_functions():
             assert FunctionType([s1, s2], s3) == supremum(
                 FunctionType([tau1, tau2], tau3), FunctionType([sigma1, sigma2], sigma3)
             )
+
+
+def test_la_posta():
+    subtypes_generator = generators.generate_msubtypes(base='gradual', polarity='+')(
+        weights=[50, 50, 0]
+    )
+    for _ in range(1000):
+        try:
+            tau1, tau2 = next(subtypes_generator)
+            sigma1, sigma2 = next(subtypes_generator)
+            # assert is_msubtype_plus(msupremum_plus(tau1, sigma1), msupremum_plus(tau2, sigma2))
+            assert is_msubtype_plus(
+                msupremum_minus(tau1, sigma1), msupremum_minus(tau2, sigma2)
+            )
+        except AssertionError as e:
+            print()
+            print(
+                str(tau1) + ' ' + str(sigma1) + ' ' + str(msupremum_minus(tau1, sigma1))
+            )
+            print(
+                str(tau2) + ' ' + str(sigma2) + ' ' + str(msupremum_minus(tau2, sigma2))
+            )
+            raise e

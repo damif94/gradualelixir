@@ -1,4 +1,4 @@
-from gradualelixir.types import definitions, utils
+from gradualelixir.gtypes import definitions, utils
 
 term = 'term'
 none = 'none'

@@ -1,6 +1,6 @@
 import typing as t
 
-from gradualelixir.types import definitions
+from gradualelixir.gtypes import definitions
 
 S = t.TypeVar('S')
 T = t.TypeVar('T')
