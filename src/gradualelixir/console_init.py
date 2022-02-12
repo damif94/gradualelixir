@@ -80,3 +80,15 @@ def msupremum_minus(tau, sigma):
     return utils.unparse_type(
         definitions.msupremum_minus(utils.parse_type(tau), utils.parse_type(sigma))
     )
+
+
+def minfimum_plus(tau, sigma):
+    return utils.unparse_type(
+        definitions.minfimum_plus(utils.parse_type(tau), utils.parse_type(sigma))
+    )
+
+
+def minfimum_minus(tau, sigma):
+    return utils.unparse_type(
+        definitions.minfimum_minus(utils.parse_type(tau), utils.parse_type(sigma))
+    )

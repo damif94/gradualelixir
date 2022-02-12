@@ -583,3 +583,110 @@ def msupremum_minus(tau: Type, sigma: Type) -> Type:
             [tau not in base_types, sigma not in base_types, type(tau) != type(sigma)]
         )
         return NoneType()
+
+
+def minfimum_plus(tau: Type, sigma: Type) -> Type:
+    if tau in base_types and sigma in base_types:
+        return base_infimum(tau, sigma)
+    if AnyType() in [tau, sigma]:
+        return AnyType()
+    elif TermType() in [tau, sigma]:
+        return tau if isinstance(sigma, TermType) else sigma
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return ListType(minfimum_plus(tau.type, sigma.type))
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        if len(tau.types) == len(sigma.types):
+            return TupleType(
+                [
+                    minfimum_plus(tau.types[i], sigma.types[i])
+                    for i in range(len(tau.types))
+                ]
+            )
+        else:
+            if is_static_type(tau) and is_static_type(sigma):
+                return NoneType()
+            return AnyType()
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        return MapType(utils.merge_dicts(tau.map_type, sigma.map_type, minfimum_plus))
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        if len(tau.arg_types) == len(sigma.arg_types):
+            return FunctionType(
+                [
+                    minfimum_minus(tau.arg_types[i], sigma.arg_types[i])
+                    for i in range(len(tau.arg_types))
+                ],
+                minfimum_plus(tau.ret_type, sigma.ret_type),
+            )
+        else:
+            if is_static_type(tau) and is_static_type(sigma):
+                return NoneType()
+            return AnyType()
+    else:
+        assert any(
+            [
+                tau in base_types and sigma not in base_types,
+                sigma in base_types and tau not in base_types,
+            ]
+        ) or all(
+            [tau not in base_types, sigma not in base_types, type(tau) != type(sigma)]
+        )
+        if is_static_type(tau) and is_static_type(sigma):
+            return NoneType()
+        else:
+            return AnyType()
+
+
+def minfimum_minus(tau: Type, sigma: Type) -> Type:
+    if tau in base_types and sigma in base_types:
+        return base_supremum(tau, sigma)
+    if AnyType() in [tau, sigma]:
+        return AnyType()
+    elif NoneType() in [tau, sigma]:
+        return tau if isinstance(sigma, NoneType) else sigma
+    elif isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return ListType(minfimum_minus(tau.type, sigma.type))
+    elif isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        if len(tau.types) == len(sigma.types):
+            return TupleType(
+                [
+                    minfimum_minus(tau.types[i], sigma.types[i])
+                    for i in range(len(tau.types))
+                ]
+            )
+        else:
+            if is_static_type(tau) and is_static_type(sigma):
+                return TermType()
+            else:
+                return AnyType()
+    elif isinstance(tau, MapType) and isinstance(sigma, MapType):
+        inter_keys = [k for k in tau.map_type if k in sigma.map_type]
+        return MapType(
+            {k: minfimum_minus(tau.map_type[k], sigma.map_type[k]) for k in inter_keys}
+        )
+    elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        if len(tau.arg_types) == len(sigma.arg_types):
+            return FunctionType(
+                [
+                    minfimum_plus(tau.arg_types[i], sigma.arg_types[i])
+                    for i in range(len(tau.arg_types))
+                ],
+                minfimum_minus(tau.ret_type, sigma.ret_type),
+            )
+        else:
+            if is_static_type(tau) and is_static_type(sigma):
+                return TermType()
+            else:
+                return AnyType()
+    else:
+        assert any(
+            [
+                tau in base_types and sigma not in base_types,
+                sigma in base_types and tau not in base_types,
+            ]
+        ) or all(
+            [tau not in base_types, sigma not in base_types, type(tau) != type(sigma)]
+        )
+        if is_static_type(tau) and is_static_type(sigma):
+            return TermType()
+        else:
+            return AnyType()

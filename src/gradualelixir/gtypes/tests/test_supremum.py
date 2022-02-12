@@ -43,7 +43,7 @@ def test_base_types(function_name, tau, sigma, mu_or_error):
 def test_term_and_none(function_name, tau, role):
     tau = utils.parse_type(tau)
     function = getattr(definitions, function_name)
-    types_generator = generators.types_generator(base='gradual', force_recreate=False)()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         sigma = next(types_generator)
         try:
@@ -58,7 +58,7 @@ def test_term_and_none(function_name, tau, role):
 @pytest.mark.parametrize('function_name', ('infimum', 'supremum'))
 def test_tuples_same_length(function_name):
     function = getattr(definitions, function_name)
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         tau1, tau2 = next(types_generator), next(types_generator)
         sigma1, sigma2 = next(types_generator), next(types_generator)
@@ -83,7 +83,7 @@ def test_tuples_same_length(function_name):
 @pytest.mark.parametrize('function_name', ('infimum', 'supremum'))
 def test_tuples_different_lengths(function_name):
     function = getattr(definitions, function_name)
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         taus = [next(types_generator), next(types_generator)]
         sigmas = [next(types_generator), next(types_generator), next(types_generator)]
@@ -102,7 +102,7 @@ def test_tuples_different_lengths(function_name):
 @pytest.mark.parametrize('function_name', ('infimum', 'supremum'))
 def test_list(function_name):
     function = getattr(definitions, function_name)
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         tau, sigma = next(types_generator), next(types_generator)
         try:
@@ -123,7 +123,7 @@ def test_functions_same_length(function_name):
     dual_function = getattr(
         definitions, 'supremum' if function_name == 'infimum' else 'infimum'
     )
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         tau1, tau2, tau3 = (
             next(types_generator),
@@ -176,7 +176,7 @@ def test_functions_same_length(function_name):
     ),
 )
 def test_infimum_map(tau_keys, sigma_keys, mu_keys):
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(1000):
         tau_map = dict([(k, next(types_generator)) for k in tau_keys])
         sigma_map = dict([(k, next(types_generator)) for k in sigma_keys])
@@ -221,7 +221,7 @@ def test_infimum_map(tau_keys, sigma_keys, mu_keys):
 )
 def test_map(function_name, tau_keys, sigma_keys, mu_keys):
     function = getattr(definitions, function_name)
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(1000):
         tau_map = dict([(k, next(types_generator)) for k in tau_keys])
         sigma_map = dict([(k, next(types_generator)) for k in sigma_keys])
@@ -266,7 +266,7 @@ def test_map(function_name, tau_keys, sigma_keys, mu_keys):
     ),
 )
 def test_type_constructors_different_constructors(cls1, meta1, cls2, meta2):
-    types_generator = generators.types_generator(base='gradual', force_recreate=False)()
+    types_generator = generators.generate_types(base='gradual')()
     args1 = cls1, meta1
     if cls1 == MapType:
         args1 = cls1, *meta1

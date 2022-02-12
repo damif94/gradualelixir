@@ -2,9 +2,11 @@ from gradualelixir.gtypes import generators
 from gradualelixir.gtypes.definitions import (FunctionType, NoneType, TermType,
                                               TupleType, TypeException,
                                               TypeExceptionEnum, infimum,
+                                              is_materialization,
                                               is_msubtype_plus, is_static_type,
-                                              is_subtype, msupremum_minus,
-                                              supremum)
+                                              is_subtype, minfimum_minus,
+                                              minfimum_plus, supremum)
+from gradualelixir.gtypes.generators import generate_materializations
 
 
 def test_subtype_is_msubtype_plus():
@@ -42,7 +44,7 @@ def test_lattice_relations():
 
 
 def test_top_and_bottom_of_lattice():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     tau = next(types_generator)
     for _ in range(1000):
         if is_static_type(tau):
@@ -66,7 +68,7 @@ def test_top_and_bottom_of_lattice():
 
 
 def test_supremum_is_defined_or_blame_any_and_something_else():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(2500):
         tau1, tau2 = next(types_generator), next(types_generator)
         try:
@@ -79,7 +81,7 @@ def test_supremum_is_defined_or_blame_any_and_something_else():
 
 
 def test_infimum_is_defined_or_blame_any_and_something_else():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(5000):
         tau1, tau2 = next(types_generator), next(types_generator)
         try:
@@ -92,7 +94,7 @@ def test_infimum_is_defined_or_blame_any_and_something_else():
 
 
 def test_supremum_is_diagonal_identity():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(5000):
         tau = next(types_generator)
         assert tau == supremum(tau, tau)
@@ -100,7 +102,7 @@ def test_supremum_is_diagonal_identity():
 
 
 def test_supremum_is_commutative():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(5000):
         tau, sigma = next(types_generator), next(types_generator)
         try:
@@ -122,7 +124,7 @@ def test_supremum_is_commutative():
 
 
 def test_supremum_on_tuples():
-    types_generator = generators.types_generator(base='gradual')()
+    types_generator = generators.generate_types(base='gradual')()
     for _ in range(5000):
         tau1, sigma1 = next(types_generator), next(types_generator)
         tau2, sigma2 = next(types_generator), next(types_generator)
@@ -140,9 +142,7 @@ def test_supremum_on_tuples():
 
 
 def test_supremum_on_functions():
-    types_generator = generators.types_generator(base='gradual', force_recreate=False)(
-        weights=[50, 50, 0]
-    )
+    types_generator = generators.generate_types(base='gradual')(weights=[50, 50, 0])
     for _ in range(10000):
         tau1, sigma1 = next(types_generator), next(types_generator)
         tau2, sigma2 = next(types_generator), next(types_generator)
@@ -165,24 +165,32 @@ def test_supremum_on_functions():
             )
 
 
-def test_la_posta():
-    subtypes_generator = generators.generate_msubtypes(base='gradual', polarity='+')(
-        weights=[50, 50, 0]
-    )
-    for _ in range(1000):
-        try:
-            tau1, tau2 = next(subtypes_generator)
-            sigma1, sigma2 = next(subtypes_generator)
-            # assert is_msubtype_plus(msupremum_plus(tau1, sigma1), msupremum_plus(tau2, sigma2))
-            assert is_msubtype_plus(
-                msupremum_minus(tau1, sigma1), msupremum_minus(tau2, sigma2)
-            )
-        except AssertionError as e:
-            print()
+def test_materialization_and_msupremmum():
+    materializations_generator = generate_materializations(remote=False)()
+    for i in range(10000):
+        (tau1, tau2), (sigma1, sigma2) = next(materializations_generator), next(
+            materializations_generator
+        )
+        if isinstance(tau1, TupleType) and isinstance(sigma1, TupleType):
             print(
-                str(tau1) + ' ' + str(sigma1) + ' ' + str(msupremum_minus(tau1, sigma1))
+                str(tau1) + ' ' + str(sigma1) + ' ' + str(minfimum_minus(tau1, sigma1))
             )
             print(
-                str(tau2) + ' ' + str(sigma2) + ' ' + str(msupremum_minus(tau2, sigma2))
+                str(tau2) + ' ' + str(sigma2) + ' ' + str(minfimum_minus(tau2, sigma2))
             )
-            raise e
+            print(
+                str(tau1) + ' ' + str(sigma1) + ' ' + str(minfimum_plus(tau1, sigma1))
+            )
+            print(
+                str(tau2) + ' ' + str(sigma2) + ' ' + str(minfimum_plus(tau2, sigma2))
+            )
+            print(i)
+            print(
+                '---------------------------------------------------------------------'
+            )
+        assert is_materialization(
+            minfimum_plus(tau1, sigma1), minfimum_plus(tau2, sigma2)
+        )
+        assert is_materialization(
+            minfimum_minus(tau1, sigma1), minfimum_minus(tau2, sigma2)
+        )
