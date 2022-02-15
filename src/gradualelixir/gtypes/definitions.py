@@ -201,6 +201,36 @@ def is_static_type(tau: Type) -> bool:
         ) and is_static_type(tau.ret_type)
 
 
+def is_higher_order(tau: Type) -> bool:
+    if tau in base_types + [AnyType()]:
+        return False
+    elif isinstance(tau, ListType):
+        return is_higher_order(tau.type)
+    elif isinstance(tau, TupleType):
+        return any([is_higher_order(sigma) for sigma in tau.types])
+    elif isinstance(tau, MapType):
+        return any([is_higher_order(sigma) for sigma in tau.map_type.values()])
+    else:
+        assert isinstance(tau, FunctionType)
+        return True
+
+
+def is_allowed(tau: Type) -> bool:
+    if isinstance(tau, NoneType):
+        return False
+    elif tau in base_types + [AnyType()]:
+        return True
+    elif isinstance(tau, ListType):
+        return True
+    elif isinstance(tau, TupleType):
+        return all([is_allowed(sigma) for sigma in tau.types])
+    elif isinstance(tau, MapType):
+        return all([is_allowed(sigma) for sigma in tau.map_type.values()])
+    else:
+        assert isinstance(tau, FunctionType)
+        return is_allowed(tau.ret_type)
+
+
 def is_subtype(tau: Type, sigma: Type) -> bool:
     if tau in base_types and sigma in base_types:
         return is_base_subtype(tau, sigma)

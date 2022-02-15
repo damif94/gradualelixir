@@ -4,7 +4,7 @@ from .. import generators, utils
 from ..definitions import (FunctionType, ListType, NoneType, TermType,
                            TupleType, is_static_type, is_subtype)
 
-TEST_ITERATIONS = 100000
+TEST_ITERATIONS = 1000
 
 
 @pytest.mark.parametrize(
@@ -51,16 +51,22 @@ def test_term_and_none():
 
 def test_tuples_same_length():
     types_generator = generators.generate_types(base='gradual')()
-    for _ in range(TEST_ITERATIONS):
+    i = 0
+    while i < TEST_ITERATIONS / 10:
         tau1, tau2 = next(types_generator), next(types_generator)
         sigma1, sigma2 = next(types_generator), next(types_generator)
         if is_subtype(tau1, sigma1) and is_subtype(tau2, sigma2):
             assert is_subtype(TupleType([tau1, tau2]), TupleType([sigma1, sigma2]))
-        else:
+            i += 1
+    while i < TEST_ITERATIONS:
+        tau1, tau2 = next(types_generator), next(types_generator)
+        sigma1, sigma2 = next(types_generator), next(types_generator)
+        if not (is_subtype(tau1, sigma1) and is_subtype(tau2, sigma2)):
             assert not is_subtype(TupleType([tau1, tau2]), TupleType([sigma1, sigma2]))
+            i += 1
 
 
-def test_tuples_different_lengths(function_name):
+def test_tuples_different_lengths():
     types_generator = generators.generate_types(base='gradual')()
     for _ in range(TEST_ITERATIONS):
         taus = [next(types_generator), next(types_generator)]
@@ -70,18 +76,24 @@ def test_tuples_different_lengths(function_name):
 
 def test_list():
     types_generator = generators.generate_types(base='gradual')()
-    for _ in range(TEST_ITERATIONS):
+    i = 0
+    while i < TEST_ITERATIONS / 10:
         tau, sigma = next(types_generator), next(types_generator)
         if is_subtype(tau, sigma):
             assert is_subtype(ListType(tau), ListType(sigma))
-        else:
-            assert not is_subtype(ListType(tau), ListType(sigma))
+            i += 1
+    i = 0
+    while i < TEST_ITERATIONS:
+        tau, sigma = next(types_generator), next(types_generator)
+        if is_subtype(tau, sigma):
+            assert is_subtype(ListType(tau), ListType(sigma))
+            i += 1
 
 
 def test_functions_same_length():
     types_generator = generators.generate_types(base='gradual')()
     i = 0
-    for _ in range(TEST_ITERATIONS):
+    while i < TEST_ITERATIONS / 10:
         tau1, tau2 = next(types_generator), next(types_generator)
         sigma1, sigma2 = next(types_generator), next(types_generator)
         if is_subtype(sigma1, tau1) and is_subtype(tau2, sigma2):
@@ -89,8 +101,12 @@ def test_functions_same_length():
                 FunctionType([tau1], tau2), FunctionType([sigma1], sigma2)
             )
             i += 1
-            print(i)
-        else:
+    i = 0
+    while i < TEST_ITERATIONS:
+        tau1, tau2 = next(types_generator), next(types_generator)
+        sigma1, sigma2 = next(types_generator), next(types_generator)
+        if not (is_subtype(sigma1, tau1) and is_subtype(tau2, sigma2)):
             assert not is_subtype(
                 FunctionType([tau1], tau2), FunctionType([sigma1], sigma2)
             )
+            i += 1
