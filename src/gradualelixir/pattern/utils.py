@@ -1,12 +1,6 @@
-from . import definitions
 from collections import OrderedDict
 
-
-def format_error(error: definitions.PatternError, padding='') -> str:
-    bullet = ''
-    if error.bullet is not None:
-        bullet = format_error(error.bullet, padding + '  ')
-    return f'{error.msg}\n' + (f'{padding}> {bullet}' if bullet else '')
+from . import definitions
 
 
 def parse_pattern(x):
@@ -15,9 +9,9 @@ def parse_pattern(x):
     elif isinstance(x, float):
         return definitions.FloatPattern(value=x)
     elif isinstance(x, str):
-        if x == '_':
+        if x == "_":
             return definitions.WildPattern()
-        elif x.startswith('^'):
+        elif x.startswith("^"):
             return definitions.PinIdentPattern(identifier=x[1:])
         else:
             return definitions.IdentPattern(identifier=x)

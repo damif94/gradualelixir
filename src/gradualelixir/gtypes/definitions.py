@@ -2,7 +2,7 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
-from gradualelixir.gtypes import utils
+from . import utils
 
 
 class Type:
@@ -12,7 +12,7 @@ class Type:
 @dataclass
 class IntegerType(Type):
     def __str__(self):
-        return 'integer'
+        return "integer"
 
     def __hash__(self):
         return 1
@@ -21,7 +21,7 @@ class IntegerType(Type):
 @dataclass
 class FloatType(Type):
     def __str__(self):
-        return 'float'
+        return "float"
 
     def __hash__(self):
         return 2
@@ -30,7 +30,7 @@ class FloatType(Type):
 @dataclass
 class NumberType(Type):
     def __str__(self):
-        return 'number'
+        return "number"
 
     def __hash__(self):
         return 3
@@ -39,7 +39,7 @@ class NumberType(Type):
 @dataclass
 class TermType(Type):
     def __str__(self):
-        return 'term'
+        return "term"
 
     def __hash__(self):
         return 4
@@ -48,13 +48,13 @@ class TermType(Type):
 @dataclass
 class NoneType(Type):
     def __str__(self):
-        return 'none'
+        return "none"
 
 
 @dataclass
 class AnyType(Type):
     def __str__(self):
-        return 'any'
+        return "any"
 
 
 @dataclass
@@ -62,7 +62,7 @@ class TupleType(Type):
     types: t.List[Type]
 
     def __str__(self):
-        return '{' + ','.join([str(ty) for ty in self.types]) + '}'
+        return "{" + ",".join([str(ty) for ty in self.types]) + "}"
 
 
 @dataclass
@@ -70,7 +70,7 @@ class ListType(Type):
     type: Type
 
     def __str__(self):
-        return '[' + str(self.type) + ']'
+        return "[" + str(self.type) + "]"
 
 
 @dataclass
@@ -81,7 +81,7 @@ class MapType(Type):
     def __str__(self):
         keys = self.map_type.keys()
         str_values = [str(v) for v in self.map_type.values()]
-        return '%{' + ','.join([f'{k}: {v}' for (k, v) in zip(keys, str_values)]) + '}'
+        return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
 
 
 @dataclass
@@ -97,10 +97,10 @@ class FunctionType(Type):
 
 class TypeExceptionEnum(Enum):
     supremum_does_not_exist_for_any_and_something_else = (
-        'supremum_does_not_exist_for_any_and_something_else'
+        "supremum_does_not_exist_for_any_and_something_else"
     )
-    cannot_apply_grounding = 'cannot_apply_grounding'
-    type_is_not_base = 'type_is_not_base'
+    cannot_apply_grounding = "cannot_apply_grounding"
+    type_is_not_base = "type_is_not_base"
 
 
 class TypeException(Exception):

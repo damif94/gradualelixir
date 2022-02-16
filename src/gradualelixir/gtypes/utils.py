@@ -1,26 +1,26 @@
 import typing as t
 
-from gradualelixir.gtypes import definitions
+from . import definitions
 
-S = t.TypeVar('S')
-T = t.TypeVar('T')
+S = t.TypeVar("S")
+T = t.TypeVar("T")
 
 
 def parse_type(x):
-    if x == 'integer':
+    if x == "integer":
         return definitions.IntegerType()
-    if x == 'float':
+    if x == "float":
         return definitions.FloatType()
-    if x == 'number':
+    if x == "number":
         return definitions.NumberType()
-    if x == 'term':
+    if x == "term":
         return definitions.TermType()
-    if x == 'none':
+    if x == "none":
         return definitions.NoneType()
-    if x == 'any':
+    if x == "any":
         return definitions.AnyType()
     if isinstance(x, tuple):
-        if len(x) >= 2 and x[-2] == '->':
+        if len(x) >= 2 and x[-2] == "->":
             return definitions.FunctionType(
                 [parse_type(y) for y in x[:-2]], parse_type(x[-1])
             )
@@ -35,22 +35,22 @@ def parse_type(x):
 
 def unparse_type(x):
     if isinstance(x, definitions.IntegerType):
-        return 'integer'
+        return "integer"
     if isinstance(x, definitions.FloatType):
-        return 'float'
+        return "float"
     if isinstance(x, definitions.NumberType):
-        return 'number'
+        return "number"
     if isinstance(x, definitions.TermType):
-        return 'term'
+        return "term"
     if isinstance(x, definitions.NoneType):
-        return 'none'
+        return "none"
     if isinstance(x, definitions.AnyType):
-        return 'any'
+        return "any"
     if isinstance(x, definitions.TupleType):
         return tuple([unparse_type(y) for y in x.types])
     if isinstance(x, definitions.FunctionType):
         return tuple(
-            [unparse_type(y) for y in x.arg_types] + ['->'] + [unparse_type(x.ret_type)]
+            [unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)]
         )
     if isinstance(x, definitions.MapType):
         return {k: unparse_type(x.map_type[k]) for k in x.map_type}

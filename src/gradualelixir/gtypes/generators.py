@@ -3,16 +3,22 @@ import random
 import typing as t
 
 import rpyc
-from gradualelixir.gtypes.definitions import (FunctionType, ListType, MapType,
-                                              TupleType, Type, is_subtype)
+from gradualelixir.gtypes.definitions import (
+    FunctionType,
+    ListType,
+    MapType,
+    TupleType,
+    Type,
+    is_subtype,
+)
 from gradualelixir.gtypes.utils import flatten, parse_type, unzip
 
-T = t.TypeVar('T')
+T = t.TypeVar("T")
 
 
 seeds = {
-    'static': ['integer', 'float', 'number', 'term', 'none'],
-    'gradual': ['integer', 'float', 'number', 'term', 'none', 'any'],  # type: ignore
+    "static": ["integer", "float", "number", "term", "none"],
+    "gradual": ["integer", "float", "number", "term", "none", "any"],  # type: ignore
 }
 
 
@@ -27,10 +33,10 @@ def type_builder(cls: t.Type[Type], arity: int, *args: t.Any) -> Type:
     elif cls == FunctionType:
         return FunctionType(arg_types=list(args)[: arity - 1], ret_type=args[arity - 1])
     else:
-        raise ValueError('cannot call type_builder without a type constructor')
+        raise ValueError("cannot call type_builder without a type constructor")
 
 
-def types_generator(base='static') -> t.List[t.List[Type]]:
+def types_generator(base="static") -> t.List[t.List[Type]]:
     base_types = seeds[base]
     composite_types_1 = flatten(  # type: ignore
         [
@@ -60,10 +66,10 @@ def types_generator(base='static') -> t.List[t.List[Type]]:
                 ]
                 if random.randint(0, 10) < 5
             ],
-            [('->', x) for x in base_types],
-            [(x, '->', y) for x in base_types for y in base_types],
+            [("->", x) for x in base_types],
+            [(x, "->", y) for x in base_types for y in base_types],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in base_types
                 for y in base_types
                 for z in base_types
@@ -97,62 +103,62 @@ def types_generator(base='static') -> t.List[t.List[Type]]:
                 ]
                 if random.randint(0, 10) < 1
             ],
-            [('->', x) for x in composite_types_1 if random.randint(0, 10) < 2],
+            [("->", x) for x in composite_types_1 if random.randint(0, 10) < 2],
             [
-                (x, '->', y)
+                (x, "->", y)
                 for x in base_types
                 for y in composite_types_1
                 if random.randint(0, 10) < 2
             ],
             [
-                (x, '->', y)
+                (x, "->", y)
                 for x in composite_types_1
                 for y in base_types
                 if random.randint(0, 10) < 2
             ],
             [
-                (x, '->', y)
+                (x, "->", y)
                 for x in composite_types_1
                 for y in composite_types_1
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in composite_types_1
                 for y in base_types
                 for z in base_types
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in base_types
                 for y in composite_types_1
                 for z in base_types
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in base_types
                 for y in base_types
                 for z in composite_types_1
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in composite_types_1
                 for y in composite_types_1
                 for z in base_types
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in composite_types_1
                 for y in base_types
                 for z in composite_types_1
                 if random.randint(0, 10) < 1
             ],
             [
-                (x, y, '->', z)
+                (x, y, "->", z)
                 for x in base_types
                 for y in composite_types_1
                 for z in composite_types_1
@@ -169,8 +175,8 @@ def types_generator(base='static') -> t.List[t.List[Type]]:
 
 
 def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
-    base_relation = [('any', x) for x in seeds['static']] + [
-        (x, x) for x in seeds['gradual']
+    base_relation = [("any", x) for x in seeds["static"]] + [
+        (x, x) for x in seeds["gradual"]
     ]
     composite_relation_1 = flatten(  # type: ignore
         [
@@ -214,14 +220,14 @@ def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
                 ]
                 if random.randint(0, 100) < 5
             ],
-            [(('->', x[0]), ('->', x[1])) for x in base_relation],
+            [(("->", x[0]), ("->", x[1])) for x in base_relation],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in base_relation
                 for y in base_relation
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in base_relation
                 for z in base_relation
@@ -232,7 +238,7 @@ def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
     composite_relation_types_1 = list(
         [x[0] for x in composite_relation_1 if random.randint(0, 4) < 1]
     )
-    composite_relation_1 = composite_relation_1 + [('any', x) for x in composite_relation_types_1]  # type: ignore
+    composite_relation_1 = composite_relation_1 + [("any", x) for x in composite_relation_types_1]  # type: ignore
     composite_relation_2 = flatten(  # type: ignore
         [
             [((), ())],  # type: ignore
@@ -280,65 +286,65 @@ def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
                 if random.randint(0, 10) < 1
             ],
             [
-                (('->', x[0]), ('->', x[1]))
+                (("->", x[0]), ("->", x[1]))
                 for x in composite_relation_1
                 if random.randint(0, 10) < 2
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 if random.randint(0, 10) < 2
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 if random.randint(0, 10) < 2
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in composite_relation_1
                 for y in composite_relation_1
                 if random.randint(0, 10) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 for z in base_relation
                 if random.randint(0, 50) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 for z in base_relation
                 if random.randint(0, 50) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in base_relation
                 for z in composite_relation_1
                 if random.randint(0, 50) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in composite_relation_1
                 for z in base_relation
                 if random.randint(0, 50) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 for z in composite_relation_1
                 if random.randint(0, 50) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 for z in composite_relation_1
@@ -349,7 +355,7 @@ def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
     composite_relation_types_2 = list(
         [x[0] for x in composite_relation_2 if random.randint(0, 20) < 1]
     )
-    composite_relation_2 = composite_relation_2 + [('any', x) for x in composite_relation_types_2]  # type: ignore
+    composite_relation_2 = composite_relation_2 + [("any", x) for x in composite_relation_types_2]  # type: ignore
 
     return [
         [(parse_type(x[0]), parse_type(x[1])) for x in base_relation],
@@ -361,8 +367,8 @@ def materializations_generator(**kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
 def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
     base_relation = (
         [(x, x) for x in seeds[base]]
-        + [(x, 'term') for x in seeds['static']]
-        + [('none', x) for x in seeds['static']]
+        + [(x, "term") for x in seeds["static"]]
+        + [("none", x) for x in seeds["static"]]
     )
     base_relation_types = list(set([x[0] for x in base_relation]))
     composite_relation_1 = flatten(  # type: ignore
@@ -408,14 +414,14 @@ def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
                 for y in base_relation
                 if random.randint(0, 100) < 1
             ],
-            [(('->', x[0]), ('->', x[1])) for x in base_relation],
+            [(("->", x[0]), ("->", x[1])) for x in base_relation],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in base_relation
                 for y in base_relation
             ],
             [
-                ((x[1], y[1], '->', z[0]), (x[0], y[0], '->', z[1]))
+                ((x[1], y[1], "->", z[0]), (x[0], y[0], "->", z[1]))
                 for x in base_relation
                 for y in base_relation
                 for z in base_relation
@@ -427,9 +433,7 @@ def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
     composite_relation_types_1 = list(
         [x[0] for x in composite_relation_1 if random.randint(0, 4) < 1]
     )
-    composite_relation_1 = composite_relation_1 + flatten(  # type: ignore
-        [[(x, 'term'), ('none', x)] for x in composite_relation_types_1]
-    )
+    composite_relation_1 = composite_relation_1 + flatten([[(x, "term"), ("none", x)] for x in composite_relation_types_1])  # type: ignore
 
     composite_relation_2 = flatten(  # type: ignore
         [
@@ -515,65 +519,65 @@ def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
                 if random.randint(0, 100) < 1
             ],
             [
-                (('->', x[0]), ('->', x[1]))
+                (("->", x[0]), ("->", x[1]))
                 for x in composite_relation_1
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], '->', y[0]), (x[1], '->', y[1]))
+                ((x[0], "->", y[0]), (x[1], "->", y[1]))
                 for x in composite_relation_1
                 for y in composite_relation_1
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 for z in base_relation
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 for z in base_relation
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in base_relation
                 for z in composite_relation_1
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in composite_relation_1
                 for z in base_relation
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in composite_relation_1
                 for y in base_relation
                 for z in composite_relation_1
                 if random.randint(0, 100) < 1
             ],
             [
-                ((x[0], y[0], '->', z[0]), (x[1], y[1], '->', z[1]))
+                ((x[0], y[0], "->", z[0]), (x[1], y[1], "->", z[1]))
                 for x in base_relation
                 for y in composite_relation_1
                 for z in composite_relation_1
@@ -585,9 +589,7 @@ def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
     composite_relation_types_2 = list(
         [x[0] for x in composite_relation_2 if random.randint(0, 20) < 1]
     )
-    composite_relation_2 = composite_relation_2 + flatten(  # type: ignore
-        [[(x, 'term'), ('none', x)] for x in composite_relation_types_2]
-    )
+    composite_relation_2 = composite_relation_2 + flatten([[(x, "term"), ("none", x)] for x in composite_relation_types_2])  # type: ignore
 
     return [
         [(parse_type(x[0]), parse_type(x[1])) for x in base_relation],
@@ -597,18 +599,18 @@ def subtypes_generator(base, **kwargs) -> t.List[t.List[t.Tuple[Type, Type]]]:
 
 
 def generator_from_cache(function, base=None, force_recreate=False):
-    cache_dir = '/Users/damian/PycharmProjects/gradual-elixir/.cache/'
-    suffix = f'__{base}' if base else ''
+    cache_dir = "/Users/damian/PycharmProjects/gradual-elixir/.cache/"
+    suffix = f"__{base}" if base else ""
     if not force_recreate:
         try:
-            f = open(f'{cache_dir}{function.__name__}{suffix}.pickle', 'rb')
+            f = open(f"{cache_dir}{function.__name__}{suffix}.pickle", "rb")
             types_lists = pickle.load(f)
             f.close()
         except FileNotFoundError:
-            return generator_from_cache(function, base=base, force_recreate=False)
+            return generator_from_cache(function, base=base, force_recreate=True)
     else:
         types_lists = function(base=base)
-        f = open(f'{cache_dir}{function.__name__}{suffix}.pickle', 'wb')
+        f = open(f"{cache_dir}{function.__name__}{suffix}.pickle", "wb")
         pickle.dump(types_lists, f)
         f.close()
 
@@ -625,48 +627,21 @@ def generator_from_cache(function, base=None, force_recreate=False):
     return generator
 
 
-def generator_from_remote(function, base=None, relation_arity=1):
-    def generator(weights=None):
-        conn = rpyc.connect('localhost', 18812)
-        types_lengths = [
-            conn.root.get_lengths(function.__name__, base, i) for i in [0, 1, 2]
-        ]
-        while True:
-            level = random.choices(
-                population=[0, 1, 2], weights=weights or [10, 30, 60]
-            )[0]
-            item = conn.root.get(
-                function.__name__,
-                base,
-                level,
-                random.randint(0, types_lengths[level] - 1),
-                relation_arity,
-            )
-            if relation_arity == 1:
-                yield item
-            print(item)
-            yield tuple([parse_type(item[i]) for i in range(relation_arity)])
-
-    return generator
-
-
-def generate_types(base='static', remote=False):
-    if remote:
-        return generator_from_remote(function=types_generator, base=base)
+def generate_types(base="static"):
     return generator_from_cache(
         function=types_generator, base=base, force_recreate=False
     )
 
 
-def generate_subtypes(base='static', remote=False, polarity='+'):
+def generate_subtypes(base="static", polarity="+"):
     def generator(weights=None):
-        gen = generate_types(base=base, remote=remote)(weights)
+        gen = generate_types(base=base)(weights)
         while True:
             tau, sigma = next(gen), next(gen)
             if (
-                polarity == '+'
+                polarity == "+"
                 and is_subtype(tau, sigma)
-                or polarity == '-'
+                or polarity == "-"
                 and is_subtype(sigma, tau)
             ):
                 yield tau, sigma
@@ -674,11 +649,7 @@ def generate_subtypes(base='static', remote=False, polarity='+'):
     return generator
 
 
-def generate_materializations(remote=False):
-    if remote:
-        return generator_from_remote(
-            function=materializations_generator, relation_arity=2
-        )
+def generate_materializations():
     return generator_from_cache(
         function=materializations_generator, force_recreate=False
     )

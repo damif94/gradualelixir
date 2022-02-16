@@ -1,27 +1,34 @@
 import pytest
 
 from .. import generators, utils
-from ..definitions import (FunctionType, ListType, NoneType, TermType,
-                           TupleType, is_static_type, is_subtype)
+from ..definitions import (
+    FunctionType,
+    ListType,
+    NoneType,
+    TermType,
+    TupleType,
+    is_static_type,
+    is_subtype,
+)
 
 TEST_ITERATIONS = 1000
 
 
 @pytest.mark.parametrize(
-    'tau, sigma, expected_result, expected_flipped_result',
+    "tau, sigma, expected_result, expected_flipped_result",
     (
-        ('integer', 'integer', True, True),
-        ('integer', 'term', True, False),
-        ('integer', 'none', False, True),
-        ('integer', 'float', False, False),
-        ('integer', 'number', True, False),
-        ('float', 'float', True, True),
-        ('float', 'term', True, False),
-        ('integer', 'none', False, True),
-        ('float', 'number', True, False),
-        ('term', 'term', True, True),
-        ('none', 'term', True, False),
-        ('none', 'none', True, True),
+        ("integer", "integer", True, True),
+        ("integer", "term", True, False),
+        ("integer", "none", False, True),
+        ("integer", "float", False, False),
+        ("integer", "number", True, False),
+        ("float", "float", True, True),
+        ("float", "term", True, False),
+        ("integer", "none", False, True),
+        ("float", "number", True, False),
+        ("term", "term", True, True),
+        ("none", "term", True, False),
+        ("none", "none", True, True),
     ),
 )
 def test_base_types(tau, sigma, expected_result, expected_flipped_result):
@@ -31,14 +38,14 @@ def test_base_types(tau, sigma, expected_result, expected_flipped_result):
 
 
 def test_reflexivity():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     for _ in range(TEST_ITERATIONS):
         tau = next(types_generator)
         assert is_subtype(tau, tau)
 
 
 def test_term_and_none():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     for _ in range(TEST_ITERATIONS):
         tau = next(types_generator)
         if is_static_type(tau):
@@ -50,7 +57,7 @@ def test_term_and_none():
 
 
 def test_tuples_same_length():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     i = 0
     while i < TEST_ITERATIONS / 10:
         tau1, tau2 = next(types_generator), next(types_generator)
@@ -67,7 +74,7 @@ def test_tuples_same_length():
 
 
 def test_tuples_different_lengths():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     for _ in range(TEST_ITERATIONS):
         taus = [next(types_generator), next(types_generator)]
         sigmas = [next(types_generator), next(types_generator), next(types_generator)]
@@ -75,7 +82,7 @@ def test_tuples_different_lengths():
 
 
 def test_list():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     i = 0
     while i < TEST_ITERATIONS / 10:
         tau, sigma = next(types_generator), next(types_generator)
@@ -91,7 +98,7 @@ def test_list():
 
 
 def test_functions_same_length():
-    types_generator = generators.generate_types(base='gradual')()
+    types_generator = generators.generate_types(base="gradual")()
     i = 0
     while i < TEST_ITERATIONS / 10:
         tau1, tau2 = next(types_generator), next(types_generator)
