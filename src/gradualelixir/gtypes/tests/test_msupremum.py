@@ -208,8 +208,8 @@ def test_type_constructors_different_constructors(cls1, meta1, cls2, meta2):
         assert isinstance(definitions.msupremum_plus(tau, sigma), TermType)
         assert isinstance(definitions.msupremum_minus(tau, sigma), NoneType)
         if is_static_type(tau) and is_static_type(sigma):
-            assert isinstance(definitions.minfimum_minus(tau, sigma), TermType)
-            assert isinstance(definitions.minfimum_plus(tau, sigma), NoneType)
+            assert isinstance(definitions.supremum(tau, sigma), TermType)
+            assert isinstance(definitions.infimum(tau, sigma), NoneType)
         else:
-            assert isinstance(definitions.minfimum_minus(tau, sigma), AnyType)
-            assert isinstance(definitions.minfimum_plus(tau, sigma), AnyType)
+            assert isinstance(definitions.supremum(tau, sigma), AnyType)
+            assert isinstance(definitions.infimum(tau, sigma), AnyType)

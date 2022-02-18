@@ -227,7 +227,7 @@ def pattern_match_aux(
                     kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
                     args={"identifier": pattern.identifier, "tau": tau, "sigma": sigma},
                 )
-            if types.is_allowed(mu := types.minfimum_plus(tau, sigma)):
+            if types.is_allowed(mu := types.infimum(tau, sigma)):
                 gamma_env[pattern.identifier] = mu
                 return PatternMatchReturnType(gamma_env, lambda env: env[pattern.identifier])  # type: ignore
             return BasePatternError(
@@ -246,7 +246,7 @@ def pattern_match_aux(
                     kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
                     args={"identifier": pattern.identifier, "tau": tau, "sigma": sigma},
                 )
-            elif types.is_allowed(mu := types.minfimum_plus(tau, sigma)):
+            elif types.is_allowed(mu := types.infimum(tau, sigma)):
                 return PatternMatchReturnType(gamma_env, lambda env: mu)
             return BasePatternError(
                 kind=PatternErrorEnum.incompatible_type_for_pinned_variable,
@@ -277,7 +277,7 @@ def pattern_match_aux(
             return NestedPatternError(
                 error=aux_tail, context=ListPatternContext(head=False, pattern=pattern)
             )
-        return PatternMatchReturnType(gamma_env, lambda env: types.minfimum_minus(types.ListType(aux_head.mapping(env)), aux_tail.mapping(env)))  # type: ignore
+        return PatternMatchReturnType(gamma_env, lambda env: types.supremum(types.ListType(aux_head.mapping(env)), aux_tail.mapping(env)))  # type: ignore
     elif isinstance(pattern, TuplePattern) and isinstance(tau, types.TupleType):
         # TP_TUPLE
         if len(pattern.items) != len(tau.types):

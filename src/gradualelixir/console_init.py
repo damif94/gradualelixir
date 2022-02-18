@@ -51,20 +51,6 @@ def is_materialization(tau, sigma) -> bool:
     )
 
 
-def is_msubtype_plus(tau, sigma) -> bool:
-    return type_definitions.is_msubtype_plus(
-        type_utils.parse_type(tau),
-        type_utils.parse_type(sigma),
-    )
-
-
-def is_msubtype_minus(tau, sigma) -> bool:
-    return type_definitions.is_msubtype_minus(
-        type_utils.parse_type(tau),
-        type_utils.parse_type(sigma),
-    )
-
-
 def supremum(tau, sigma):
     return type_utils.unparse_type(
         type_definitions.supremum(
@@ -81,25 +67,9 @@ def infimum(tau, sigma):
     )
 
 
-def msupremum_plus(tau, sigma):
-    return type_utils.unparse_type(
-        type_definitions.msupremum_plus(
-            type_utils.parse_type(tau), type_utils.parse_type(sigma)
-        )
-    )
-
-
-def msupremum_minus(tau, sigma):
-    return type_utils.unparse_type(
-        type_definitions.msupremum_minus(
-            type_utils.parse_type(tau), type_utils.parse_type(sigma)
-        )
-    )
-
-
 def minfimum_plus(tau, sigma):
     return type_utils.unparse_type(
-        type_definitions.minfimum_plus(
+        type_definitions.infimum(
             type_utils.parse_type(tau), type_utils.parse_type(sigma)
         )
     )
@@ -107,7 +77,7 @@ def minfimum_plus(tau, sigma):
 
 def minfimum_minus(tau, sigma):
     return type_utils.unparse_type(
-        type_definitions.minfimum_minus(
+        type_definitions.supremum(
             type_utils.parse_type(tau), type_utils.parse_type(sigma)
         )
     )

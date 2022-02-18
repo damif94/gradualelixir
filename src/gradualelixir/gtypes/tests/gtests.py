@@ -5,14 +5,14 @@ from gradualelixir.gtypes.definitions import (
     TermType,
     TupleType,
     TypeException,
-    TypeExceptionEnum,
+    TypeErrorEnum,
     infimum,
     is_materialization,
     is_msubtype_plus,
     is_static_type,
     is_subtype,
-    minfimum_minus,
-    minfimum_plus,
+    supremum,
+    infimum,
     supremum,
 )
 from gradualelixir.gtypes.generators import generate_materializations
@@ -39,8 +39,8 @@ def test_lattice_relations():
             assert is_subtype(infimum(tau1, sigma1), infimum(tau2, sigma2))
         except TypeException as e:
             assert (
-                e.reason
-                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
         except AssertionError as e:
             print(tau1)
@@ -64,15 +64,15 @@ def test_top_and_bottom_of_lattice():
                 is_subtype(tau, TermType())
             except TypeException as e:
                 assert (
-                    e.reason
-                    == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                        e.kind
+                        == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
                 )
             try:
                 is_subtype(NoneType(), tau)
             except TypeException as e:
                 assert (
-                    e.reason
-                    == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                        e.kind
+                        == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
                 )
 
 
@@ -84,8 +84,8 @@ def test_supremum_is_defined_or_blame_any_and_something_else():
             supremum(tau1, tau2)
         except TypeException as e:
             assert (
-                e.reason
-                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
 
 
@@ -97,8 +97,8 @@ def test_infimum_is_defined_or_blame_any_and_something_else():
             infimum(tau1, tau2)
         except TypeException as e:
             assert (
-                e.reason
-                is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    is TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
 
 
@@ -118,8 +118,8 @@ def test_supremum_is_commutative():
             supremum(tau, sigma)
         except TypeException as e:
             assert (
-                e.reason
-                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
         else:
             print(tau)
@@ -145,8 +145,8 @@ def test_supremum_on_tuples():
             )
         except TypeException as e:
             assert (
-                e.reason
-                == TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    == TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
 
 
@@ -165,8 +165,8 @@ def test_supremum_on_functions():
             print("-------------------")
         except TypeException as e:
             assert (
-                e.reason
-                is TypeExceptionEnum.supremum_does_not_exist_for_any_and_something_else
+                    e.kind
+                    is TypeErrorEnum.supremum_does_not_exist_for_any_and_something_else
             )
         else:
             assert FunctionType([s1, s2], s3) == supremum(
@@ -182,24 +182,24 @@ def test_materialization_and_msupremmum():
         )
         if isinstance(tau1, TupleType) and isinstance(sigma1, TupleType):
             print(
-                str(tau1) + " " + str(sigma1) + " " + str(minfimum_minus(tau1, sigma1))
+                str(tau1) + " " + str(sigma1) + " " + str(supremum(tau1, sigma1))
             )
             print(
-                str(tau2) + " " + str(sigma2) + " " + str(minfimum_minus(tau2, sigma2))
+                str(tau2) + " " + str(sigma2) + " " + str(supremum(tau2, sigma2))
             )
             print(
-                str(tau1) + " " + str(sigma1) + " " + str(minfimum_plus(tau1, sigma1))
+                str(tau1) + " " + str(sigma1) + " " + str(infimum(tau1, sigma1))
             )
             print(
-                str(tau2) + " " + str(sigma2) + " " + str(minfimum_plus(tau2, sigma2))
+                str(tau2) + " " + str(sigma2) + " " + str(infimum(tau2, sigma2))
             )
             print(i)
             print(
                 "---------------------------------------------------------------------"
             )
         assert is_materialization(
-            minfimum_plus(tau1, sigma1), minfimum_plus(tau2, sigma2)
+            infimum(tau1, sigma1), infimum(tau2, sigma2)
         )
         assert is_materialization(
-            minfimum_minus(tau1, sigma1), minfimum_minus(tau2, sigma2)
+            supremum(tau1, sigma1), supremum(tau2, sigma2)
         )
