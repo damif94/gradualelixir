@@ -7,16 +7,23 @@ T = t.TypeVar("T")
 
 
 def parse_type(x):
-    if x == "boolean":
-        return definitions.BooleanType()
-    if x == "integer":
-        return definitions.IntegerType()
-    if x == "float":
-        return definitions.FloatType()
-    if x == "number":
-        return definitions.NumberType()
-    if x == "any":
-        return definitions.AnyType()
+    if isinstance(x, bool):
+        return definitions.AtomLiteralType(atom="true" if x else "false")
+    if isinstance(x, str):
+        if x.startswith(":"):
+            return definitions.AtomLiteralType(atom=x[1:])
+        if x == "boolean":
+            return definitions.BooleanType()
+        if x == "atom":
+            return definitions.AtomType()
+        if x == "integer":
+            return definitions.IntegerType()
+        if x == "float":
+            return definitions.FloatType()
+        if x == "number":
+            return definitions.NumberType()
+        if x == "any":
+            return definitions.AnyType()
     if isinstance(x, tuple):
         if len(x) >= 2 and x[-2] == "->":
             return definitions.FunctionType(
@@ -28,7 +35,7 @@ def parse_type(x):
         return definitions.MapType({k: parse_type(x[k]) for k in x})
     if isinstance(x, list):
         if len(x) == 0:
-           return definitions.ElistType()
+            return definitions.ElistType()
         assert len(x) == 1
         return definitions.ListType(parse_type(x[0]))
 
@@ -36,6 +43,12 @@ def parse_type(x):
 def unparse_type(x):
     if isinstance(x, definitions.BooleanType):
         return "boolean"
+    if isinstance(x, definitions.AtomLiteralType):
+        if x.atom in ["true", "false"]:
+            return x.atom == "true"
+        return str(x)
+    if isinstance(x, definitions.AtomType):
+        return "atom"
     if isinstance(x, definitions.IntegerType):
         return "integer"
     if isinstance(x, definitions.FloatType):

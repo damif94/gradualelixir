@@ -1,13 +1,9 @@
 from collections import OrderedDict
 
-from .definitions import (
-    ListPatternContext,
-    MapPatternContext,
-    PatternErrorEnum,
-    TuplePatternContext,
-)
-from . import definitions, utils
 from ..gtypes import utils as type_utils
+from . import definitions, utils
+from .definitions import (ListPatternContext, MapPatternContext,
+                          PatternErrorEnum, TuplePatternContext)
 
 integer = "integer"
 float = "float"
@@ -155,8 +151,8 @@ def test_tp_varn():
 
 
 def test_tp_elist():
-    assert_pattern_match_ok(([], [none], {}, {}), ([none], {}))
-    assert_pattern_match_ok(([], [number], {}, {}), ([none], {}))
+    assert_pattern_match_ok(([], [], {}, {}), ([], {}))
+    assert_pattern_match_ok(([], [number], {}, {}), ([], {}))
     assert_pattern_match_error(
         ([], integer, {}, {}),
         context_path=[PatternErrorEnum.incompatible_constructors_error],
@@ -376,7 +372,7 @@ def test_tp_any():
     assert_pattern_match_ok((px, any, {}, {x: integer}), (any, {}))
     assert_pattern_match_ok((px, integer, {}, {x: any}), (any, {}))
 
-    assert_pattern_match_ok(([], any, {}, {}), ([none], {}))
+    assert_pattern_match_ok(([], any, {}, {}), ([], {}))
 
     assert_pattern_match_ok(([x], any, {}, {}), ([any], {x: any}))
     assert_pattern_match_ok(([x], any, {x: integer}, {}), ([any], {x: any}))

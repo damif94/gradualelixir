@@ -3,14 +3,8 @@ import random
 import typing as t
 
 import rpyc
-from gradualelixir.gtypes.definitions import (
-    FunctionType,
-    ListType,
-    MapType,
-    TupleType,
-    Type,
-    is_subtype,
-)
+from gradualelixir.gtypes.definitions import (FunctionType, ListType, MapType,
+                                              TupleType, Type, is_subtype)
 from gradualelixir.gtypes.utils import flatten, parse_type, unzip
 
 T = t.TypeVar("T")

@@ -20,6 +20,32 @@ class BooleanType(Type):
 
 
 @dataclass
+class AtomType(Type):
+    def __str__(self):
+        return "atom"
+
+
+@dataclass
+class AtomLiteralType(Type):
+    atom: str
+
+    def __init__(self, atom):
+        if atom == ":true":
+            self.atom = "true"
+        elif atom == ":false":
+            self.atom = "false"
+        else:
+            self.atom = atom
+
+    def __str__(self):
+        if self.atom:
+            if self.atom in ["true", "false"]:
+                return self.atom
+            return ":" + self.atom
+        return "atom"
+
+
+@dataclass
 class FloatType(Type):
     def __str__(self):
         return "float"
@@ -47,9 +73,9 @@ class TupleType(Type):
 
 @dataclass
 class ElistType(Type):
-
     def __str__(self):
         return "[]"
+
 
 @dataclass
 class ListType(Type):
@@ -97,15 +123,23 @@ class SupremumError(TypingError):
     reason = TypeErrorEnum.supremum_does_not_exist
 
     def __init__(self, supremum: bool):
-        self.args = ('supremum' if supremum else 'infimum',)
+        self.args = ("supremum" if supremum else "infimum",)
 
 
-base_types: t.List[Type] = [
-    BooleanType(),
-    IntegerType(),
-    FloatType(),
-    NumberType(),
-]
+def is_base_type(tau: Type) -> bool:
+    return any(
+        [
+            isinstance(tau, klass)
+            for klass in [
+                AtomLiteralType,
+                AtomType,
+                BooleanType,
+                IntegerType,
+                FloatType,
+                NumberType,
+            ]
+        ]
+    )
 
 
 def grounding(tau: t.Union[ListType, TupleType, MapType, FunctionType]) -> Type:
@@ -121,10 +155,19 @@ def grounding(tau: t.Union[ListType, TupleType, MapType, FunctionType]) -> Type:
 
 
 def is_base_subtype(tau: Type, sigma: Type) -> bool:
-    assert tau in base_types and sigma in base_types
+    assert is_base_type(tau) and is_base_type(sigma)
     if any(
         [
             tau == sigma,
+            isinstance(tau, AtomLiteralType)
+            and tau.atom in ["true", "false"]
+            and isinstance(sigma, BooleanType),
+            isinstance(tau, BooleanType) and isinstance(sigma, AtomType),
+            isinstance(tau, AtomLiteralType)
+            and isinstance(sigma, AtomLiteralType)
+            and tau.atom == sigma.atom,
+            isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomType),
+            isinstance(tau, AtomType) and isinstance(sigma, AtomType),
             isinstance(tau, IntegerType) and isinstance(sigma, NumberType),
             isinstance(tau, FloatType) and isinstance(sigma, NumberType),
         ]
@@ -134,11 +177,22 @@ def is_base_subtype(tau: Type, sigma: Type) -> bool:
 
 
 def base_supremum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
-    assert tau in base_types and sigma in base_types
+    assert is_base_type(tau) and is_base_type(sigma)
     if is_base_subtype(tau, sigma):
         return sigma
     if is_base_subtype(sigma, tau):
         return tau
+    if isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomLiteralType):
+        if tau.atom == "true" and sigma.atom == "false":
+            return BooleanType()
+        elif tau.atom == "false" and sigma.atom == "true":
+            return BooleanType()
+        else:
+            return AtomType()
+    if isinstance(tau, AtomLiteralType) and isinstance(sigma, BooleanType):
+        return AtomType()
+    if isinstance(tau, BooleanType) and isinstance(sigma, AtomLiteralType):
+        return AtomType()
     if isinstance(tau, IntegerType) and isinstance(sigma, FloatType):
         return NumberType()
     if isinstance(tau, FloatType) and isinstance(sigma, IntegerType):
@@ -147,7 +201,7 @@ def base_supremum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
 
 
 def base_infimum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
-    assert tau in base_types and sigma in base_types
+    assert is_base_type(tau) and is_base_type(sigma)
     if is_base_subtype(tau, sigma):
         return tau
     if is_base_subtype(sigma, tau):
@@ -158,7 +212,7 @@ def base_infimum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
 def is_static_type(tau: Type) -> bool:
     if isinstance(tau, AnyType):
         return False
-    elif tau in base_types:
+    elif is_base_type(tau):
         return True
     elif isinstance(tau, ElistType):
         return True
@@ -176,7 +230,7 @@ def is_static_type(tau: Type) -> bool:
 
 
 def is_higher_order(tau: Type) -> bool:
-    if tau in base_types:
+    if is_base_type(tau):
         return False
     elif isinstance(tau, AnyType):
         return False
@@ -194,10 +248,12 @@ def is_higher_order(tau: Type) -> bool:
 
 
 def is_subtype(tau: Type, sigma: Type) -> bool:
-    if tau in base_types and sigma in base_types:
+    if is_base_type(tau) and is_base_type(sigma):
         return is_base_subtype(tau, sigma)
     elif isinstance(tau, AnyType) or isinstance(sigma, AnyType):
-        return isinstance(tau, AnyType) and isinstance(sigma, AnyType)
+        return True
+    elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
+        return True
     elif isinstance(tau, ElistType) and isinstance(sigma, ListType):
         return True
     elif isinstance(tau, ListType) and isinstance(sigma, ListType):
@@ -215,21 +271,13 @@ def is_subtype(tau: Type, sigma: Type) -> bool:
             TupleType(types=sigma.arg_types), TupleType(types=tau.arg_types)
         ) and is_subtype(tau.ret_type, sigma.ret_type)
     else:
-        assert any(
-            [
-                tau in base_types and sigma not in base_types,
-                sigma in base_types and tau not in base_types,
-            ]
-        ) or all(
-            [tau not in base_types, sigma not in base_types, type(tau) != type(sigma)]
-        )
         return False
 
 
 def is_materialization(tau: Type, sigma: Type) -> bool:
     if isinstance(tau, AnyType):
         return True
-    elif tau in base_types and sigma in base_types and tau == sigma:
+    elif is_base_type(tau) and is_base_type(sigma) and tau == sigma:
         return True
     elif isinstance(tau, ElistType) or isinstance(sigma, ElistType):
         return True
@@ -274,10 +322,12 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
         return False
 
 
-def supremum_infimum_aux(tau: Type, sigma: Type, supremum=True) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux(
+    tau: Type, sigma: Type, supremum=True
+) -> t.Union[Type, TypingError]:
     if AnyType() in [tau, sigma]:
         return AnyType()
-    elif tau in base_types and sigma in base_types:
+    elif is_base_type(tau) and is_base_type(sigma):
         return base_supremum(tau, sigma) if supremum else base_infimum(tau, sigma)
     elif isinstance(tau, ElistType):
         if isinstance(sigma, ElistType):
@@ -324,7 +374,9 @@ def supremum_infimum_aux(tau: Type, sigma: Type, supremum=True) -> t.Union[Type,
         if len(tau.arg_types) == len(sigma.arg_types):
             types_acc = []
             for i in range(len(tau.arg_types)):
-                aux = supremum_infimum_aux(tau.arg_types[i], sigma.arg_types[i], not supremum)
+                aux = supremum_infimum_aux(
+                    tau.arg_types[i], sigma.arg_types[i], not supremum
+                )
                 if isinstance(aux, TypingError):
                     return aux
                 types_acc.append(aux)

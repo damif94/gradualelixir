@@ -8,7 +8,11 @@ def parse_pattern(x):
         return definitions.IntegerPattern(value=x)
     elif isinstance(x, float):
         return definitions.FloatPattern(value=x)
+    elif isinstance(x, bool):
+        return definitions.AtomPattern(value="true" if x else "false")
     elif isinstance(x, str):
+        if x.startswith(":"):
+            return definitions.AtomPattern(value=x[1:])
         if x == "_":
             return definitions.WildPattern()
         elif x.startswith("^"):

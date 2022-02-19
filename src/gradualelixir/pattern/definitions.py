@@ -1,6 +1,7 @@
 import enum
 import typing as t
 from dataclasses import dataclass
+
 from ..gtypes import definitions as types
 
 
@@ -58,6 +59,18 @@ class FloatPattern(LiteralPattern):
 
     def __str__(self):
         return str(self.value)
+
+
+@dataclass
+class AtomPattern(LiteralPattern):
+    value: str
+
+    def __init__(self, value: str):
+        self.type = types.AtomLiteralType(atom=value)
+        self.value = value
+
+    def __str__(self):
+        return str(self.type)
 
 
 @dataclass
@@ -212,7 +225,7 @@ def pattern_match_aux(
 ) -> t.Union[PatternMatchReturnType, PatternError]:
     if isinstance(pattern, LiteralPattern):
         # TP_LIT
-        if types.is_msubtype_minus(tau, pattern.type):
+        if types.is_subtype(tau, pattern.type):
             return PatternMatchReturnType(gamma_env, lambda domain: pattern.type)  # type: ignore
         else:
             return BasePatternError(
@@ -227,7 +240,7 @@ def pattern_match_aux(
                     kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
                     args={"identifier": pattern.identifier, "tau": tau, "sigma": sigma},
                 )
-            if types.is_allowed(mu := types.infimum(tau, sigma)):
+            if not isinstance(mu := types.infimum(tau, sigma), types.SupremumError):
                 gamma_env[pattern.identifier] = mu
                 return PatternMatchReturnType(gamma_env, lambda env: env[pattern.identifier])  # type: ignore
             return BasePatternError(
@@ -246,7 +259,7 @@ def pattern_match_aux(
                     kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
                     args={"identifier": pattern.identifier, "tau": tau, "sigma": sigma},
                 )
-            elif types.is_allowed(mu := types.infimum(tau, sigma)):
+            elif not isinstance(mu := types.infimum(tau, sigma), types.SupremumError):
                 return PatternMatchReturnType(gamma_env, lambda env: mu)
             return BasePatternError(
                 kind=PatternErrorEnum.incompatible_type_for_pinned_variable,
@@ -262,9 +275,7 @@ def pattern_match_aux(
         return PatternMatchReturnType(gamma_env, lambda env: tau)
     elif isinstance(pattern, ElistPattern) and isinstance(tau, types.ListType):
         # TP_ELIST
-        return PatternMatchReturnType(
-            gamma_env, lambda env: types.ListType(types.NoneType())
-        )
+        return PatternMatchReturnType(gamma_env, lambda env: types.ElistType())
     elif isinstance(pattern, ListPattern) and isinstance(tau, types.ListType):
         # TP_LIST
         aux_head = pattern_match_aux(pattern.head, tau.type, gamma_env, sigma_env)

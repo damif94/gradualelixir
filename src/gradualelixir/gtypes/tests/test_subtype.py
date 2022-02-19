@@ -1,15 +1,8 @@
 import pytest
 
 from .. import generators, utils
-from ..definitions import (
-    FunctionType,
-    ListType,
-    NoneType,
-    TermType,
-    TupleType,
-    is_static_type,
-    is_subtype,
-)
+from ..definitions import (FunctionType, ListType, NoneType, TermType,
+                           TupleType, is_static_type, is_subtype)
 
 TEST_ITERATIONS = 1000
 
