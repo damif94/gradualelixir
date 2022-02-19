@@ -1,33 +1,33 @@
 from collections import OrderedDict
 
-from .. import definitions, utils
+from gradualelixir import types, utils
 
-integer = "integer"
-float = "float"
-number = "number"
-boolean = "boolean"
-any = "any"
-atom = "atom"
+integer = 'integer'
+float = 'float'
+number = 'number'
+boolean = 'boolean'
+any = 'any'
+atom = 'atom'
 true = True
 false = False
 
 
 def supremum(sigma, tau):
-    result = definitions.supremum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, definitions.SupremumError):
+    result = types.supremum(utils.parse_type(tau), utils.parse_type(sigma))
+    if isinstance(result, types.SupremumError):
         return result
     return utils.unparse_type(result)
 
 
 def infimum(sigma, tau):
-    result = definitions.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, definitions.SupremumError):
+    result = types.infimum(utils.parse_type(tau), utils.parse_type(sigma))
+    if isinstance(result, types.SupremumError):
         return result
     return utils.unparse_type(result)
 
 
 def is_subtype(tau, sigma):
-    return definitions.is_subtype(utils.parse_type(tau), utils.parse_type(sigma))
+    return types.is_subtype(utils.parse_type(tau), utils.parse_type(sigma))
 
 
 def sett(*args):
@@ -51,14 +51,14 @@ def assert_infimum_ok(input, output):
 
 def assert_supremum_error(sigma, tau, sup=True):
     result = supremum(sigma, tau)
-    assert isinstance(result, definitions.SupremumError)
-    assert result.args[0] == "supremum" if sup else "infimum"
+    assert isinstance(result, types.SupremumError)
+    assert result.args[0] == 'supremum' if sup else 'infimum'
 
 
 def assert_infimum_error(sigma, tau, sup=False):
     result = infimum(sigma, tau)
-    assert isinstance(result, definitions.SupremumError)
-    assert result.args[0] == "supremum" if sup else "infimum"
+    assert isinstance(result, types.SupremumError)
+    assert result.args[0] == 'supremum' if sup else 'infimum'
 
 
 def test_subtype_base():
@@ -66,7 +66,7 @@ def test_subtype_base():
     assert is_subtype(integer, number)
     assert is_subtype(float, float)
     assert is_subtype(float, number)
-    assert is_subtype(":a", atom)
+    assert is_subtype(':a', atom)
     assert is_subtype(true, boolean)
     assert is_subtype(false, boolean)
     assert is_subtype(true, atom)
@@ -75,7 +75,7 @@ def test_subtype_base():
 
     assert not is_subtype(number, integer)
     assert not is_subtype(number, float)
-    assert not is_subtype(atom, ":a")
+    assert not is_subtype(atom, ':a')
     assert not is_subtype(boolean, true)
     assert not is_subtype(boolean, false)
     assert not is_subtype(atom, true)
@@ -171,36 +171,36 @@ def test_subtype_map():
 
 
 def test_subtype_function():
-    assert is_subtype(("->", integer), ("->", integer))
-    assert is_subtype((boolean, "->", integer), (boolean, "->", integer))
-    assert is_subtype((boolean, float, "->", integer), (boolean, float, "->", integer))
+    assert is_subtype(('->', integer), ('->', integer))
+    assert is_subtype((boolean, '->', integer), (boolean, '->', integer))
+    assert is_subtype((boolean, float, '->', integer), (boolean, float, '->', integer))
 
-    assert is_subtype(("->", integer), ("->", number))
-    assert is_subtype(("->", any), ("->", number))
-    assert is_subtype(("->", integer), ("->", any))
-    assert is_subtype((boolean, "->", integer), (boolean, "->", number))
-    assert is_subtype((atom, "->", integer), (boolean, "->", integer))
-    assert is_subtype((atom, "->", integer), (boolean, "->", number))
-    assert is_subtype((atom, "->", integer), (boolean, "->", any))
-    assert is_subtype((any, "->", integer), (boolean, "->", number))
-    assert is_subtype((any, "->", integer), (boolean, "->", any))
+    assert is_subtype(('->', integer), ('->', number))
+    assert is_subtype(('->', any), ('->', number))
+    assert is_subtype(('->', integer), ('->', any))
+    assert is_subtype((boolean, '->', integer), (boolean, '->', number))
+    assert is_subtype((atom, '->', integer), (boolean, '->', integer))
+    assert is_subtype((atom, '->', integer), (boolean, '->', number))
+    assert is_subtype((atom, '->', integer), (boolean, '->', any))
+    assert is_subtype((any, '->', integer), (boolean, '->', number))
+    assert is_subtype((any, '->', integer), (boolean, '->', any))
     assert is_subtype(
-        ((any, integer), "->", [integer]), ((boolean, integer), "->", [any])
+        ((any, integer), '->', [integer]), ((boolean, integer), '->', [any])
     )
 
-    assert not is_subtype(("->", integer), (any, "->", integer))
-    assert not is_subtype(("->", integer), (boolean, "->", integer))
-    assert not is_subtype((any, "->", integer), ("->", integer))
-    assert not is_subtype((boolean, "->", integer), ("->", integer))
-    assert not is_subtype((any, "->", integer), (boolean, integer, "->", integer))
-    assert not is_subtype((boolean, integer, "->", integer), (any, "->", integer))
-    assert not is_subtype((boolean, integer, "->", integer), (integer, "->", integer))
+    assert not is_subtype(('->', integer), (any, '->', integer))
+    assert not is_subtype(('->', integer), (boolean, '->', integer))
+    assert not is_subtype((any, '->', integer), ('->', integer))
+    assert not is_subtype((boolean, '->', integer), ('->', integer))
+    assert not is_subtype((any, '->', integer), (boolean, integer, '->', integer))
+    assert not is_subtype((boolean, integer, '->', integer), (any, '->', integer))
+    assert not is_subtype((boolean, integer, '->', integer), (integer, '->', integer))
 
-    assert not is_subtype(("->", number), ("->", integer))
-    assert not is_subtype((boolean, "->", integer), (atom, "->", number))
-    assert not is_subtype((boolean, "->", integer), ([boolean], "->", integer))
-    assert not is_subtype((atom, "->", number), (boolean, "->", integer))
-    assert not is_subtype((atom, "->", number), (boolean, "->", (any,)))
+    assert not is_subtype(('->', number), ('->', integer))
+    assert not is_subtype((boolean, '->', integer), (atom, '->', number))
+    assert not is_subtype((boolean, '->', integer), ([boolean], '->', integer))
+    assert not is_subtype((atom, '->', number), (boolean, '->', integer))
+    assert not is_subtype((atom, '->', number), (boolean, '->', (any,)))
 
 
 def test_supremum_base():
@@ -228,18 +228,18 @@ def test_supremum_base():
     assert_supremum_ok((false, boolean), boolean)
     assert_supremum_ok((boolean, false), boolean)
 
-    assert_supremum_ok((":a", ":a"), ":a")
-    assert_supremum_ok((":b", ":b"), ":b")
-    assert_supremum_ok((":a", ":b"), atom)
-    assert_supremum_ok((":b", ":a"), atom)
+    assert_supremum_ok((':a', ':a'), ':a')
+    assert_supremum_ok((':b', ':b'), ':b')
+    assert_supremum_ok((':a', ':b'), atom)
+    assert_supremum_ok((':b', ':a'), atom)
 
-    assert_supremum_ok((true, ":a"), atom)
-    assert_supremum_ok((false, ":a"), atom)
-    assert_supremum_ok((":a", true), atom)
-    assert_supremum_ok((":a", false), atom)
+    assert_supremum_ok((true, ':a'), atom)
+    assert_supremum_ok((false, ':a'), atom)
+    assert_supremum_ok((':a', true), atom)
+    assert_supremum_ok((':a', false), atom)
 
-    assert_supremum_ok((":a", boolean), atom)
-    assert_supremum_ok((boolean, ":a"), atom)
+    assert_supremum_ok((':a', boolean), atom)
+    assert_supremum_ok((boolean, ':a'), atom)
 
 
 def test_infimum_base():
@@ -265,18 +265,18 @@ def test_infimum_base():
     assert_infimum_error((false, boolean), false)
     assert_infimum_error((boolean, false), false)
 
-    assert_infimum_ok((":a", ":a"), ":a")
-    assert_infimum_ok((":b", ":b"), ":b")
-    assert_infimum_error(":a", ":b")
-    assert_infimum_error(":b", ":a")
+    assert_infimum_ok((':a', ':a'), ':a')
+    assert_infimum_ok((':b', ':b'), ':b')
+    assert_infimum_error(':a', ':b')
+    assert_infimum_error(':b', ':a')
 
-    assert_infimum_error(true, ":a")
-    assert_infimum_error(false, ":a")
-    assert_infimum_error(":a", true)
-    assert_infimum_error(":a", false)
+    assert_infimum_error(true, ':a')
+    assert_infimum_error(false, ':a')
+    assert_infimum_error(':a', true)
+    assert_infimum_error(':a', false)
 
-    assert_infimum_error(":a", boolean)
-    assert_infimum_error(boolean, ":a")
+    assert_infimum_error(':a', boolean)
+    assert_infimum_error(boolean, ':a')
 
 
 def test_supremum_list():
@@ -424,44 +424,44 @@ def test_infimum_map():
 
 
 def test_supremum_function():
-    assert_supremum_ok((("->", integer), ("->", integer)), ("->", integer))
-    assert_supremum_ok((("->", integer), ("->", float)), ("->", number))
-    assert_supremum_ok((("->", float), ("->", integer)), ("->", number))
+    assert_supremum_ok((('->', integer), ('->', integer)), ('->', integer))
+    assert_supremum_ok((('->', integer), ('->', float)), ('->', number))
+    assert_supremum_ok((('->', float), ('->', integer)), ('->', number))
     assert_supremum_ok(
-        ((sett(1), "->", ()), (sett(2), "->", ())), (sett(1, 2), "->", ())
+        ((sett(1), '->', ()), (sett(2), '->', ())), (sett(1, 2), '->', ())
     )
     assert_supremum_ok(
-        ((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(1, 2), "->", sett())
+        ((sett(1), '->', sett(1)), (sett(2), '->', sett(2))), (sett(1, 2), '->', sett())
     )
     assert_supremum_ok(
-        ((sett(1), sett(3), "->", sett(1)), (sett(2), sett(4), "->", sett(2))),
-        (sett(1, 2), sett(3, 4), "->", sett()),
+        ((sett(1), sett(3), '->', sett(1)), (sett(2), sett(4), '->', sett(2))),
+        (sett(1, 2), sett(3, 4), '->', sett()),
     )
-    assert_supremum_error(("->", ()), (float, "->", ()))
-    assert_infimum_error((integer, "->", ()), (boolean, "->", ()), sup=True)
-    assert_infimum_error((integer, "->", integer), (integer, "->", boolean))
-    assert_supremum_error(("->", integer), (integer, "->", integer))
-    assert_supremum_error(("->", integer), (integer, integer, "->", integer))
-    assert_supremum_error((integer, "->", integer), (integer, integer, "->", integer))
+    assert_supremum_error(('->', ()), (float, '->', ()))
+    assert_infimum_error((integer, '->', ()), (boolean, '->', ()), sup=True)
+    assert_infimum_error((integer, '->', integer), (integer, '->', boolean))
+    assert_supremum_error(('->', integer), (integer, '->', integer))
+    assert_supremum_error(('->', integer), (integer, integer, '->', integer))
+    assert_supremum_error((integer, '->', integer), (integer, integer, '->', integer))
 
 
 def test_infimum_function():
-    assert_infimum_ok((("->", integer), ("->", integer)), ("->", integer))
-    assert_infimum_ok((("->", sett(1)), ("->", sett(2))), ("->", sett(1, 2)))
-    assert_infimum_ok((("->", sett(2)), ("->", sett(1))), ("->", sett(1, 2)))
-    assert_infimum_ok(((sett(1), "->", ()), (sett(2), "->", ())), (sett(), "->", ()))
+    assert_infimum_ok((('->', integer), ('->', integer)), ('->', integer))
+    assert_infimum_ok((('->', sett(1)), ('->', sett(2))), ('->', sett(1, 2)))
+    assert_infimum_ok((('->', sett(2)), ('->', sett(1))), ('->', sett(1, 2)))
+    assert_infimum_ok(((sett(1), '->', ()), (sett(2), '->', ())), (sett(), '->', ()))
     assert_infimum_ok(
-        ((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(), "->", sett(1, 2))
+        ((sett(1), '->', sett(1)), (sett(2), '->', sett(2))), (sett(), '->', sett(1, 2))
     )
     assert_infimum_ok(
-        ((sett(1), sett(3), "->", sett(1)), (sett(2), sett(4), "->", sett(2))),
-        (sett(), sett(), "->", sett(1, 2)),
+        ((sett(1), sett(3), '->', sett(1)), (sett(2), sett(4), '->', sett(2))),
+        (sett(), sett(), '->', sett(1, 2)),
     )
-    assert_supremum_error((integer, "->", ()), (float, "->", ()), sup=False)
-    assert_supremum_error((integer, "->", integer), (integer, "->", boolean))
-    assert_infimum_error(("->", integer), (integer, "->", integer))
-    assert_infimum_error(("->", integer), (integer, integer, "->", integer))
-    assert_infimum_error((integer, "->", integer), (integer, integer, "->", integer))
+    assert_supremum_error((integer, '->', ()), (float, '->', ()), sup=False)
+    assert_supremum_error((integer, '->', integer), (integer, '->', boolean))
+    assert_infimum_error(('->', integer), (integer, '->', integer))
+    assert_infimum_error(('->', integer), (integer, integer, '->', integer))
+    assert_infimum_error((integer, '->', integer), (integer, integer, '->', integer))
 
 
 def test_supremum_any():
@@ -471,12 +471,12 @@ def test_supremum_any():
     assert_supremum_ok(((any, integer), (float, any)), (any, any))
     assert_supremum_ok(({1: any}, {1: integer, 2: float}), {1: any})
     assert_supremum_ok(
-        ((sett(1), any, "->", integer), (sett(2), any, "->", integer)),
-        (sett(1, 2), any, "->", integer),
+        ((sett(1), any, '->', integer), (sett(2), any, '->', integer)),
+        (sett(1, 2), any, '->', integer),
     )
     assert_supremum_ok(
-        ((any, sett(1), "->", integer), (sett(2), any, "->", integer)),
-        (any, any, "->", integer),
+        ((any, sett(1), '->', integer), (sett(2), any, '->', integer)),
+        (any, any, '->', integer),
     )
 
 
@@ -488,10 +488,10 @@ def test_infimum_any():
     assert_infimum_ok(({1: any}, {1: integer, 2: float}), {1: any, 2: float})
     assert_infimum_ok(({1: any}, {1: any, 2: float}), {1: any, 2: float})
     assert_infimum_ok(
-        ((sett(1), any, "->", integer), (sett(2), any, "->", integer)),
-        (sett(), any, "->", integer),
+        ((sett(1), any, '->', integer), (sett(2), any, '->', integer)),
+        (sett(), any, '->', integer),
     )
     assert_infimum_ok(
-        ((any, sett(1), "->", integer), (sett(2), any, "->", integer)),
-        (any, any, "->", integer),
+        ((any, sett(1), '->', integer), (sett(2), any, '->', integer)),
+        (any, any, '->', integer),
     )
