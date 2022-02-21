@@ -8,12 +8,6 @@ class Type:
 
 
 @dataclass
-class IntegerType(Type):
-    def __str__(self):
-        return "integer"
-
-
-@dataclass
 class BooleanType(Type):
     def __str__(self):
         return "boolean"
@@ -25,8 +19,18 @@ class AtomType(Type):
         return "atom"
 
 
+class LiteralType(Type):
+    pass
+
+
 @dataclass
-class AtomLiteralType(Type):
+class IntegerType(LiteralType):
+    def __str__(self):
+        return "integer"
+
+
+@dataclass
+class AtomLiteralType(LiteralType):
     atom: str
 
     def __init__(self, atom):
@@ -46,7 +50,7 @@ class AtomLiteralType(Type):
 
 
 @dataclass
-class FloatType(Type):
+class FloatType(LiteralType):
     def __str__(self):
         return "float"
 
@@ -88,7 +92,7 @@ class ListType(Type):
 @dataclass
 class MapType(Type):
 
-    map_type: t.Dict[int, Type]
+    map_type: t.Dict[t.Union[int, float, str, bool], Type]
 
     def __str__(self):
         keys = self.map_type.keys()

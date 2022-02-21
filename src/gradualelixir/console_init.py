@@ -57,18 +57,6 @@ def infimum(tau, sigma):
     )
 
 
-def minfimum_plus(tau, sigma):
-    return utils.unparse_type(
-        gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
-
-
-def minfimum_minus(tau, sigma):
-    return utils.unparse_type(
-        gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
-
-
 def pattern_match(pat, tau, gamma_env, sigma_env):
     gamma_env = {k: utils.parse_type(v) for k, v in gamma_env.items()}
     sigma_env = {k: utils.parse_type(v) for k, v in sigma_env.items()}

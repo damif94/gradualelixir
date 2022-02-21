@@ -4,6 +4,18 @@ from dataclasses import dataclass
 from . import pattern
 from . import types as gtypes
 from .exception import SyntaxException
+from enum import Enum
+
+
+class UnaryOpEnum(Enum):
+    negation = "!"
+    negative = "-"
+
+
+class BinaryOpEnum(Enum):
+    conjunction = "and"
+    disjunction = "or"
+    sum = "+"
 
 
 class Expression:
@@ -96,7 +108,7 @@ class ListExpression(Expression):
 
 @dataclass
 class MapExpression(Expression):
-    map: t.OrderedDict[int, Expression]
+    map: t.OrderedDict[t.Union[int, float, bool, str], Expression]
 
     def __str__(self):
         keys = self.map.keys()
@@ -110,7 +122,35 @@ class PatternMatchExpression(Expression):
     expression: Expression
 
     def __str__(self):
-        return f"{str(self.pattern)} = {str(self.expression)}"
+        return f"{self.pattern} = {self.expression}"
+
+
+@dataclass
+class SeqExpression(Expression):
+    left_expression: Expression
+    right_expression: Expression
+
+    def __str__(self):
+        return f"{self.left_expression}; {self.right_expression}"
+
+
+@dataclass
+class UnaryOpExpression(Expression):
+    op: UnaryOpEnum
+    expression: Expression
+
+    def __str__(self):
+        return f'{self.op.value}{self.expression}'
+
+
+@dataclass
+class BinaryOpExpression(Expression):
+    op: BinaryOpEnum
+    left_expression: Expression
+    right_expression: Expression
+
+    def __str__(self):
+        return f'{self.left_expression} {self.op.value} {self.right_expression}'
 
 
 @dataclass
@@ -174,7 +214,7 @@ class AnonymizedFunctionExpression(Expression):
 
 
 @dataclass
-class FunctionCall(Expression):
+class FunctionCallExpression(Expression):
     function_name: str
     arguments: t.List[Expression]
 
@@ -184,7 +224,7 @@ class FunctionCall(Expression):
 
 
 @dataclass
-class VarCall(Expression):
+class VarCallExpression(Expression):
     ident: str
     arguments: t.List[Expression]
 

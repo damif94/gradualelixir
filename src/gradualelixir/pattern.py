@@ -35,7 +35,7 @@ class PinIdentPattern(Pattern):
 @dataclass
 class LiteralPattern(Pattern):
     type: gtypes.Type
-    value: t.Any
+    value: t.Union[int, float, str, bool]
 
 
 @dataclass
@@ -94,7 +94,7 @@ class ListPattern(Pattern):
     tail: Pattern
 
     def __init__(self, head, tail):
-        if not (isinstance(tail, ListPattern) or isinstance(tail, ElistPattern)):
+        if not (isinstance(tail, ListPattern) or isinstance(tail, ElistPattern) or isinstance(tail, WildPattern)):
             raise SyntaxException(
                 "List pattern's tail should be either a List Pattern or an Elist Pattern"
             )
@@ -108,12 +108,25 @@ class ListPattern(Pattern):
 @dataclass
 class MapPattern(Pattern):
 
-    map: t.OrderedDict[int, Pattern]
+    map: t.OrderedDict[t.Union[int, float, bool, str], Pattern]
 
     def __str__(self):
         keys = self.map.keys()
         str_values = [str(v) for _, v in self.map.items()]
         return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
+
+
+def make_pattern_from_literal(value: t.Union[int, float, bool, str]) -> LiteralPattern:
+    if isinstance(value, int):
+        return IntegerPattern(value)
+    elif isinstance(value, float):
+        return FloatPattern(value)
+    elif isinstance(value, bool):
+        return AtomLiteralPattern("true" if value else "false")
+    else:
+        assert isinstance(value, str)
+        return AtomLiteralPattern(value)
+
 
 
 class PatternErrorEnum(enum.Enum):
@@ -172,7 +185,7 @@ class TuplePatternContext(PatternContext):
 @dataclass
 class MapPatternContext(PatternContext):
     pattern: MapPattern
-    key: int
+    key: t.Union[int, float, bool, str]
 
     def __str__(self):
         return f"In the pattern for key {self.key} inside {self.pattern}"
@@ -324,7 +337,7 @@ def pattern_match_aux(
             )
         else:
             mappings_map_acc: t.Dict[
-                int, t.Callable[[TypeEnv], gtypes.Type]
+                t.Union[int, float, bool, str], t.Callable[[TypeEnv], gtypes.Type]
             ] = {}
             gamma_env_aux = gamma_env
             for key in tau.map_type:
@@ -351,26 +364,6 @@ def pattern_match_aux(
             ground_tau = gtypes.MapType({k: tau for k in pattern.map})
         return pattern_match_aux(pattern, ground_tau, gamma_env, sigma_env)
     else:
-        assert any(
-            [
-                isinstance(pattern, ElistPattern),
-                isinstance(pattern, ListPattern),
-                isinstance(pattern, TuplePattern),
-                isinstance(pattern, MapPattern),
-            ]
-        )
-        assert any(
-            [
-                isinstance(pattern, ElistPattern)
-                and not isinstance(tau, gtypes.ListType),
-                isinstance(pattern, ListPattern)
-                and not isinstance(tau, gtypes.ListType),
-                isinstance(pattern, TuplePattern)
-                and not isinstance(tau, gtypes.TupleType),
-                isinstance(pattern, MapPattern) and not isinstance(tau, gtypes.MapType),
-                isinstance(tau, gtypes.FunctionType),
-            ]
-        )
         return BasePatternError(
             kind=PatternErrorEnum.incompatible_constructors_error,
             args={"pattern": pattern, "tau": tau},

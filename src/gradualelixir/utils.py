@@ -67,7 +67,7 @@ def unparse_type(x):
         return tuple([unparse_type(y) for y in x.types])
     if isinstance(x, gtypes.FunctionType):
         return tuple(
-            [unparse_type(y) for y in x.arg_gtypes]
+            [unparse_type(y) for y in x.arg_types]
             + ["->"]
             + [unparse_type(x.ret_type)]
         )
@@ -95,10 +95,9 @@ def parse_pattern(x):
     elif isinstance(x, tuple):
         return pattern.TuplePattern([parse_pattern(y) for y in x])
     if isinstance(x, dict):
-        map = OrderedDict()
-        for k, v in x.items():
-            map[k] = parse_pattern(v)
-        return pattern.MapPattern(map)
+        return pattern.MapPattern(
+            OrderedDict([(k, parse_pattern(v)) for k, v in x.items()])
+        )
     else:
         assert isinstance(x, list)
         if len(x) == 0:
