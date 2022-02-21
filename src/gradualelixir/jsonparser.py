@@ -47,11 +47,11 @@ def parse_pattern(j) -> pattern.Pattern:
         right_pattern = parse_pattern(right_node)
         return pattern.ListPattern(left_pattern, right_pattern)
 
-    tail_pat = pattern.ElistPattern()
+    tail_pattern: pattern.Pattern = pattern.ElistPattern()
     for node in reversed(j):
-        head_pat = parse_pattern(node)
-        tail_pat = pattern.ListPattern(head_pat, tail_pat)
-    return tail_pat
+        head_pattern = parse_pattern(node)
+        tail_pattern = pattern.ListPattern(head_pattern, tail_pattern)
+    return tail_pattern
 
 
 def parse_expression(j) -> expression.Expression:
@@ -94,22 +94,24 @@ def parse_expression(j) -> expression.Expression:
                     else_expr = parse_expression(do_node["else"])
                 return expression.IfExpression(cond_expr, if_expr, else_expr)
             elif op == "case":
-                pattern_node, clause_nodes = children_nodes
-                pat = parse_pattern(pattern_node)
-                items = []
-                for test_node, do_node in clause_nodes:
-                    test_pat = parse_pattern(test_node)
-                    do_expr = parse_expression(do_node)
-                    items += (test_pat, do_expr)
-                return expression.CaseExpression(pat, items)
+                case_node, clause_nodes = children_nodes
+                case_expression = parse_expression(case_node)
+                branches = []
+                for _, _, node in clause_nodes["do"]:
+                    test_pattern = parse_pattern(node[0][0])
+                    do_expression = parse_expression(node[1])
+                    branches.append((test_pattern, do_expression))
+                return expression.CaseExpression(case_expression, branches)
             elif op == "cond":
                 clause_nodes = children_nodes
-                items = []
-                for cond_node, do_node in clause_nodes:
-                    cond_expr = parse_expression(cond_node)
-                    do_expr = parse_expression(do_node)
-                    items += (cond_expr, do_expr)
-                return expression.CondExpression(items)
+                branches = []
+                for _, _, node in clause_nodes[0]["do"]:
+                    cond_node = node[0][0]
+                    do_node = node[1]
+                    cond_expression = parse_expression(cond_node)
+                    do_expression = parse_expression(do_node)
+                    branches.append((cond_expression, do_expression))  # type: ignore
+                return expression.CondExpression(branches)
             elif op == "__block__":
                 left_expression = parse_expression(children_nodes[0])
                 if len(children_nodes) == 1:
@@ -117,6 +119,23 @@ def parse_expression(j) -> expression.Expression:
                 else:
                     right_expression = parse_expression([op, meta, children_nodes[1:]])
                     return expression.SeqExpression(left_expression, right_expression)
+            elif aux := [
+                symbol
+                for symbol in list(expression.UnaryOpEnum)
+                + list(expression.BinaryOpEnum)
+                if symbol.value == op
+            ]:
+                if len(children_nodes) == 1:
+                    symbol = aux[0]
+                    assert symbol in expression.UnaryOpEnum
+                    arg_expression = parse_expression(children_nodes[0])
+                    return expression.UnaryOpExpression(symbol, arg_expression)
+                else:
+                    symbol = aux[0] if aux[0] in expression.BinaryOpEnum else aux[1]
+                    assert symbol in expression.BinaryOpEnum
+                    left_expression = parse_expression(children_nodes[0])
+                    right_expression = parse_expression(children_nodes[1])
+                    return expression.BinaryOpExpression(symbol, left_expression, right_expression)  # type: ignore
             elif children_nodes is None:
                 return expression.IdentExpression(j[0])
 
@@ -126,8 +145,10 @@ def parse_expression(j) -> expression.Expression:
             right_expression = parse_expression(right_node)
             return expression.ListExpression(left_expression, right_expression)
 
-        tail_expr = expression.ElistExpression()
+        tail_expression: expression.Expression = expression.ElistExpression()
         for node in reversed(j):
-            head_expr = parse_expression(node)
-            tail_expr = expression.ListExpression(head_expr, tail_expr)
-        return tail_expr
+            head_expression = parse_expression(node)
+            tail_expression = expression.ListExpression(
+                head_expression, tail_expression
+            )
+        return tail_expression

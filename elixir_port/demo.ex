@@ -1,5 +1,3 @@
-[
-  if x do
-    1
-  end
-
+if true do:
+  1
+end

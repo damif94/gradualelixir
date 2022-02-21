@@ -370,6 +370,13 @@ def test_tp_any():
     assert_pattern_match_ok((px, integer, {}, {x: any}), (any, {}))
 
     assert_pattern_match_ok(([], any, {}, {}), ([], {}))
+    assert_pattern_match_ok((["_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok(([1, "|", "_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok(([1, "|", [2]], any, {}, {}), ([integer], {}))
+    assert_pattern_match_ok((["_", "|", [2]], [integer], {}, {}), ([integer], {}))
+    assert_pattern_match_ok((["_", "|", [2]], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok((["_", "|", "_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok((["_", "|", ["_"]], any, {}, {}), ([any], {}))
 
     assert_pattern_match_ok(([x], any, {}, {}), ([any], {x: any}))
     assert_pattern_match_ok(([x], any, {x: integer}, {}), ([any], {x: any}))

@@ -94,7 +94,11 @@ class ListPattern(Pattern):
     tail: Pattern
 
     def __init__(self, head, tail):
-        if not (isinstance(tail, ListPattern) or isinstance(tail, ElistPattern) or isinstance(tail, WildPattern)):
+        if not (
+            isinstance(tail, ListPattern)
+            or isinstance(tail, ElistPattern)
+            or isinstance(tail, WildPattern)
+        ):
             raise SyntaxException(
                 "List pattern's tail should be either a List Pattern or an Elist Pattern"
             )
@@ -128,7 +132,6 @@ def make_pattern_from_literal(value: t.Union[int, float, bool, str]) -> LiteralP
         return AtomLiteralPattern(value)
 
 
-
 class PatternErrorEnum(enum.Enum):
     incompatible_type_for_variable = (
         "Couldn't match identifier {identifier}'s current type {sigma} with {tau}"
@@ -138,9 +141,7 @@ class PatternErrorEnum(enum.Enum):
         "Can't match {identifier}'s current type {tau} against {sigma}. "
         "Arrow types can only be used for assignment in pattern matches"
     )
-    incompatible_type_for_pinned_variable = (
-        "Couldn't match pinned identifier {identifier}'s current type {sigma} with {tau}"
-    )
+    incompatible_type_for_pinned_variable = "Couldn't match pinned identifier {identifier}'s current type {sigma} with {tau}"
     pinned_identifier_not_found_in_environment = (
         "Couldn't find pinned variable ^{identifier} in the environment"
     )
@@ -233,7 +234,10 @@ class PatternMatchReturnType:
 
 
 def pattern_match_aux(
-    pattern: Pattern, tau: gtypes.Type, gamma_env: TypeEnv, sigma_env: TypeEnv,
+    pattern: Pattern,
+    tau: gtypes.Type,
+    gamma_env: TypeEnv,
+    sigma_env: TypeEnv,
 ) -> t.Union[PatternMatchReturnType, PatternError]:
     if isinstance(pattern, LiteralPattern):
         # TP_LIT
@@ -371,7 +375,10 @@ def pattern_match_aux(
 
 
 def pattern_match(
-    pattern: Pattern, tau: gtypes.Type, gamma_env: TypeEnv, sigma_env: TypeEnv,
+    pattern: Pattern,
+    tau: gtypes.Type,
+    gamma_env: TypeEnv,
+    sigma_env: TypeEnv,
 ) -> t.Union[t.Tuple[gtypes.Type, TypeEnv], PatternError]:
     aux = pattern_match_aux(pattern, tau, gamma_env, sigma_env)
     if isinstance(aux, PatternError):

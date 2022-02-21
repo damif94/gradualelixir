@@ -67,9 +67,7 @@ def unparse_type(x):
         return tuple([unparse_type(y) for y in x.types])
     if isinstance(x, gtypes.FunctionType):
         return tuple(
-            [unparse_type(y) for y in x.arg_types]
-            + ["->"]
-            + [unparse_type(x.ret_type)]
+            [unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)]
         )
     else:
         assert isinstance(x, gtypes.MapType)
@@ -103,6 +101,8 @@ def parse_pattern(x):
         if len(x) == 0:
             return pattern.ElistPattern()
         else:
+            if len(x) == 3 and x[1] == "|":
+                return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[2]))
             return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[1:]))
 
 

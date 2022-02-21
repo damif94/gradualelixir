@@ -1,21 +1,45 @@
 import typing as t
 from dataclasses import dataclass
+from enum import Enum
 
 from . import pattern
 from . import types as gtypes
 from .exception import SyntaxException
-from enum import Enum
 
 
 class UnaryOpEnum(Enum):
     negation = "!"
     negative = "-"
+    absolute_value = "abs"
+
+    @property
+    def is_infix(self):
+        return self not in [UnaryOpEnum.absolute_value]
 
 
 class BinaryOpEnum(Enum):
     conjunction = "and"
     disjunction = "or"
     sum = "+"
+    subtraction = "-"
+    multiplication = "*"
+    division = "/"
+    integer_division = "div"
+    integer_reminder = "rem"
+    maximum = "max"
+    minimum = "min"
+    concatenation = "++"
+    unconcatenation = "--"
+    equality = "=="
+
+    @property
+    def is_infix(self):
+        return self not in [
+            BinaryOpEnum.integer_division,
+            BinaryOpEnum.integer_reminder,
+            BinaryOpEnum.maximum,
+            BinaryOpEnum.minimum,
+        ]
 
 
 class Expression:
@@ -92,9 +116,9 @@ class ElistExpression(Expression):
 @dataclass
 class ListExpression(Expression):
     head: Expression
-    tail: Expression
+    tail: t.Union["ListExpression", Expression]
 
-    def __init__(self, head, tail):
+    def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
         if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
             raise SyntaxException(
                 "List pattern's tail should be either a List Expression or an Elist Expression"
@@ -140,7 +164,10 @@ class UnaryOpExpression(Expression):
     expression: Expression
 
     def __str__(self):
-        return f'{self.op.value}{self.expression}'
+        if self.op.is_infix:
+            return f"{self.op.value}{self.expression}"
+        else:
+            return f"{self.op.value}({self.expression})"
 
 
 @dataclass
@@ -150,7 +177,10 @@ class BinaryOpExpression(Expression):
     right_expression: Expression
 
     def __str__(self):
-        return f'{self.left_expression} {self.op.value} {self.right_expression}'
+        if self.op.is_infix:
+            return f"{self.left_expression} {self.op.value} {self.right_expression}"
+        else:
+            return f"{self.op.value}({self.left_expression}, {self.right_expression})"
 
 
 @dataclass
@@ -160,10 +190,10 @@ class IfExpression(Expression):
     else_expression: t.Optional[Expression]
 
     def __str__(self):
-        res = f"if {self.condition} do:\n"
+        res = f"if {self.condition} do\n"
         res += f"{self.if_expression}\n"
         if self.else_expression:
-            res += "else:\n"
+            res += "else\n"
             res += f"{self.else_expression}\n"
         res += "end"
         return res
@@ -171,16 +201,22 @@ class IfExpression(Expression):
 
 @dataclass
 class CaseExpression(Expression):
-    pat: pattern.Pattern
+    expression: Expression
     clauses: t.List[t.Tuple[pattern.Pattern, Expression]]
 
-    def __init__(self, *args, **kwargs):
-        super(CaseExpression, self).__init__(*args, **kwargs)
-        if len(self.clauses) == 0:
+    def __init__(
+        self,
+        expression: Expression,
+        clauses: t.List[t.Tuple[pattern.Pattern, Expression]],
+    ):
+        super(CaseExpression, self).__init__()
+        if len(clauses) == 0:
             raise SyntaxException("case expression expects at least one clause")
+        self.expression = expression
+        self.clauses = clauses
 
     def __str__(self):
-        res = f"case {self.pat} do:\n"
+        res = f"case {self.expression} do\n"
         for clause in self.clauses:
             res += f"{clause[0]} -> {clause[1]}\n"
         res += "end"
@@ -191,13 +227,14 @@ class CaseExpression(Expression):
 class CondExpression(Expression):
     clauses: t.List[t.Tuple[Expression, Expression]]
 
-    def __init__(self, *args, **kwargs):
-        super(CondExpression, self).__init__(*args, **kwargs)
-        if len(self.clauses) == 0:
+    def __init__(self, clauses: t.List[t.Tuple[Expression, Expression]]):
+        super(CondExpression, self).__init__()
+        if len(clauses) == 0:
             raise SyntaxException("cond expression expects at least one clause")
+        self.clauses = clauses
 
     def __str__(self):
-        res = "cond do:\n"
+        res = "cond do\n"
         for clause in self.clauses:
             res += f"{clause[0]} -> {clause[1]}\n"
         res += "end"
