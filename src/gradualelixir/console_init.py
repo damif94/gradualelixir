@@ -3,12 +3,12 @@ from gradualelixir import pattern
 from gradualelixir import types as gtypes
 from gradualelixir import utils
 
-term = 'term'
-none = 'none'
-integer = 'integer'
-number = 'number'
-float = 'float'
-any = 'any'
+term = "term"
+none = "none"
+integer = "integer"
+number = "number"
+float = "float"
+any = "any"
 
 
 def is_base_subtype(tau, sigma) -> bool:

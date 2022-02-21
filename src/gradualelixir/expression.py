@@ -1,0 +1,193 @@
+import typing as t
+from dataclasses import dataclass
+
+from . import pattern
+from . import types as gtypes
+from .exception import SyntaxException
+
+
+class Expression:
+
+    # should be implemented in any derived instance
+    def __str__(self):
+        pass
+
+
+@dataclass
+class IdentExpression(Expression):
+    identifier: str
+
+    def __str__(self):
+        return self.identifier
+
+
+@dataclass
+class LiteralExpression(Expression):
+    type: gtypes.Type
+    value: t.Any
+
+
+@dataclass
+class IntegerExpression(LiteralExpression):
+    value: int
+
+    def __init__(self, value: int):
+        self.type = gtypes.IntegerType()
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+@dataclass
+class FloatExpression(LiteralExpression):
+    value: float
+
+    def __init__(self, value: float):
+        self.type = gtypes.FloatType()
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+@dataclass
+class AtomLiteralExpression(LiteralExpression):
+    value: str
+
+    def __init__(self, value: str):
+        self.type = gtypes.AtomLiteralType(atom=value)
+        self.value = value
+
+    def __str__(self):
+        return str(self.type)
+
+
+@dataclass
+class TupleExpression(Expression):
+    items: t.List[Expression]
+
+    def __str__(self):
+        return "{" + ",".join([str(item) for item in self.items]) + "}"
+
+
+@dataclass
+class ElistExpression(Expression):
+    def __str__(self):
+        return "[]"
+
+
+@dataclass
+class ListExpression(Expression):
+    head: Expression
+    tail: Expression
+
+    def __init__(self, head, tail):
+        if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
+            raise SyntaxException(
+                "List pattern's tail should be either a List Expression or an Elist Expression"
+            )
+        self.head = head
+        self.tail = tail
+
+    def __str__(self):
+        return f"[{str(self.head)} | {str(self.tail)}]"
+
+
+@dataclass
+class MapExpression(Expression):
+    map: t.OrderedDict[int, Expression]
+
+    def __str__(self):
+        keys = self.map.keys()
+        str_values = [str(v) for _, v in self.map.items()]
+        return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
+
+
+@dataclass
+class PatternMatchExpression(Expression):
+    pattern: pattern.Pattern
+    expression: Expression
+
+    def __str__(self):
+        return f"{str(self.pattern)} = {str(self.expression)}"
+
+
+@dataclass
+class IfExpression(Expression):
+    condition: Expression
+    if_expression: Expression
+    else_expression: t.Optional[Expression]
+
+    def __str__(self):
+        res = f"if {self.condition} do:\n"
+        res += f"{self.if_expression}\n"
+        if self.else_expression:
+            res += "else:\n"
+            res += f"{self.else_expression}\n"
+        res += "end"
+        return res
+
+
+@dataclass
+class CaseExpression(Expression):
+    pat: pattern.Pattern
+    clauses: t.List[t.Tuple[pattern.Pattern, Expression]]
+
+    def __init__(self, *args, **kwargs):
+        super(CaseExpression, self).__init__(*args, **kwargs)
+        if len(self.clauses) == 0:
+            raise SyntaxException("case expression expects at least one clause")
+
+    def __str__(self):
+        res = f"case {self.pat} do:\n"
+        for clause in self.clauses:
+            res += f"{clause[0]} -> {clause[1]}\n"
+        res += "end"
+        return res
+
+
+@dataclass
+class CondExpression(Expression):
+    clauses: t.List[t.Tuple[Expression, Expression]]
+
+    def __init__(self, *args, **kwargs):
+        super(CondExpression, self).__init__(*args, **kwargs)
+        if len(self.clauses) == 0:
+            raise SyntaxException("cond expression expects at least one clause")
+
+    def __str__(self):
+        res = "cond do:\n"
+        for clause in self.clauses:
+            res += f"{clause[0]} -> {clause[1]}\n"
+        res += "end"
+        return res
+
+
+@dataclass
+class AnonymizedFunctionExpression(Expression):
+    name: str
+    arity: int
+
+    def __str__(self):
+        return f"&{self.name}/{self.arity}"
+
+
+@dataclass
+class FunctionCall(Expression):
+    function_name: str
+    arguments: t.List[Expression]
+
+    def __str__(self):
+        arguments_str = ",".join([str(arg) for arg in self.arguments])
+        return f"{self.function_name}({arguments_str})"
+
+
+@dataclass
+class VarCall(Expression):
+    ident: str
+    arguments: t.List[Expression]
+
+    def __str__(self):
+        arguments_str = ",".join([str(arg) for arg in self.arguments])
+        return f"{self.ident}.({arguments_str})"

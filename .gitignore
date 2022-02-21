@@ -153,4 +153,4 @@ cython_debug/
 
 .cache/
 
-**/.testmondata
+elixir_port/**
