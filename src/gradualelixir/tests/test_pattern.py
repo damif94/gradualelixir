@@ -2,16 +2,16 @@ from collections import OrderedDict
 
 from gradualelixir import pattern, utils
 
-integer = 'integer'
-float = 'float'
-number = 'number'
-any = 'any'
-x = 'x'
-y = 'y'
-z = 'z'
-px = '^x'
-py = '^y'
-pz = '^z'
+integer = "integer"
+float = "float"
+number = "number"
+any = "any"
+x = "x"
+y = "y"
+z = "z"
+px = "^x"
+py = "^y"
+pz = "^z"
 
 
 def pattern_match(pat, tau, gamma_env, sigma_env):
@@ -92,7 +92,7 @@ def test_tp_pin():
         ],
     )
     assert_pattern_match_error(
-        (px, integer, {}, {x: (integer, '->', integer)}),
+        (px, integer, {}, {x: (integer, "->", integer)}),
         context_path=[
             pattern.PatternErrorEnum.arrow_types_into_pinned_identifier,
         ],
@@ -100,12 +100,12 @@ def test_tp_pin():
 
 
 def test_tp_wild():
-    assert_pattern_match_ok(('_', integer, {}, {}), (integer, {}))
+    assert_pattern_match_ok(("_", integer, {}, {}), (integer, {}))
     assert_pattern_match_ok(
-        ('_', integer, {x: float}, {y: number}), (integer, {x: float})
+        ("_", integer, {x: float}, {y: number}), (integer, {x: float})
     )
     assert_pattern_match_ok(
-        ('_', [float], {x: float}, {y: number}), ([float], {x: float})
+        ("_", [float], {x: float}, {y: number}), ([float], {x: float})
     )
 
 
@@ -138,11 +138,11 @@ def test_tp_varn():
         context_path=[pattern.PatternErrorEnum.incompatible_type_for_variable],
     )
     assert_pattern_match_error(
-        (x, integer, {x: (integer, '->', integer)}, {}),
+        (x, integer, {x: (integer, "->", integer)}, {}),
         context_path=[pattern.PatternErrorEnum.arrow_types_into_nonlinear_identifier],
     )
     assert_pattern_match_error(
-        (x, (integer, '->', integer), {x: sett(2)}, {}),
+        (x, (integer, "->", integer), {x: sett(2)}, {}),
         context_path=[pattern.PatternErrorEnum.arrow_types_into_nonlinear_identifier],
     )
 
@@ -229,7 +229,7 @@ def test_tp_tuple():
         ],
     )
     assert_pattern_match_error(
-        (('_', '_', ((1, x), x)), (float, float, ((float, integer), float)), {}, {}),
+        (("_", "_", ((1, x), x)), (float, float, ((float, integer), float)), {}, {}),
         context_path=[
             (pattern.TuplePatternContext, 3),
             (pattern.TuplePatternContext, 1),
@@ -326,7 +326,7 @@ def test_tp_map():
     )
     assert_pattern_match_error(
         (
-            {1: '_', 2: '_', 3: {1: {1: 1, 2: x}, 2: x}},
+            {1: "_", 2: "_", 3: {1: {1: 1, 2: x}, 2: x}},
             {1: float, 2: float, 3: {1: {1: float, 2: integer}, 2: float}},
             {},
             {},
@@ -340,7 +340,7 @@ def test_tp_map():
     )
     assert_pattern_match_error(
         (
-            {2: '_', 3: '_', 1: {1: {2: 1, 1: x}, 2: x}},
+            {2: "_", 3: "_", 1: {1: {2: 1, 1: x}, 2: x}},
             {2: float, 3: float, 1: {1: {2: float, 1: integer}, 2: float}},
             {},
             {},
@@ -370,6 +370,13 @@ def test_tp_any():
     assert_pattern_match_ok((px, integer, {}, {x: any}), (any, {}))
 
     assert_pattern_match_ok(([], any, {}, {}), ([], {}))
+    assert_pattern_match_ok((["_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok(([1, "|", "_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok(([1, "|", [2]], any, {}, {}), ([integer], {}))
+    assert_pattern_match_ok((["_", "|", [2]], [integer], {}, {}), ([integer], {}))
+    assert_pattern_match_ok((["_", "|", [2]], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok((["_", "|", "_"], any, {}, {}), ([any], {}))
+    assert_pattern_match_ok((["_", "|", ["_"]], any, {}, {}), ([any], {}))
 
     assert_pattern_match_ok(([x], any, {}, {}), ([any], {x: any}))
     assert_pattern_match_ok(([x], any, {x: integer}, {}), ([any], {x: any}))

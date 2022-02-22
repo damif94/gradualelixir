@@ -4,30 +4,30 @@ from collections import OrderedDict
 from gradualelixir import pattern
 from gradualelixir import types as gtypes
 
-S = t.TypeVar('S')
-T = t.TypeVar('T')
+S = t.TypeVar("S")
+T = t.TypeVar("T")
 
 
 def parse_type(x):
     if isinstance(x, bool):
-        return gtypes.AtomLiteralType(atom='true' if x else 'false')
+        return gtypes.AtomLiteralType(atom="true" if x else "false")
     if isinstance(x, str):
-        if x.startswith(':'):
+        if x.startswith(":"):
             return gtypes.AtomLiteralType(atom=x[1:])
-        if x == 'boolean':
+        if x == "boolean":
             return gtypes.BooleanType()
-        if x == 'atom':
+        if x == "atom":
             return gtypes.AtomType()
-        if x == 'integer':
+        if x == "integer":
             return gtypes.IntegerType()
-        if x == 'float':
+        if x == "float":
             return gtypes.FloatType()
-        if x == 'number':
+        if x == "number":
             return gtypes.NumberType()
-        if x == 'any':
+        if x == "any":
             return gtypes.AnyType()
     if isinstance(x, tuple):
-        if len(x) >= 2 and x[-2] == '->':
+        if len(x) >= 2 and x[-2] == "->":
             return gtypes.FunctionType(
                 [parse_type(y) for y in x[:-2]], parse_type(x[-1])
             )
@@ -44,21 +44,21 @@ def parse_type(x):
 
 def unparse_type(x):
     if isinstance(x, gtypes.BooleanType):
-        return 'boolean'
+        return "boolean"
     if isinstance(x, gtypes.AtomLiteralType):
-        if x.atom in ['true', 'false']:
-            return x.atom == 'true'
+        if x.atom in ["true", "false"]:
+            return x.atom == "true"
         return str(x)
     if isinstance(x, gtypes.AtomType):
-        return 'atom'
+        return "atom"
     if isinstance(x, gtypes.IntegerType):
-        return 'integer'
+        return "integer"
     if isinstance(x, gtypes.FloatType):
-        return 'float'
+        return "float"
     if isinstance(x, gtypes.NumberType):
-        return 'number'
+        return "number"
     if isinstance(x, gtypes.AnyType):
-        return 'any'
+        return "any"
     if isinstance(x, gtypes.ElistType):
         return []
     elif isinstance(x, gtypes.ListType):
@@ -67,9 +67,7 @@ def unparse_type(x):
         return tuple([unparse_type(y) for y in x.types])
     if isinstance(x, gtypes.FunctionType):
         return tuple(
-            [unparse_type(y) for y in x.arg_gtypes]
-            + ['->']
-            + [unparse_type(x.ret_type)]
+            [unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)]
         )
     else:
         assert isinstance(x, gtypes.MapType)
@@ -82,28 +80,29 @@ def parse_pattern(x):
     elif isinstance(x, float):
         return pattern.FloatPattern(value=x)
     elif isinstance(x, bool):
-        return pattern.AtomLiteralPattern(value='true' if x else 'false')
+        return pattern.AtomLiteralPattern(value="true" if x else "false")
     elif isinstance(x, str):
-        if x.startswith(':'):
+        if x.startswith(":"):
             return pattern.AtomLiteralPattern(value=x[1:])
-        if x == '_':
+        if x == "_":
             return pattern.WildPattern()
-        elif x.startswith('^'):
+        elif x.startswith("^"):
             return pattern.PinIdentPattern(identifier=x[1:])
         else:
             return pattern.IdentPattern(identifier=x)
     elif isinstance(x, tuple):
         return pattern.TuplePattern([parse_pattern(y) for y in x])
     if isinstance(x, dict):
-        map = OrderedDict()
-        for k, v in x.items():
-            map[k] = parse_pattern(v)
-        return pattern.MapPattern(map)
+        return pattern.MapPattern(
+            OrderedDict([(k, parse_pattern(v)) for k, v in x.items()])
+        )
     else:
         assert isinstance(x, list)
         if len(x) == 0:
             return pattern.ElistPattern()
         else:
+            if len(x) == 3 and x[1] == "|":
+                return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[2]))
             return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[1:]))
 
 

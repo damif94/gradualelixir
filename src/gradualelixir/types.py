@@ -8,59 +8,63 @@ class Type:
 
 
 @dataclass
-class IntegerType(Type):
-    def __str__(self):
-        return 'integer'
-
-
-@dataclass
 class BooleanType(Type):
     def __str__(self):
-        return 'boolean'
+        return "boolean"
 
 
 @dataclass
 class AtomType(Type):
     def __str__(self):
-        return 'atom'
+        return "atom"
+
+
+class LiteralType(Type):
+    pass
 
 
 @dataclass
-class AtomLiteralType(Type):
+class IntegerType(LiteralType):
+    def __str__(self):
+        return "integer"
+
+
+@dataclass
+class AtomLiteralType(LiteralType):
     atom: str
 
     def __init__(self, atom):
-        if atom == ':true':
-            self.atom = 'true'
-        elif atom == ':false':
-            self.atom = 'false'
+        if atom == ":true":
+            self.atom = "true"
+        elif atom == ":false":
+            self.atom = "false"
         else:
             self.atom = atom
 
     def __str__(self):
         if self.atom:
-            if self.atom in ['true', 'false']:
+            if self.atom in ["true", "false"]:
                 return self.atom
-            return ':' + self.atom
-        return 'atom'
+            return ":" + self.atom
+        return "atom"
 
 
 @dataclass
-class FloatType(Type):
+class FloatType(LiteralType):
     def __str__(self):
-        return 'float'
+        return "float"
 
 
 @dataclass
 class NumberType(Type):
     def __str__(self):
-        return 'number'
+        return "number"
 
 
 @dataclass
 class AnyType(Type):
     def __str__(self):
-        return 'any'
+        return "any"
 
 
 @dataclass
@@ -68,13 +72,13 @@ class TupleType(Type):
     types: t.List[Type]
 
     def __str__(self):
-        return '{' + ','.join([str(ty) for ty in self.types]) + '}'
+        return "{" + ",".join([str(ty) for ty in self.types]) + "}"
 
 
 @dataclass
 class ElistType(Type):
     def __str__(self):
-        return '[]'
+        return "[]"
 
 
 @dataclass
@@ -82,18 +86,18 @@ class ListType(Type):
     type: Type
 
     def __str__(self):
-        return '[' + str(self.type) + ']'
+        return "[" + str(self.type) + "]"
 
 
 @dataclass
 class MapType(Type):
 
-    map_type: t.Dict[int, Type]
+    map_type: t.Dict[t.Union[int, float, str, bool], Type]
 
     def __str__(self):
         keys = self.map_type.keys()
         str_values = [str(v) for v in self.map_type.values()]
-        return '%{' + ','.join([f'{k}: {v}' for (k, v) in zip(keys, str_values)]) + '}'
+        return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
 
 
 @dataclass
@@ -108,7 +112,7 @@ class FunctionType(Type):
 
 
 class TypeErrorEnum(Enum):
-    supremum_does_not_exist = '{} does not exist'
+    supremum_does_not_exist = "{} does not exist"
 
 
 class TypingError:
@@ -123,7 +127,7 @@ class SupremumError(TypingError):
     reason = TypeErrorEnum.supremum_does_not_exist
 
     def __init__(self, supremum: bool):
-        self.args = ('supremum' if supremum else 'infimum',)
+        self.args = ("supremum" if supremum else "infimum",)
 
 
 def is_base_type(tau: Type) -> bool:
@@ -160,7 +164,7 @@ def is_base_subtype(tau: Type, sigma: Type) -> bool:
         [
             tau == sigma,
             isinstance(tau, AtomLiteralType)
-            and tau.atom in ['true', 'false']
+            and tau.atom in ["true", "false"]
             and isinstance(sigma, BooleanType),
             isinstance(tau, BooleanType) and isinstance(sigma, AtomType),
             isinstance(tau, AtomLiteralType)
@@ -183,9 +187,9 @@ def base_supremum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
     if is_base_subtype(sigma, tau):
         return tau
     if isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomLiteralType):
-        if tau.atom == 'true' and sigma.atom == 'false':
+        if tau.atom == "true" and sigma.atom == "false":
             return BooleanType()
-        elif tau.atom == 'false' and sigma.atom == 'true':
+        elif tau.atom == "false" and sigma.atom == "true":
             return BooleanType()
         else:
             return AtomType()

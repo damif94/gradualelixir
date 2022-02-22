@@ -3,12 +3,12 @@ from gradualelixir import pattern
 from gradualelixir import types as gtypes
 from gradualelixir import utils
 
-term = 'term'
-none = 'none'
-integer = 'integer'
-number = 'number'
-float = 'float'
-any = 'any'
+term = "term"
+none = "none"
+integer = "integer"
+number = "number"
+float = "float"
+any = "any"
 
 
 def is_base_subtype(tau, sigma) -> bool:
@@ -54,18 +54,6 @@ def supremum(tau, sigma):
 def infimum(tau, sigma):
     return utils.unparse_type(
         gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
-
-
-def minfimum_plus(tau, sigma):
-    return utils.unparse_type(
-        gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
-
-
-def minfimum_minus(tau, sigma):
-    return utils.unparse_type(
-        gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
     )
 
 
