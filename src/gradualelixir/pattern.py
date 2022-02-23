@@ -334,7 +334,7 @@ def pattern_match_aux(
         )
     elif isinstance(pattern, MapPattern) and isinstance(tau, gtypes.MapType):
         # TP_MAP
-        if pattern.map.keys() != tau.map_type.keys():
+        if not all([k in tau.map_type.keys() for k in pattern.map.keys()]):
             return BasePatternError(
                 kind=PatternErrorEnum.incompatible_maps_error,
                 args={"pattern": pattern, "tau": tau},
@@ -344,7 +344,11 @@ def pattern_match_aux(
                 t.Union[int, float, bool, str], t.Callable[[TypeEnv], gtypes.Type]
             ] = {}
             gamma_env_aux = gamma_env
-            for key in tau.map_type:
+            for key in tau.map_type.keys():
+                if key not in pattern.map.keys():
+                    value = tau.map_type[key]
+                    mappings_map_acc[key] = lambda d: value
+                    continue
                 aux = pattern_match_aux(
                     pattern.map[key], tau.map_type[key], gamma_env_aux, sigma_env
                 )

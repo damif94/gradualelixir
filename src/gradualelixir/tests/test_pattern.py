@@ -251,6 +251,9 @@ def test_tp_map():
         ({1: x}, {1: integer}, {}, {}), ({1: integer}, {x: integer})
     )
     assert_pattern_match_ok(
+        ({}, {1: integer}, {}, {}), ({1: integer}, {})
+    )
+    assert_pattern_match_ok(
         ({1: x, 2: 2.0}, {1: integer, 2: float}, {}, {}),
         ({1: integer, 2: float}, {x: integer}),
     )
@@ -277,6 +280,10 @@ def test_tp_map():
     assert_pattern_match_ok(
         ({1: x, 2: x}, {1: integer, 2: integer}, {}, {}),
         ({1: integer, 2: integer}, {x: integer}),
+    )
+    assert_pattern_match_ok(
+        ({2: 3}, {1: integer, 2: number}, {}, {}),
+        ({1: integer, 2: integer}, {}),
     )
     assert_pattern_match_ok(
         ({1: x, 2: x}, {1: sett(1), 2: sett(2)}, {}, {}),

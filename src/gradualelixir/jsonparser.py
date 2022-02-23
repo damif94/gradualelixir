@@ -110,7 +110,7 @@ def parse_expression(j) -> expression.Expression:
                     cond_expression = parse_expression(cond_node)
                     do_expression = parse_expression(do_node)
                     branches.append((cond_expression, do_expression))  # type: ignore
-                return expression.CondExpression(branches)
+                return expression.CondExpression(branches)  # type: ignore
             elif op == "__block__":
                 left_expression = parse_expression(children_nodes[0])
                 if len(children_nodes) == 1:

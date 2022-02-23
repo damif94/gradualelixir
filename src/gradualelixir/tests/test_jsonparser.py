@@ -402,9 +402,6 @@ def test_control_flow_expressions():
     assert parse_expression("x; y") == SeqExpression(
         IdentExpression("x"), IdentExpression("y")
     )
-
-
-def test_working():
     assert parse_expression(
         "h = case {x,y} do\n"
         "  {^x,1} -> {u, 2} = x; u\n"
@@ -446,7 +443,5 @@ def test_working():
 
 
 def test_function():
-    assert parse_expression("f(2,3)") == FunctionCallExpression("f", [IntegerExpression(2), IntegerExpression(3)])
-
-def test_working():
-    assert parse_expression("f.(2,3)") == VarCallExpression("f", [IntegerExpression(2), IntegerExpression(3)])
+    assert parse_expression("f(2,{})") == FunctionCallExpression("f", [IntegerExpression(2), TupleExpression([])])
+    assert parse_expression("f.(2,{})") == VarCallExpression("f", [IntegerExpression(2), TupleExpression([])])
