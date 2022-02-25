@@ -1,4 +1,5 @@
 from collections import OrderedDict
+
 from gradualelixir import expression, pattern
 
 
@@ -62,7 +63,8 @@ def parse_expression(j) -> expression.Expression:
         return expression.IntegerExpression(j)
     elif isinstance(j, float):
         return expression.FloatExpression(j)
-    elif isinstance(j, list):
+    else:
+        assert isinstance(j, list)
         if len(j) == 3:
             op, meta, children_nodes = j
             if op == "{}":

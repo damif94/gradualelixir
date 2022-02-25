@@ -66,7 +66,7 @@ def pattern_match(pat, tau, gamma_env, sigma_env):
         gamma_env,
         sigma_env,
     )
-    if isinstance(result, pattern.PatternError):
+    if isinstance(result, pattern.PatternMatchError):
         print(result)
         return
     return (

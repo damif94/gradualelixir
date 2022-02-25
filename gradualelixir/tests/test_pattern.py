@@ -21,7 +21,7 @@ def pattern_match(pat, tau, gamma_env, sigma_env):
         utils.parse_pattern(pat), utils.parse_type(tau), gamma_env, sigma_env
     )
     print(result)
-    if isinstance(result, pattern.PatternError):
+    if isinstance(result, pattern.PatternMatchError):
         return result
     return (
         utils.unparse_type(result[0]),
@@ -37,10 +37,10 @@ def assert_pattern_match_error(pattern_input, context_path=None):
     pat, tau, gamma_env, sigma_env = pattern_input
     return_value = pattern_match(pat, tau, gamma_env, sigma_env)
     if len(context_path) == 1:
-        assert isinstance(return_value, pattern.BasePatternError)
+        assert isinstance(return_value, pattern.BasePatternMatchError)
         assert return_value.kind is context_path[-1]
     else:
-        assert isinstance(return_value, pattern.NestedPatternError)
+        assert isinstance(return_value, pattern.NestedPatternMatchError)
         current_value = return_value
         for klass, arg in context_path[:-1]:
             current_context = current_value.context
@@ -56,7 +56,7 @@ def assert_pattern_match_error(pattern_input, context_path=None):
                 assert isinstance(current_context, pattern.MapPatternContext)
                 assert current_context.key == arg
             current_value = current_value.error
-        assert isinstance(current_value, pattern.BasePatternError)
+        assert isinstance(current_value, pattern.BasePatternMatchError)
         assert current_value.kind is context_path[-1]
 
 

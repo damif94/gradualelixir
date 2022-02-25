@@ -108,20 +108,3 @@ def parse_pattern(x):
 
 def flatten(x: t.List[t.List[T]]) -> t.List[T]:
     return [item for sublist in x for item in sublist]
-
-
-def merge_dicts(
-    d1: t.Dict[S, T], d2: t.Dict[S, T], f: t.Callable[[T, T], T]
-) -> t.Dict[S, T]:
-    result = d1.copy()
-    for k, v in d2.items():
-        result[k] = v if k not in d1 else f(d1[k], v)
-    return result
-
-
-def unzip(x: t.List[t.Tuple[S, T]]) -> t.Tuple[t.List[S], t.List[T]]:
-    result: t.Tuple[t.List[S], t.List[T]] = ([], [])
-    for pair in x:
-        result[0].append(pair[0])
-        result[1].append(pair[1])
-    return result
