@@ -322,7 +322,13 @@ class ExpressionErrorEnum(Enum):
         "The expressions {expr1} and {expr2} of type {tau1} and {tau2} are not together valid arguments for {op}/2"
     )
     pattern_match = (
-        "Couldn't match the inferred type of the expression in the right, {tau}, with {pattern}\n > {pattern_match_error}"
+        "Couldn't match the inferred type of the expression in the right, {tau}, with {pattern}\n"
+        " > {pattern_match_error}"
+    )
+    incompatible_types_for_list = "The type for the head, {tau1}, and the type for the tail, {tau2} don't have supremum"
+    incompatible_types_for_if_else = (
+        "The type inferred for the if branch, {tau1}, and the type inferred for the else branch, "
+        "{tau2} don't have supremum"
     )
 
 
@@ -495,6 +501,67 @@ def type_check(
         return ExpressionTypeCheckReturnType(gamma_env[expr.identifier], gamma_env)
     elif isinstance(expr, ElistExpression):
         return ExpressionTypeCheckReturnType(gtypes.ElistType(), gamma_env)
+    elif isinstance(expr, ListExpression):
+        head_type_check_result = type_check(expr.head, gamma_env, delta_env)
+        tail_type_check_result = type_check(expr.tail, gamma_env, delta_env)
+        list_errors = []
+        if isinstance(head_type_check_result, ExpressionError):
+            list_errors.append((ListExpressionContext(expr, head=False), head_type_check_result))
+        if isinstance(tail_type_check_result, ExpressionError):
+            list_errors.append((ListExpressionContext(expr, head=False), tail_type_check_result))
+        if list_errors:
+            return NestedExpressionTypeCheckError(expression=expr, errors=list_errors)  # type: ignore
+        else:
+            result_type = gtypes.supremum(
+                gtypes.ListType(head_type_check_result.type), tail_type_check_result.type  # type: ignore
+            )
+            if not isinstance(result_type, gtypes.TypingError):
+                return ExpressionTypeCheckReturnType(
+                    type=result_type,
+                    env={**head_type_check_result.env, **tail_type_check_result.env}  # type: ignore
+                )
+            else:
+                return BaseExpressionTypeCheckError(
+                    expression=expr,
+                    kind=ExpressionErrorEnum.incompatible_types_for_list,
+                    args={"tau1": head_type_check_result.type, "tau2": tail_type_check_result.type.type}  # type: ignore
+                )
+    elif isinstance(expr, TupleExpression):
+        type_check_results = []
+        tuple_errors = []
+        for i in range(len(expr.items)):
+            aux = type_check(expr.items[i], gamma_env, delta_env)
+            if isinstance(aux, ExpressionError):
+                tuple_errors.append((TupleExpressionContext(expr, n=i), aux))
+            else:
+                type_check_results.append(aux)
+        if tuple_errors:
+            return NestedExpressionTypeCheckError(expression=expr, errors=tuple_errors)  # type: ignore
+        else:
+            gamma_env = {}
+            for item in type_check_results:
+                gamma_env = {**gamma_env, **item.env}
+            return ExpressionTypeCheckReturnType(
+                type=gtypes.TupleType([e.type for e in type_check_results]), env=gamma_env
+            )
+    elif isinstance(expr, MapExpression):
+        type_check_results_dict = {}
+        map_errors = {}
+        for k in expr.map:
+            aux = type_check(expr.map[k], gamma_env, delta_env)
+            if isinstance(aux, ExpressionError):
+                map_errors[k] = (MapExpressionContext(expr, key=k), aux)
+            else:
+                type_check_results_dict[k] = aux
+        if map_errors:
+            return NestedExpressionTypeCheckError(expression=expr, errors=map_errors)  # type: ignore
+        else:
+            gamma_env = {}
+            for k in type_check_results_dict:
+                gamma_env = {**gamma_env, **type_check_results_dict[k].env}
+            return ExpressionTypeCheckReturnType(
+                type=gtypes.MapType({k: tau.type for k, tau in type_check_results_dict.items()}), env=gamma_env
+            )
     elif isinstance(expr, UnaryOpExpression):
         expression_type_check_result = type_check(expr.expression, gamma_env, delta_env)
         if isinstance(expression_type_check_result, ExpressionError):
@@ -571,6 +638,37 @@ def type_check(
             return ExpressionTypeCheckReturnType(
                 pattern_match_result[0], {**expression_type_check_result.env, **pattern_match_result[1]}
             )
+    elif isinstance(expr, IfExpression):
+        cond_type_check_result = type_check(expr.condition, gamma_env, delta_env)
+        if isinstance(cond_type_check_result, ExpressionError):
+            return NestedExpressionTypeCheckError(
+                expression=expr, errors=[(IfExpressionContext(expression=expr, branch=None), cond_type_check_result)]
+            )
+        else:
+            errors = []
+            if_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
+            if isinstance(if_type_check_result, ExpressionError):
+                errors.append((IfExpressionContext(expression=expr, branch=True), if_type_check_result))
+            else_type_check_result = None
+            if expr.else_expression is not None:
+                else_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
+                if isinstance(else_type_check_result, ExpressionError):
+                    errors.append((IfExpressionContext(expression=expr, branch=False), else_type_check_result))
+            if errors:
+                return NestedExpressionTypeCheckError(expression=expr, errors=errors)  # type: ignore
+            assert isinstance(if_type_check_result, ExpressionTypeCheckReturnType)
+            assert isinstance(else_type_check_result, ExpressionTypeCheckReturnType)
+            ret_type, ret_env = if_type_check_result.type, if_type_check_result.env
+            if else_type_check_result:
+                ret_type = gtypes.supremum(if_type_check_result.type, else_type_check_result.type)  # type: ignore
+                if isinstance(ret_type, gtypes.TypingError):
+                    return BaseExpressionTypeCheckError(
+                        expression=expr,
+                        kind=ExpressionErrorEnum.incompatible_types_for_if_else,
+                        args={"tau1": if_type_check_result.type, "tau2": else_type_check_result.type}
+                    )
+                ret_env = {**if_type_check_result.env, **else_type_check_result.env}
+            return ExpressionTypeCheckReturnType(ret_type, ret_env)
     elif isinstance(expr, SeqExpression):
         left_type_check_expression = type_check(expr.left_expression, gamma_env, delta_env)
         if isinstance(left_type_check_expression, ExpressionError):
@@ -589,3 +687,11 @@ def type_check(
                 right_type_check_expression.type,
                 {**left_type_check_expression.env, **right_type_check_expression.env}
             )
+    # elif isinstance(expr, CondExpression):
+    #     errors = []
+    #     for i in range(len(expr.clauses)):
+    #         cond_type_check_expression = type_check(branch[0], gamma_env, delta_env)
+    #         if isinstance(cond_type_check_expression, ExpressionError):
+    #             errors.append((CondExpressionContext(expr, branch=i, cond=True), cond_type_check_expression))
+    #             continue
+    #         do_type_check_expression = type_check(expr[1], gamma_env, delta_env)
