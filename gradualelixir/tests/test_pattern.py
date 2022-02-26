@@ -24,8 +24,8 @@ def pattern_match(pat, tau, gamma_env, sigma_env):
     if isinstance(result, pattern.PatternMatchError):
         return result
     return (
-        utils.unparse_type(result[0]),
-        {k: utils.unparse_type(v) for k, v in result[1].items()},
+        utils.unparse_type(result.type),
+        {k: utils.unparse_type(v) for k, v in result.env.items()},
     )
 
 
@@ -152,11 +152,11 @@ def test_tp_elist():
     assert_pattern_match_ok(([], [number], {}, {}), ([], {}))
     assert_pattern_match_error(
         ([], integer, {}, {}),
-        context_path=[pattern.PatternErrorEnum.incompatible_constructors_error],
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_elist],
     )
     assert_pattern_match_error(
         ([], (integer,), {}, {}),
-        context_path=[pattern.PatternErrorEnum.incompatible_constructors_error],
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_elist],
     )
 
 
@@ -182,7 +182,6 @@ def test_tp_list():
         ([x, x, y], [sett(1)], {x: sett(2)}, {}),
         ([sett(1)], {x: sett(1, 2), y: sett(1)}),
     )
-    # assert_pattern_match_error(([x], [], {}, {}), ([integer], {x: integer}))
     assert_pattern_match_error(
         ([1], integer, {}, {}),
         context_path=[pattern.PatternErrorEnum.incompatible_constructors_error],
@@ -401,6 +400,22 @@ def test_tp_any():
         ({1: x, 2: y}, any, {}, {}), ({1: any, 2: any}, {x: any, y: any})
     )
 
+    assert_pattern_match_error(
+        ([1, True], any, {}, {}),
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+    )
+    assert_pattern_match_error(
+        ([(1, 2), (True, 2)], any, {}, {}),
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+    )
+    assert_pattern_match_error(
+        ([{1: (1, 2)}, {1: (True, 2)}], any, {}, {}),
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+    )
+    assert_pattern_match_ok(
+        ([{1: (1, 2)}, {2: (True, 2)}], any, {}, {}), ([{}], {})
+    )
+
 
 def test_tp_ok_progressions():
     assert_pattern_match_ok(
@@ -465,6 +480,6 @@ def test_tp_errors():
             (pattern.ListPatternContext, False),
             (pattern.ListPatternContext, True),
             (pattern.MapPatternContext, 2),
-            pattern.PatternErrorEnum.incompatible_constructors_error,
+            pattern.PatternErrorEnum.incompatible_type_for_elist,
         ],
     )

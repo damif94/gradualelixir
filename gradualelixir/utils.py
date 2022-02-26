@@ -75,12 +75,12 @@ def unparse_type(x):
 
 
 def parse_pattern(x):
-    if isinstance(x, int):
+    if isinstance(x, bool):
+        return pattern.AtomLiteralPattern(value="true" if x else "false")
+    elif isinstance(x, int):
         return pattern.IntegerPattern(value=x)
     elif isinstance(x, float):
         return pattern.FloatPattern(value=x)
-    elif isinstance(x, bool):
-        return pattern.AtomLiteralPattern(value="true" if x else "false")
     elif isinstance(x, str):
         if x.startswith(":"):
             return pattern.AtomLiteralPattern(value=x[1:])
