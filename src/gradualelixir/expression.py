@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from gradualelixir import types as gtypes, pattern
-from gradualelixir.exception import SyntaxException
+from gradualelixir.exception import SyntaxRestrictionException
 
 
 class UnaryOpEnum(Enum):
@@ -158,7 +158,7 @@ class ListExpression(Expression):
 
     def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
         if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
-            raise SyntaxException(
+            raise SyntaxRestrictionException(
                 "List pattern's tail should be either a List Expression or an Elist Expression"
             )
         self.head = head
@@ -317,6 +317,7 @@ class VarCallExpression(Expression):
 
 
 class ExpressionErrorEnum(Enum):
+    identifier_not_found_in_environment = "Couldn't find variable {identifier} in the environment"
     incompatible_type_for_unary_operator = "The expression {expr} of type {tau} is not a valid argument for {op}/1"
     incompatible_types_for_binary_operator = (
         "The expressions {expr1} and {expr2} of type {tau1} and {tau2} are not together valid arguments for {op}/2"
@@ -332,6 +333,7 @@ class ExpressionErrorEnum(Enum):
     )
     type_is_not_boolean = "The type inferred for {tau} is not a subtype of boolean"
     incompatible_types_for_cond = "C"
+
 
 class ExpressionContext:
     expression: Expression
@@ -387,7 +389,7 @@ class BinaryOpContext(ExpressionContext):
 
 
 @dataclass
-class PatternMatchContext(ExpressionContext):
+class PatternMatchExpressionContext(ExpressionContext):
     expression: Expression
 
     def __str__(self):
@@ -395,7 +397,7 @@ class PatternMatchContext(ExpressionContext):
 
 
 @dataclass
-class IfExpressionContext(ExpressionContext):
+class IfElseExpressionContext(ExpressionContext):
     expression: IfExpression
     branch: t.Optional[bool]
 
@@ -530,7 +532,14 @@ def type_check_literal(expr: LiteralExpression, gamma_env: TypeEnv, _delta_env: 
 
 
 def type_check_ident(expr: IdentExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
-    return ExpressionTypeCheckSuccess(gamma_env[expr.identifier], gamma_env)
+    if (sigma := gamma_env.get(expr.identifier)) is not None:
+        return ExpressionTypeCheckSuccess(sigma, gamma_env)
+    else:
+        return BaseExpressionTypeCheckError(
+            expression=expr,
+            kind=ExpressionErrorEnum.identifier_not_found_in_environment,
+            args={"identifier": expr.identifier},
+        )
 
 
 def type_check_elist(_expr: ElistExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
@@ -540,41 +549,42 @@ def type_check_elist(_expr: ElistExpression, gamma_env: TypeEnv, _delta_env: Typ
 def type_check_list(expr: ListExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     head_type_check_result = type_check(expr.head, gamma_env, delta_env)
     tail_type_check_result = type_check(expr.tail, gamma_env, delta_env)
-    list_errors = []
+    errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     if isinstance(head_type_check_result, ExpressionTypeCheckError):
-        list_errors.append((ListExpressionContext(expr, head=False), head_type_check_result))
+        errors.append((ListExpressionContext(expr, head=True), head_type_check_result))
     if isinstance(tail_type_check_result, ExpressionTypeCheckError):
-        list_errors.append((ListExpressionContext(expr, head=False), tail_type_check_result))
-    if list_errors:
-        return NestedExpressionTypeCheckError(expression=expr, errors=list_errors)  # type: ignore
-    else:
-        result_type = gtypes.supremum(
-            gtypes.ListType(head_type_check_result.type), tail_type_check_result.type  # type: ignore
+        errors.append((ListExpressionContext(expr, head=False), tail_type_check_result))
+    if errors:
+        return NestedExpressionTypeCheckError(expression=expr, errors=errors)
+    assert isinstance(head_type_check_result, ExpressionTypeCheckSuccess)
+    assert isinstance(tail_type_check_result, ExpressionTypeCheckSuccess)
+    result_type = gtypes.supremum(
+        gtypes.ListType(head_type_check_result.type), tail_type_check_result.type
+    )
+    if not isinstance(result_type, gtypes.TypingError):
+        return ExpressionTypeCheckSuccess(
+            type=result_type,
+            env={**head_type_check_result.env, **tail_type_check_result.env}
         )
-        if not isinstance(result_type, gtypes.TypingError):
-            return ExpressionTypeCheckSuccess(
-                type=result_type,
-                env={**head_type_check_result.env, **tail_type_check_result.env}  # type: ignore
-            )
-        else:
-            return BaseExpressionTypeCheckError(
-                expression=expr,
-                kind=ExpressionErrorEnum.incompatible_types_for_list,
-                args={"tau1": head_type_check_result.type, "tau2": tail_type_check_result.type.type}  # type: ignore
-            )
+    else:
+        return BaseExpressionTypeCheckError(
+            expression=expr,
+            kind=ExpressionErrorEnum.incompatible_types_for_list,
+            args={"tau1": head_type_check_result.type, "tau2": tail_type_check_result.type.type}  # type: ignore
+        )
 
 
 def type_check_tuple(expr: TupleExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     type_check_results = []
-    tuple_errors = []
+    errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     for i in range(len(expr.items)):
-        aux = type_check(expr.items[i], gamma_env, delta_env)
-        if isinstance(aux, ExpressionTypeCheckError):
-            tuple_errors.append((TupleExpressionContext(expr, n=i), aux))
+        item_type_check_result = type_check(expr.items[i], gamma_env, delta_env)
+        if isinstance(item_type_check_result, ExpressionTypeCheckError):
+            errors.append((TupleExpressionContext(expr, n=i+1), item_type_check_result))
         else:
-            type_check_results.append(aux)
-    if tuple_errors:
-        return NestedExpressionTypeCheckError(expression=expr, errors=tuple_errors)  # type: ignore
+            type_check_results.append(item_type_check_result)
+    if errors:
+        return NestedExpressionTypeCheckError(expression=expr, errors=errors)
     else:
         gamma_env = {}
         for item in type_check_results:
@@ -586,15 +596,15 @@ def type_check_tuple(expr: TupleExpression, gamma_env: TypeEnv, delta_env: TypeE
 
 def type_check_map(expr: MapExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     type_check_results_dict = {}
-    map_errors = {}
+    errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     for k in expr.map:
-        aux = type_check(expr.map[k], gamma_env, delta_env)
-        if isinstance(aux, ExpressionTypeCheckError):
-            map_errors[k] = (MapExpressionContext(expr, key=k), aux)
+        item_type_check_result = type_check(expr.map[k], gamma_env, delta_env)
+        if isinstance(item_type_check_result, ExpressionTypeCheckError):
+            errors.append((MapExpressionContext(expr, key=k), item_type_check_result))
         else:
-            type_check_results_dict[k] = aux
-    if map_errors:
-        return NestedExpressionTypeCheckError(expression=expr, errors=map_errors)  # type: ignore
+            type_check_results_dict[k] = item_type_check_result
+    if errors:
+        return NestedExpressionTypeCheckError(expression=expr, errors=errors)
     else:
         gamma_env = {}
         for k in type_check_results_dict:
@@ -636,7 +646,7 @@ def type_check_binary_op(expr: BinaryOpExpression, gamma_env: TypeEnv, delta_env
             errors=[(BinaryOpContext(expression=expr, is_left=False), right_type_check_result)]
         )
     if valid_result_types := [
-        ret_type for left_arg_type, right_arg_type, ret_type in expr.op.types  # type: ignore
+        ret_type for left_arg_type, right_arg_type, ret_type in expr.op.types
         if (
             gtypes.is_subtype(right_type_check_result.type, left_arg_type())
             and
@@ -665,7 +675,7 @@ def type_check_pattern_match(expr: PatternMatchExpression, gamma_env: TypeEnv, d
     expression_type_check_result = type_check(expr.expression, gamma_env, delta_env)
     if isinstance(expression_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
-            expression=expr, errors=[(PatternMatchContext(expr.expression), expression_type_check_result)]
+            expression=expr, errors=[(PatternMatchExpressionContext(expr.expression), expression_type_check_result)]
         )
     else:
         pattern_match_result = pattern.pattern_match(
@@ -690,12 +700,12 @@ def type_check_if_else(expr: IfExpression, gamma_env: TypeEnv, delta_env: TypeEn
     cond_type_check_result = type_check(expr.condition, gamma_env, delta_env)
     if isinstance(cond_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
-            expression=expr, errors=[(IfExpressionContext(expression=expr, branch=None), cond_type_check_result)]
+            expression=expr, errors=[(IfElseExpressionContext(expression=expr, branch=None), cond_type_check_result)]
         )
     if not gtypes.is_subtype(cond_type_check_result.type, gtypes.BooleanType()):
         return NestedExpressionTypeCheckError(
             expression=expr, errors=[(
-                IfExpressionContext(expression=expr, branch=None),
+                IfElseExpressionContext(expression=expr, branch=None),
                 BaseExpressionTypeCheckError(
                     expression=expr,
                     kind=ExpressionErrorEnum.type_is_not_boolean,
@@ -706,12 +716,12 @@ def type_check_if_else(expr: IfExpression, gamma_env: TypeEnv, delta_env: TypeEn
     errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     if_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
     if isinstance(if_type_check_result, ExpressionTypeCheckError):
-        errors.append((IfExpressionContext(expression=expr, branch=True), if_type_check_result))
+        errors.append((IfElseExpressionContext(expression=expr, branch=True), if_type_check_result))
     else_type_check_result = None
     if expr.else_expression is not None:
         else_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
         if isinstance(else_type_check_result, ExpressionTypeCheckError):
-            errors.append((IfExpressionContext(expression=expr, branch=False), else_type_check_result))
+            errors.append((IfElseExpressionContext(expression=expr, branch=False), else_type_check_result))
     if errors:
         return NestedExpressionTypeCheckError(expression=expr, errors=errors)
 

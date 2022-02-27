@@ -33,8 +33,8 @@ def assert_pattern_match_ok(pattern_input, pattern_output):
     assert pattern_match(*pattern_input) == pattern_output
 
 
-def assert_pattern_match_error(pattern_input, context_path=None):
-    pat, tau, gamma_env, sigma_env = pattern_input
+def assert_pattern_match_error(pattern_match_input, context_path=None):
+    pat, tau, gamma_env, sigma_env = pattern_match_input
     return_value = pattern_match(pat, tau, gamma_env, sigma_env)
     if len(context_path) == 1:
         assert isinstance(return_value, pattern.BasePatternMatchError)
@@ -369,11 +369,13 @@ def test_tp_map():
 def test_tp_any():
     assert_pattern_match_ok((1, any, {}, {}), (integer, {}))
 
-    assert_pattern_match_ok((x, any, {x: integer}, {}), (any, {x: any}))
-    assert_pattern_match_ok((x, integer, {x: any}, {}), (any, {x: any}))
+    assert_pattern_match_ok((x, any, {x: integer}, {}), (integer, {x: integer}))
+    assert_pattern_match_ok((x, integer, {x: integer}, {}), (integer, {x: integer}))
+    assert_pattern_match_ok((x, any, {x: number}, {}), (any, {x: any}))
+    assert_pattern_match_ok((x, number, {x: any}, {}), (any, {x: any}))
 
-    assert_pattern_match_ok((px, any, {}, {x: integer}), (any, {}))
-    assert_pattern_match_ok((px, integer, {}, {x: any}), (any, {}))
+    assert_pattern_match_ok((px, any, {}, {x: number}), (any, {}))
+    assert_pattern_match_ok((px, number, {}, {x: any}), (any, {}))
 
     assert_pattern_match_ok(([], any, {}, {}), ([], {}))
     assert_pattern_match_ok((["_"], any, {}, {}), ([any], {}))
@@ -385,10 +387,10 @@ def test_tp_any():
     assert_pattern_match_ok((["_", "|", ["_"]], any, {}, {}), ([any], {}))
 
     assert_pattern_match_ok(([x], any, {}, {}), ([any], {x: any}))
-    assert_pattern_match_ok(([x], any, {x: integer}, {}), ([any], {x: any}))
-    assert_pattern_match_ok(([x, y], any, {x: integer}, {}), ([any], {x: any, y: any}))
+    assert_pattern_match_ok(([x], any, {x: number}, {}), ([any], {x: any}))
+    assert_pattern_match_ok(([x, y], any, {x: number}, {}), ([any], {x: any, y: any}))
     assert_pattern_match_ok(
-        ([x, y], any, {x: integer, y: integer}, {}), ([any], {x: any, y: any})
+        ([x, y], any, {x: number, y: number}, {}), ([any], {x: any, y: any})
     )
 
     assert_pattern_match_ok(((), any, {}, {}), ((), ({})))
@@ -460,12 +462,12 @@ def test_tp_ok_progressions():
         ((sett(1, 2, 3), sett(1, 2, 3), sett(1, 2, 3)), {x: sett(1, 2, 3)}),
     )
 
-    assert_pattern_match_ok(([x], any, {x: integer}, {}), ([any], {x: any}))
+    assert_pattern_match_ok(([x], any, {x: number}, {}), ([any], {x: any}))
     assert_pattern_match_ok(
-        (([x], (x, x)), any, {x: integer}, {}), (([any], (any, any)), {x: any})
+        (([x], (x, x)), any, {x: number}, {}), (([any], (any, any)), {x: any})
     )
     assert_pattern_match_ok(
-        ({1: ([x], (x, x)), 2: x}, any, {x: integer}, {}),
+        ({1: ([x], (x, x)), 2: x}, any, {x: number}, {}),
         ({1: ([any], (any, any)), 2: any}, {x: any}),
     )
 

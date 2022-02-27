@@ -468,6 +468,17 @@ def test_supremum_any():
     assert_supremum_ok((any, any), any)
     assert_supremum_ok((integer, any), any)
     assert_supremum_ok((any, integer), any)
+    assert_supremum_ok((float, any), any)
+    assert_supremum_ok((any, float), any)
+    assert_supremum_ok((number, any), number)
+    assert_supremum_ok((any, number), number)
+    assert_supremum_ok((boolean, any), any)
+    assert_supremum_ok((any, boolean), any)
+    assert_supremum_ok((atom, any), atom)
+    assert_supremum_ok((any, atom), atom)
+    assert_supremum_ok((":a", any), any)
+    assert_supremum_ok((any, ":a"), any)
+
     assert_supremum_ok(((any, integer), (float, any)), (any, any))
     assert_supremum_ok(({1: any}, {1: integer, 2: float}), {1: any})
     assert_supremum_ok(
@@ -475,8 +486,8 @@ def test_supremum_any():
         (sett(1, 2), any, "->", integer),
     )
     assert_supremum_ok(
-        ((any, sett(1), "->", integer), (sett(2), any, "->", integer)),
-        (any, any, "->", integer),
+        ((any, {1: integer}, "->", integer), ({2: any}, any, "->", integer)),
+        ({2: any}, {1: integer}, "->", integer),
     )
 
 

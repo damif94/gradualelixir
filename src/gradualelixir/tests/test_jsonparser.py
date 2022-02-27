@@ -2,7 +2,7 @@ import json
 import subprocess
 from collections import OrderedDict
 
-from gradualelixir import PROJECT_PATH, jsonparser, types
+from gradualelixir import PROJECT_PATH, jsonparser
 from gradualelixir.expression import (
     AtomLiteralExpression,
     ElistExpression,
@@ -42,14 +42,13 @@ def parse_expression(code):
     if isinstance(code, list):
         code = "\n".join(code)
 
-    ret = subprocess.run(
+    elixir_ast = subprocess.run(
         [f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True
     )
     print("---------------------------------------")
     print(code)
-    res = jsonparser.parse_expression(json.loads(ret.stdout))
+    res = jsonparser.parse_expression(json.loads(elixir_ast.stdout))
     print(res)
-    # print(res.__repr__())
     return res
 
 
@@ -86,7 +85,7 @@ def test_parse_data_expressions():
     assert parse_expression("%{42.1 => true}") == MapExpression(
         OrderedDict([(42.1, AtomLiteralExpression("true"))])
     )
-    # this one should be error...
+    # this one should be error... python treats 42.0 as 42
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
             [(42, TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]

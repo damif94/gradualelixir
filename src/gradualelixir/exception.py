@@ -1,0 +1,2 @@
+class SyntaxRestrictionException(Exception):
+    pass
