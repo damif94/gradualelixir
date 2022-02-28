@@ -1,1 +1,1 @@
-[1,["x",{"line":1},null]]
+["if",{"line":1},[true,{"do":1,"else":["x",{"line":4},null]}]]
