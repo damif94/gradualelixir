@@ -2,6 +2,8 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
+from gradualelixir.exception import SyntaxRestrictionException
+
 
 class Type:
     pass
@@ -23,19 +25,22 @@ class AtomType(BaseType):
         return "atom"
 
 
+@dataclass
 class LiteralType(BaseType):
-    pass
+    python_type: t.ClassVar[t.Any]
 
 
 @dataclass
 class IntegerType(LiteralType):
+    python_type = int
+
     def __str__(self):
         return "integer"
 
 
 @dataclass
 class AtomLiteralType(LiteralType):
-    atom: str
+    python_type = str
 
     def __init__(self, atom):
         self.atom = atom
@@ -50,6 +55,8 @@ class AtomLiteralType(LiteralType):
 
 @dataclass
 class FloatType(LiteralType):
+    python_type = float
+
     def __str__(self):
         return "float"
 
@@ -93,14 +100,45 @@ class TupleType(CompositeType):
 
 
 @dataclass
+class MapKey:
+    value: t.Any
+    type_class: t.Type[LiteralType]
+
+    def __init__(self, value: t.Any):
+        super(MapKey, self).__init__()
+        self.value = value
+        literal_type_classes: t.List[t.Type[LiteralType]] = [IntegerType, FloatType, AtomLiteralType]
+        for type_class in literal_type_classes:
+            if isinstance(value, type_class.python_type):
+                self.type_class = type_class
+                return
+        raise SyntaxRestrictionException(f"couldn't find an appropriate literal type for {value}")
+
+    def __hash__(self):
+        return hash(self.type_class) + hash(self.value)
+
+    def __str__(self):
+        if isinstance(self.value, str) or isinstance(self.value, bool):
+            return str(AtomLiteralType(self.value))
+        else:
+            return str(self.value)
+
+    @property
+    def type(self) -> LiteralType:
+        if self.type_class == AtomLiteralType:
+            return AtomLiteralType(self.value)
+        return self.type_class()
+
+
+@dataclass
 class MapType(CompositeType):
 
-    map_type: t.Dict[t.Union[int, float, str, bool], Type]
+    map_type: t.Dict[MapKey, Type]
 
     def __str__(self):
         keys = self.map_type.keys()
         str_values = [str(v) for v in self.map_type.values()]
-        return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
+        return "%{" + ",".join([f"{k} => {v}" for (k, v) in zip(keys, str_values)]) + "}"
 
 
 @dataclass

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from gradualelixir import expression, pattern
+from gradualelixir.types import MapKey
 
 
 def parse_pattern(j) -> pattern.Pattern:
@@ -26,7 +27,7 @@ def parse_pattern(j) -> pattern.Pattern:
                 _, _, aux = child_node
                 key, value_node = aux
                 pat = parse_pattern(value_node)
-                items_dict[key] = pat
+                items_dict[MapKey(key)] = pat
             return pattern.MapPattern(items_dict)
         elif op == "_":
             return pattern.WildPattern()
@@ -79,7 +80,7 @@ def parse_expression(j) -> expression.Expression:
                     _, _, aux = child_node
                     key, value_node = aux
                     expr = parse_expression(value_node)
-                    items_dict[key] = expr
+                    items_dict[MapKey(key)] = expr
                 return expression.MapExpression(items_dict)
             elif op == "=":
                 left_node, right_node = children_nodes

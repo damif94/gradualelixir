@@ -3,7 +3,8 @@ import typing as t
 from dataclasses import dataclass
 
 from gradualelixir import types as gtypes
-from gradualelixir.exception import SyntaxException
+from gradualelixir.exception import SyntaxRestrictionException
+from gradualelixir.types import LiteralType
 
 
 class Pattern:
@@ -34,8 +35,8 @@ class PinIdentPattern(Pattern):
 
 @dataclass
 class LiteralPattern(Pattern):
-    type: gtypes.Type
-    value: t.Union[int, float, str, bool]
+    value: t.Any
+    type: LiteralType
 
 
 @dataclass
@@ -43,8 +44,8 @@ class IntegerPattern(LiteralPattern):
     value: int
 
     def __init__(self, value: int):
-        self.type = gtypes.IntegerType()
         self.value = value
+        self.type = gtypes.IntegerType()
 
     def __str__(self):
         return str(self.value)
@@ -55,8 +56,8 @@ class FloatPattern(LiteralPattern):
     value: float
 
     def __init__(self, value: float):
-        self.type = gtypes.FloatType()
         self.value = value
+        self.type = gtypes.FloatType()
 
     def __str__(self):
         return str(self.value)
@@ -67,11 +68,11 @@ class AtomLiteralPattern(LiteralPattern):
     value: str
 
     def __init__(self, value: str):
-        self.type = gtypes.AtomLiteralType(atom=value)
         self.value = value
+        self.type = gtypes.AtomLiteralType(value)
 
     def __str__(self):
-        return str(self.type)
+        return str(gtypes.MapKey(self.value))
 
 
 @dataclass
@@ -99,7 +100,7 @@ class ListPattern(Pattern):
             or isinstance(tail, ElistPattern)
             or isinstance(tail, WildPattern)
         ):
-            raise SyntaxException(
+            raise SyntaxRestrictionException(
                 "List pattern's tail should be either a List Pattern or an Elist Pattern"
             )
         self.head = head
@@ -112,24 +113,12 @@ class ListPattern(Pattern):
 @dataclass
 class MapPattern(Pattern):
 
-    map: t.OrderedDict[t.Union[int, float, bool, str], Pattern]
+    map: t.OrderedDict[gtypes.MapKey, Pattern]
 
     def __str__(self):
         keys = self.map.keys()
         str_values = [str(v) for _, v in self.map.items()]
         return "%{" + ",".join([f"{k}: {v}" for (k, v) in zip(keys, str_values)]) + "}"
-
-
-def make_pattern_from_literal(value: t.Union[int, float, bool, str]) -> LiteralPattern:
-    if isinstance(value, int):
-        return IntegerPattern(value)
-    elif isinstance(value, float):
-        return FloatPattern(value)
-    elif isinstance(value, bool):
-        return AtomLiteralPattern("true" if value else "false")
-    else:
-        assert isinstance(value, str)
-        return AtomLiteralPattern(value)
 
 
 class PatternErrorEnum(enum.Enum):
@@ -188,7 +177,7 @@ class TuplePatternContext(PatternContext):
 @dataclass
 class MapPatternContext(PatternContext):
     pattern: MapPattern
-    key: t.Union[int, float, bool, str]
+    key: gtypes.MapKey
 
     def __str__(self):
         return f"In the pattern for key {self.key} inside {self.pattern}"
@@ -419,7 +408,7 @@ def pattern_match_aux_map(
             args={"pattern": pattern, "tau": tau},
         )
     pattern_match_mapping_results_dict: t.Dict[
-        t.Union[int, float, str, bool], t.Callable[[TypeEnv], t.Union[gtypes.Type, gtypes.TypingError]]
+        gtypes.MapKey, t.Callable[[TypeEnv], t.Union[gtypes.Type, gtypes.TypingError]]
     ] = {}
     gamma_env_aux = gamma_env
     for key in tau.map_type.keys():
@@ -440,7 +429,7 @@ def pattern_match_aux_map(
 
     def ret_mapping(env: TypeEnv):
         nonlocal pattern_match_mapping_results_dict
-        items: t.Dict[t.Union[int, float, str, bool], gtypes.Type] = {}
+        items: t.Dict[gtypes.MapKey, gtypes.Type] = {}
         for k in pattern_match_mapping_results_dict.keys():
             aux_type = pattern_match_mapping_results_dict[k](env)
             if isinstance(aux_type, gtypes.TypingError):

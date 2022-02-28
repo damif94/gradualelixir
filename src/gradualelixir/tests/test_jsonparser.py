@@ -20,7 +20,9 @@ from gradualelixir.expression import (
     BinaryOpExpression,
     CondExpression,
     CaseExpression,
-    SeqExpression, FunctionCallExpression, VarCallExpression,
+    SeqExpression,
+    FunctionCallExpression,
+    VarCallExpression,
 )
 from gradualelixir.pattern import (
     AtomLiteralPattern,
@@ -34,6 +36,7 @@ from gradualelixir.pattern import (
     TuplePattern,
     WildPattern,
 )
+from gradualelixir.types import MapKey
 
 
 def parse_expression(code):
@@ -77,33 +80,32 @@ def test_parse_data_expressions():
     )
     assert parse_expression("%{}") == MapExpression(OrderedDict([]))
     assert parse_expression("%{1 => :a}") == MapExpression(
-        OrderedDict([(1, AtomLiteralExpression("a"))])
+        OrderedDict([(MapKey(1), AtomLiteralExpression("a"))])
     )
     assert parse_expression("%{:a => 42.0}") == MapExpression(
-        OrderedDict([("a", FloatExpression(42))])
+        OrderedDict([(MapKey("a"), FloatExpression(42))])
     )
     assert parse_expression("%{42.1 => true}") == MapExpression(
-        OrderedDict([(42.1, AtomLiteralExpression("true"))])
+        OrderedDict([(MapKey(42.1), AtomLiteralExpression("true"))])
     )
-    # this one should be error... python treats 42.0 as 42
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
-            [(42, TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
+            [(MapKey(42.0), TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
         )
     )
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
-            [(42, TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
+            [(MapKey(42.0), TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
         )
     )
     assert parse_expression("%{42.0 => %{1 => 2}}") == MapExpression(
-        OrderedDict([(42, MapExpression(OrderedDict([(1, IntegerExpression(2))])))])
+        OrderedDict([(MapKey(42.0), MapExpression(OrderedDict([(MapKey(1), IntegerExpression(2))])))])
     )
     assert parse_expression("%{42.0 => %{1 => :x}, :a => {}}") == MapExpression(
         OrderedDict(
             [
-                (42, MapExpression(OrderedDict([(1, AtomLiteralExpression("x"))]))),
-                ("a", TupleExpression([])),
+                (MapKey(42.0), MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("x"))]))),
+                (MapKey("a"), TupleExpression([])),
             ]
         )
     )
@@ -128,7 +130,7 @@ def test_parse_data_expressions():
             ListExpression(
                 AtomLiteralExpression("a"),
                 ListExpression(
-                    MapExpression(OrderedDict([("x", FloatExpression(2))])),
+                    MapExpression(OrderedDict([(MapKey("x"), FloatExpression(2))])),
                     ListExpression(ElistExpression(), ElistExpression()),
                 ),
             ),
@@ -145,7 +147,7 @@ def test_parse_data_expressions():
             ListExpression(
                 AtomLiteralExpression("a"),
                 ListExpression(
-                    MapExpression(OrderedDict([("x", FloatExpression(2))])),
+                    MapExpression(OrderedDict([(MapKey("x"), FloatExpression(2))])),
                     ListExpression(ElistExpression(), ElistExpression()),
                 ),
             ),
@@ -174,29 +176,29 @@ def test_parse_data_patterns():
     )
     assert parse_pattern("%{}") == MapPattern(OrderedDict([]))
     assert parse_pattern("%{1 => :a}") == MapPattern(
-        OrderedDict([(1, AtomLiteralPattern("a"))])
+        OrderedDict([(MapKey(1), AtomLiteralPattern("a"))])
     )
     assert parse_pattern("%{:a => 42.0}") == MapPattern(
-        OrderedDict([("a", FloatPattern(42))])
+        OrderedDict([(MapKey("a"), FloatPattern(42))])
     )
     assert parse_pattern("%{42.1 => true}") == MapPattern(
-        OrderedDict([(42.1, AtomLiteralPattern("true"))])
+        OrderedDict([(MapKey(42.1), AtomLiteralPattern("true"))])
     )
     # TODO this one should be error...should fix it somehow!
     assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
-        OrderedDict([(42, TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
+        OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
     )
     assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
-        OrderedDict([(42, TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
+        OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
     )
     assert parse_pattern("%{42.0 => %{1 => 2}}") == MapPattern(
-        OrderedDict([(42, MapPattern(OrderedDict([(1, IntegerPattern(2))])))])
+        OrderedDict([(MapKey(42.0), MapPattern(OrderedDict([(MapKey(1), IntegerPattern(2))])))])
     )
     assert parse_pattern("%{42.0 => %{1 => :x}, :a => {}}") == MapPattern(
         OrderedDict(
             [
-                (42, MapPattern(OrderedDict([(1, AtomLiteralPattern("x"))]))),
-                ("a", TuplePattern([])),
+                (MapKey(42.0), MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("x"))]))),
+                (MapKey("a"), TuplePattern([])),
             ]
         )
     )
@@ -221,7 +223,7 @@ def test_parse_data_patterns():
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
-                    MapPattern(OrderedDict([("x", FloatPattern(2))])),
+                    MapPattern(OrderedDict([(MapKey("x"), FloatPattern(2))])),
                     ListPattern(ElistPattern(), ElistPattern()),
                 ),
             ),
@@ -235,7 +237,7 @@ def test_parse_data_patterns():
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
-                    MapPattern(OrderedDict([("x", FloatPattern(2))])),
+                    MapPattern(OrderedDict([(MapKey("x"), FloatPattern(2))])),
                     ListPattern(ElistPattern(), ElistPattern()),
                 ),
             ),
@@ -249,7 +251,7 @@ def test_parse_data_patterns():
             ListPattern(
                 IdentPattern("z"),
                 ListPattern(
-                    MapPattern(OrderedDict([("x", WildPattern())])),
+                    MapPattern(OrderedDict([(MapKey("x"), WildPattern())])),
                     ListPattern(
                         ListPattern(IntegerPattern(1), WildPattern()), ElistPattern()
                     ),

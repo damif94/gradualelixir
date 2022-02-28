@@ -178,7 +178,7 @@ class TupleExpression(Expression):
 
 @dataclass
 class MapExpression(Expression):
-    map: t.OrderedDict[t.Union[int, float, bool, str], Expression]
+    map: t.OrderedDict[gtypes.MapKey, Expression]
 
     def __str__(self):
         keys = self.map.keys()
@@ -250,17 +250,6 @@ class CaseExpression(Expression):
     expression: Expression
     clauses: t.List[t.Tuple[pattern.Pattern, Expression]]
 
-    def __init__(
-        self,
-        expression: Expression,
-        clauses: t.List[t.Tuple[pattern.Pattern, Expression]],
-    ):
-        super(CaseExpression, self).__init__()
-        if len(clauses) == 0:
-            raise SyntaxException("case expression expects at least one clause")
-        self.expression = expression
-        self.clauses = clauses
-
     def __str__(self):
         res = f"case {self.expression} do\n"
         for clause in self.clauses:
@@ -272,12 +261,6 @@ class CaseExpression(Expression):
 @dataclass
 class CondExpression(Expression):
     clauses: t.List[t.Tuple[Expression, Expression]]
-
-    def __init__(self, clauses: t.List[t.Tuple[Expression, Expression]]):
-        super(CondExpression, self).__init__()
-        if len(clauses) == 0:
-            raise SyntaxException("cond expression expects at least one clause")
-        self.clauses = clauses
 
     def __str__(self):
         res = "cond do\n"
@@ -362,7 +345,7 @@ class TupleExpressionContext(ExpressionContext):
 @dataclass
 class MapExpressionContext(ExpressionContext):
     expression: MapExpression
-    key: t.Union[int, float, bool, str]
+    key: gtypes.MapKey
 
     def __str__(self):
         return f"In the expression for key {self.key}"
