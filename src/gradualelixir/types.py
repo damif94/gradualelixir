@@ -41,9 +41,7 @@ class IntegerType(LiteralType):
 @dataclass
 class AtomLiteralType(LiteralType):
     python_type = str
-
-    def __init__(self, atom):
-        self.atom = atom
+    atom: str
 
     def __str__(self):
         if self.atom:
@@ -109,7 +107,7 @@ class MapKey:
         self.value = value
         literal_type_classes: t.List[t.Type[LiteralType]] = [IntegerType, FloatType, AtomLiteralType]
         for type_class in literal_type_classes:
-            if isinstance(value, type_class.python_type):
+            if type(value) == type_class.python_type:
                 self.type_class = type_class
                 return
         raise SyntaxRestrictionException(f"couldn't find an appropriate literal type for {value}")
@@ -119,7 +117,7 @@ class MapKey:
 
     def __str__(self):
         if isinstance(self.value, str) or isinstance(self.value, bool):
-            return str(AtomLiteralType(self.value))
+            return str(AtomLiteralType(self.value)) # type: ignore
         else:
             return str(self.value)
 

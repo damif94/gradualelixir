@@ -7,7 +7,7 @@ from gradualelixir.exception import SyntaxRestrictionException
 
 
 class UnaryOpEnum(Enum):
-    negation = "!"
+    negation = "not"
     negative = "-"
     absolute_value = "abs"
 
@@ -16,16 +16,20 @@ class UnaryOpEnum(Enum):
         return self not in [UnaryOpEnum.absolute_value]
 
     @property
-    def types(self) -> t.List[t.Tuple[t.Type[gtypes.Type], t.Type[gtypes.Type]]]:
+    def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type]]:
         if self in [UnaryOpEnum.negative, UnaryOpEnum.absolute_value]:
             return [
-                (gtypes.IntegerType, gtypes.IntegerType),
-                (gtypes.FloatType, gtypes.FloatType),
-                (gtypes.NumberType, gtypes.NumberType)
+                (gtypes.IntegerType(), gtypes.IntegerType()),
+                (gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.NumberType(), gtypes.NumberType())
             ]
         else:
             assert self is UnaryOpEnum.negation
-            return [(gtypes.BooleanType, gtypes.BooleanType)]
+            return [
+                (gtypes.AtomLiteralType("true"), gtypes.AtomLiteralType("false")),
+                (gtypes.AtomLiteralType("false"), gtypes.AtomLiteralType("true")),
+                (gtypes.BooleanType(), gtypes.BooleanType())
+            ]
 
 
 class BinaryOpEnum(Enum):
@@ -39,8 +43,6 @@ class BinaryOpEnum(Enum):
     integer_reminder = "rem"
     maximum = "max"
     minimum = "min"
-    concatenation = "++"
-    unconcatenation = "--"
     equality = "=="
 
     @property
@@ -53,38 +55,50 @@ class BinaryOpEnum(Enum):
         ]
 
     @property
-    def types(self) -> t.List[t.Tuple[t.Type[gtypes.Type], t.Type[gtypes.Type], t.Type[gtypes.Type]]]:
-        if self in [BinaryOpEnum.conjunction, BinaryOpEnum.disjunction]:
-            return [(gtypes.BooleanType, gtypes.BooleanType, gtypes.BooleanType)]
+    def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type, gtypes.Type]]:
+        if self is BinaryOpEnum.conjunction:
+            return [
+                (gtypes.AtomLiteralType("true"), gtypes.AtomLiteralType("true"), gtypes.AtomLiteralType("true")),
+                (gtypes.AtomLiteralType("false"), gtypes.BooleanType(), gtypes.AtomLiteralType("false")),
+                (gtypes.BooleanType(), gtypes.AtomLiteralType("false"), gtypes.AtomLiteralType("false")),
+                (gtypes.BooleanType(), gtypes.BooleanType(), gtypes.BooleanType())
+            ]
+        if self is BinaryOpEnum.disjunction:
+            return [
+                (gtypes.AtomLiteralType("false"), gtypes.AtomLiteralType("false"), gtypes.AtomLiteralType("false")),
+                (gtypes.AtomLiteralType("true"), gtypes.BooleanType(), gtypes.AtomLiteralType("true")),
+                (gtypes.BooleanType(), gtypes.AtomLiteralType("true"), gtypes.AtomLiteralType("true")),
+                (gtypes.BooleanType(), gtypes.BooleanType(), gtypes.BooleanType())
+            ]
         elif self in [BinaryOpEnum.sum, BinaryOpEnum.product, BinaryOpEnum.subtraction]:
             return [
-                (gtypes.IntegerType, gtypes.IntegerType, gtypes.IntegerType),
-                (gtypes.FloatType, gtypes.FloatType, gtypes.FloatType),
-                (gtypes.IntegerType, gtypes.FloatType, gtypes.FloatType),
-                (gtypes.FloatType, gtypes.IntegerType, gtypes.FloatType),
-                (gtypes.FloatType, gtypes.NumberType, gtypes.FloatType),
-                (gtypes.NumberType, gtypes.FloatType, gtypes.FloatType),
-                (gtypes.NumberType, gtypes.NumberType, gtypes.NumberType)
+                (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType()),
+                (gtypes.FloatType(), gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.IntegerType(), gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.FloatType(), gtypes.IntegerType(), gtypes.FloatType()),
+                (gtypes.FloatType(), gtypes.NumberType(), gtypes.FloatType()),
+                (gtypes.NumberType(), gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType())
             ]
         elif self is BinaryOpEnum.division:
-            return [(gtypes.NumberType, gtypes.NumberType, gtypes.FloatType)]
+            return [(gtypes.NumberType(), gtypes.NumberType(), gtypes.FloatType())]
         elif self in [BinaryOpEnum.integer_reminder, BinaryOpEnum.integer_division]:
-            return [(gtypes.IntegerType, gtypes.IntegerType, gtypes.IntegerType)]
+            return [(gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType())]
         elif self in [BinaryOpEnum.maximum, BinaryOpEnum.minimum]:
             return [
-                (gtypes.IntegerType, gtypes.IntegerType, gtypes.IntegerType),
-                (gtypes.FloatType, gtypes.FloatType, gtypes.FloatType),
-                (gtypes.NumberType, gtypes.NumberType, gtypes.NumberType)
+                (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType()),
+                (gtypes.FloatType(), gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType())
             ]
         else:
             assert self is BinaryOpEnum.equality
             return [
                 # TODO improve so that
                 #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=x), gtypes.BooleanType)
-                (gtypes.AtomType, gtypes.AtomType, gtypes.BooleanType),
-                (gtypes.IntegerType, gtypes.IntegerType, gtypes.BooleanType),
-                (gtypes.FloatType, gtypes.FloatType, gtypes.BooleanType),
-                (gtypes.NumberType, gtypes.NumberType, gtypes.BooleanType)
+                (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
+                (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.BooleanType()),
+                (gtypes.FloatType(), gtypes.FloatType(), gtypes.BooleanType()),
+                (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType())
             ]
 
 
@@ -221,7 +235,7 @@ class PatternMatchExpression(Expression):
 
 
 @dataclass
-class IfExpression(Expression):
+class IfElseExpression(Expression):
     condition: Expression
     if_expression: Expression
     else_expression: t.Optional[Expression]
@@ -381,7 +395,7 @@ class PatternMatchExpressionContext(ExpressionContext):
 
 @dataclass
 class IfElseExpressionContext(ExpressionContext):
-    expression: IfExpression
+    expression: IfElseExpression
     branch: t.Optional[bool]
 
     def __str__(self):
@@ -500,7 +514,7 @@ def type_check(expr: Expression, gamma_env: TypeEnv, delta_env: TypeEnv) -> Expr
         return type_check_binary_op(expr, gamma_env, delta_env)
     if isinstance(expr, PatternMatchExpression):
         return type_check_pattern_match(expr, gamma_env, delta_env)
-    if isinstance(expr, IfExpression):
+    if isinstance(expr, IfElseExpression):
         return type_check_if_else(expr, gamma_env, delta_env)
     if isinstance(expr, SeqExpression):
         return type_check_seq(expr, gamma_env, delta_env)
@@ -508,6 +522,8 @@ def type_check(expr: Expression, gamma_env: TypeEnv, delta_env: TypeEnv) -> Expr
         return type_check_cond(expr, gamma_env, delta_env)
     if isinstance(expr, CaseExpression):
         return type_check_case(expr, gamma_env, delta_env)
+    else:
+        pass
 
 
 def type_check_literal(expr: LiteralExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
@@ -532,15 +548,24 @@ def type_check_elist(_expr: ElistExpression, gamma_env: TypeEnv, _delta_env: Typ
 def type_check_list(expr: ListExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     head_type_check_result = type_check(expr.head, gamma_env, delta_env)
     tail_type_check_result = type_check(expr.tail, gamma_env, delta_env)
-    errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
+    if isinstance(head_type_check_result, ExpressionTypeCheckError) and isinstance(tail_type_check_result, ExpressionTypeCheckError):
+        return NestedExpressionTypeCheckError(
+            expression=expr,
+            errors=[
+                (ListExpressionContext(expr, head=True), head_type_check_result),
+                (ListExpressionContext(expr, head=False), tail_type_check_result)
+            ]
+        )
     if isinstance(head_type_check_result, ExpressionTypeCheckError):
-        errors.append((ListExpressionContext(expr, head=True), head_type_check_result))
+        return NestedExpressionTypeCheckError(
+            expression=expr,
+            errors=[(ListExpressionContext(expr, head=True), head_type_check_result)]
+        )
     if isinstance(tail_type_check_result, ExpressionTypeCheckError):
-        errors.append((ListExpressionContext(expr, head=False), tail_type_check_result))
-    if errors:
-        return NestedExpressionTypeCheckError(expression=expr, errors=errors)
-    assert isinstance(head_type_check_result, ExpressionTypeCheckSuccess)
-    assert isinstance(tail_type_check_result, ExpressionTypeCheckSuccess)
+        return NestedExpressionTypeCheckError(
+            expression=expr,
+            errors=[(ListExpressionContext(expr, head=False), tail_type_check_result)]
+        )
     result_type = gtypes.supremum(
         gtypes.ListType(head_type_check_result.type), tail_type_check_result.type
     )
@@ -605,9 +630,9 @@ def type_check_unary_op(expr: UnaryOpExpression, gamma_env: TypeEnv, delta_env: 
         )
     if valid_result_types := [
         ret_type for arg_type, ret_type in expr.op.types
-        if gtypes.is_subtype(expression_type_check_result.type, arg_type())
+        if gtypes.is_subtype(expression_type_check_result.type, arg_type)
     ]:
-        return ExpressionTypeCheckSuccess(valid_result_types[0](), expression_type_check_result.env)
+        return ExpressionTypeCheckSuccess(valid_result_types[0], expression_type_check_result.env)
     return BaseExpressionTypeCheckError(
         expression=expr,
         kind=ExpressionErrorEnum.incompatible_type_for_unary_operator,
@@ -617,12 +642,20 @@ def type_check_unary_op(expr: UnaryOpExpression, gamma_env: TypeEnv, delta_env: 
 
 def type_check_binary_op(expr: BinaryOpExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     left_type_check_result = type_check(expr.left_expression, gamma_env, delta_env)
+    right_type_check_result = type_check(expr.right_expression, gamma_env, delta_env)
+    if isinstance(left_type_check_result, ExpressionTypeCheckError) and isinstance(right_type_check_result, ExpressionTypeCheckError):
+        return NestedExpressionTypeCheckError(
+            expression=expr,
+            errors=[
+                (BinaryOpContext(expression=expr, is_left=True), left_type_check_result),
+                (BinaryOpContext(expression=expr, is_left=False), right_type_check_result)
+            ]
+        )
     if isinstance(left_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
             expression=expr,
             errors=[(BinaryOpContext(expression=expr, is_left=True), left_type_check_result)]
         )
-    right_type_check_result = type_check(expr.right_expression, gamma_env, delta_env)
     if isinstance(right_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
             expression=expr,
@@ -631,13 +664,13 @@ def type_check_binary_op(expr: BinaryOpExpression, gamma_env: TypeEnv, delta_env
     if valid_result_types := [
         ret_type for left_arg_type, right_arg_type, ret_type in expr.op.types
         if (
-            gtypes.is_subtype(right_type_check_result.type, left_arg_type())
+            gtypes.is_subtype(left_type_check_result.type, left_arg_type)
             and
-            gtypes.is_subtype(right_type_check_result.type, right_arg_type())
+            gtypes.is_subtype(right_type_check_result.type, right_arg_type)
         )
     ]:
         return ExpressionTypeCheckSuccess(
-            type=valid_result_types[0](),
+            type=valid_result_types[0],
             env={**left_type_check_result.env, **right_type_check_result.env}
         )
     else:
@@ -679,7 +712,7 @@ def type_check_pattern_match(expr: PatternMatchExpression, gamma_env: TypeEnv, d
         )
 
 
-def type_check_if_else(expr: IfExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
+def type_check_if_else(expr: IfElseExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     cond_type_check_result = type_check(expr.condition, gamma_env, delta_env)
     if isinstance(cond_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
@@ -700,18 +733,19 @@ def type_check_if_else(expr: IfExpression, gamma_env: TypeEnv, delta_env: TypeEn
     if_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
     if isinstance(if_type_check_result, ExpressionTypeCheckError):
         errors.append((IfElseExpressionContext(expression=expr, branch=True), if_type_check_result))
-    else_type_check_result = None
     if expr.else_expression is not None:
-        else_type_check_result = type_check(expr.if_expression, gamma_env, delta_env)
+        else_type_check_result = type_check(expr.else_expression, gamma_env, delta_env)
         if isinstance(else_type_check_result, ExpressionTypeCheckError):
             errors.append((IfElseExpressionContext(expression=expr, branch=False), else_type_check_result))
+    else:
+        else_type_check_result = if_type_check_result
     if errors:
         return NestedExpressionTypeCheckError(expression=expr, errors=errors)
 
     assert isinstance(if_type_check_result, ExpressionTypeCheckSuccess)
     assert isinstance(else_type_check_result, ExpressionTypeCheckSuccess)
     ret_type, ret_env = if_type_check_result.type, if_type_check_result.env
-    if else_type_check_result:
+    if expr.else_expression:
         aux = gtypes.supremum(if_type_check_result.type, else_type_check_result.type)
         if isinstance(aux, gtypes.TypingError):
             return BaseExpressionTypeCheckError(

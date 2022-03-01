@@ -12,7 +12,7 @@ from gradualelixir.expression import (
     MapExpression,
     PatternMatchExpression,
     TupleExpression,
-    IfExpression,
+    IfElseExpression,
     UnaryOpExpression,
     UnaryOpEnum,
     IdentExpression,
@@ -317,7 +317,7 @@ def test_control_flow_expressions():
         "  1\n" 
         "end\n"
     ) == (
-        IfExpression(
+        IfElseExpression(
             condition=AtomLiteralExpression("true"),
             if_expression=IntegerExpression(1),
             else_expression=None,
@@ -330,7 +330,7 @@ def test_control_flow_expressions():
         "  {2, 2}\n" 
         "end\n"
     ) == (
-        IfExpression(
+        IfElseExpression(
             condition=AtomLiteralExpression("true"),
             if_expression=TupleExpression([IntegerExpression(1), IntegerExpression(1)]),
             else_expression=TupleExpression(
@@ -435,7 +435,7 @@ def test_control_flow_expressions():
                 ],
             ),
         ),
-        IfExpression(
+        IfElseExpression(
             BinaryOpExpression(BinaryOpEnum.equality, IdentExpression("h"), IntegerExpression(1)),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("true")),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("false")),

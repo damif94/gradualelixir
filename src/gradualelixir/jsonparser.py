@@ -1,7 +1,14 @@
 from collections import OrderedDict
 
-from gradualelixir import expression, pattern
+from gradualelixir import expression, pattern, types as gtypes
 from gradualelixir.types import MapKey
+
+
+def parse_key(j) -> gtypes.MapKey:
+    if isinstance(j, bool):
+        return gtypes.MapKey("true" if j else "false")
+    else:
+        return gtypes.MapKey(j)
 
 
 def parse_pattern(j) -> pattern.Pattern:
@@ -25,9 +32,10 @@ def parse_pattern(j) -> pattern.Pattern:
             items_dict = OrderedDict()
             for child_node in children_nodes:
                 _, _, aux = child_node
-                key, value_node = aux
+                key_node, value_node = aux
+                key = parse_key(key_node)
                 pat = parse_pattern(value_node)
-                items_dict[MapKey(key)] = pat
+                items_dict[key] = pat
             return pattern.MapPattern(items_dict)
         elif op == "_":
             return pattern.WildPattern()
@@ -78,9 +86,10 @@ def parse_expression(j) -> expression.Expression:
                 items_dict = OrderedDict()
                 for child_node in children_nodes:
                     _, _, aux = child_node
-                    key, value_node = aux
+                    key_node, value_node = aux
+                    key = parse_key(key_node)
                     expr = parse_expression(value_node)
-                    items_dict[MapKey(key)] = expr
+                    items_dict[key] = expr
                 return expression.MapExpression(items_dict)
             elif op == "=":
                 left_node, right_node = children_nodes
@@ -94,7 +103,7 @@ def parse_expression(j) -> expression.Expression:
                 else_expr = None
                 if "else" in do_node:
                     else_expr = parse_expression(do_node["else"])
-                return expression.IfExpression(cond_expr, if_expr, else_expr)
+                return expression.IfElseExpression(cond_expr, if_expr, else_expr)
             elif op == "case":
                 case_node, clause_nodes = children_nodes
                 case_expression = parse_expression(case_node)
