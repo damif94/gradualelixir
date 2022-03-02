@@ -28,6 +28,10 @@ from gradualelixir.expression import (
     MapExpression,
     ElistExpression,
     ListExpression,
+    CondExpression,
+    SeqExpression,
+    CondExpressionContext,
+    UnaryOpEnum
 )
 from gradualelixir.pattern import LiteralPattern, IntegerPattern, IdentPattern
 from gradualelixir.types import (
@@ -77,7 +81,6 @@ def check_context_path(error_data: ExpressionTypeCheckError, context_path):
         assert isinstance(error_data, BaseExpressionTypeCheckError)
         assert error_data.kind is context_path
 
-
 def assert_type_check_expression_error(type_check_input, context_path):
     code, previous_env = type_check_input
     if not isinstance(code, Expression):
@@ -94,6 +97,7 @@ def assert_type_check_expression_error(type_check_input, context_path):
     ret = expression.type_check(expr, previous_env, {})
     assert isinstance(ret, ExpressionTypeCheckError)
     check_context_path(ret, context_path)
+    print(ret)
 
 
 def test_literal():
@@ -993,10 +997,10 @@ def test_if_else():
         # else
         #   y
         # end
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("y")),
-        {"x": IntegerType(), "y": FloatType()},
+        IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
+        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
         NumberType(),
-        {"x": IntegerType(), "y": FloatType()},
+        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
     )
     assert_type_check_expression_ok(
         # if true do
@@ -1023,59 +1027,49 @@ def test_if_else():
 
     # VARIABLE EXPORT behavior
     assert_type_check_expression_ok(
-        # if true do
-        #   x = 1
+        # if b = true do
+        #   b; 1
         # else
-        #   y = 1.0
+        #   b; 1.0
         # end
         IfElseExpression(
-            AtomLiteralExpression("true"),
-            PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
-            PatternMatchExpression(IdentPattern("y"), FloatExpression(1.0)),
+            PatternMatchExpression(IdentPattern("b"), AtomLiteralExpression("true")),
+            SeqExpression(IdentExpression("b"), IntegerExpression(1)),
+            SeqExpression(IdentExpression("b"), FloatExpression(1.0)),
         ),
         {},
         NumberType(),
-        {"x": IntegerType(), "y": FloatType()},
+        {"b": AtomLiteralType("true")},
     )
     assert_type_check_expression_ok(
         # if true do
-        #   x = 1
+        #   b = 1
         # else
-        #   x = 1.0
+        #   b = 1.0
         # end
         IfElseExpression(
             AtomLiteralExpression("true"),
-            PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
-            PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
+            PatternMatchExpression(IdentPattern("b"), IntegerExpression(1)),
+            PatternMatchExpression(IdentPattern("b"), FloatExpression(1.0)),
         ),
         {},
         NumberType(),
-        {"x": FloatType()},
+        {},
     )
     assert_type_check_expression_ok(
-        # if true do
-        #   x = 1
+        # if x = true do
+        #   y = 1
         # else
-        #   if false do
-        #     x = 2.0
-        #   else
-        #     y = 2
-        #   end
+        #   z = 1.0
         # end
         IfElseExpression(
-            AtomLiteralExpression("true"),
-            PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
-            (
-                IfElseExpression(
-                    AtomLiteralExpression("false"),
-                    PatternMatchExpression(IdentPattern("x"), FloatExpression(2.0)),
-                    PatternMatchExpression(IdentPattern("y"), IntegerExpression(2)),
-                )
-            ),
+            PatternMatchExpression(IdentPattern("x"), AtomLiteralExpression("true")),
+            PatternMatchExpression(IdentPattern("y"), IntegerExpression(1)),
+            PatternMatchExpression(IdentPattern("z"), FloatExpression(1.0)),
         ),
         {},
         NumberType(),
-        {"x": FloatType(), "y": IntegerType()},
+        {"x": AtomLiteralType("true")},
     )
 
     # BASE ERRORS behavior
@@ -1125,4 +1119,226 @@ def test_if_else():
         # end
         (IfElseExpression(AtomLiteralExpression("true"), IntegerExpression(1), IdentExpression("x")), {}),
         [((IfElseExpressionContext, {"branch": False}), identifier_not_found_in_environment)],
+    )
+
+
+def test_cond():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        # cond do
+        #   true -> x
+        # end
+        CondExpression([(AtomLiteralExpression("true"), IdentExpression("x"))]),
+        {"x": IntegerType()},
+        IntegerType(),
+        {"x": IntegerType()},
+    )
+    assert_type_check_expression_ok(
+        # cond do
+        #   true -> x
+        #   false -> y
+        # end
+        CondExpression(
+            [
+                (AtomLiteralExpression("true"), IdentExpression("x")),
+                (AtomLiteralExpression("false"), IdentExpression("y")),
+            ]
+        ),
+        {"x": IntegerType(), "y": FloatType()},
+        NumberType(),
+        {"x": IntegerType(), "y": FloatType()},
+    )
+    assert_type_check_expression_ok(
+        # cond do
+        #   b -> x
+        #   false -> y
+        # end
+        CondExpression(
+            [(IdentExpression("b"), IdentExpression("x")), (AtomLiteralExpression("false"), IdentExpression("y"))]
+        ),
+        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
+        NumberType(),
+        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
+    )
+    assert_type_check_expression_ok(
+        # cond do
+        #   true -> x
+        #   false -> y
+        # end
+        CondExpression(
+            [
+                (AtomLiteralExpression("true"), IdentExpression("x")),
+                (AtomLiteralExpression("false"), IdentExpression("y")),
+            ]
+        ),
+        {"x": IntegerType(), "y": FloatType()},
+        NumberType(),
+        {"x": IntegerType(), "y": FloatType()},
+    )
+    assert_type_check_expression_ok(
+        # cond do
+        #   true -> x
+        #   false -> y
+        # end
+        CondExpression(
+            [
+                (AtomLiteralExpression("true"), IdentExpression("x")),
+                (AtomLiteralExpression("false"), IdentExpression("y")),
+            ]
+        ),
+        {"x": NumberType(), "y": AnyType()},
+        NumberType(),
+        {"x": NumberType(), "y": AnyType()},
+    )
+
+    # VARIABLE EXPORT behavior
+    assert_type_check_expression_ok(
+        # cond do
+        #   b = true -> b; x = 1
+        #   c = false -> c; y = 1.0
+        # end
+        CondExpression(
+            [
+                (
+                    PatternMatchExpression(IdentPattern("b"), AtomLiteralExpression("true")),
+                    SeqExpression(
+                        IdentExpression("b"), PatternMatchExpression(IdentPattern("x"), IntegerExpression(1))
+                    ),
+                ),
+                (
+                    PatternMatchExpression(IdentPattern("c"), AtomLiteralExpression("false")),
+                    SeqExpression(
+                        IdentExpression("c"), PatternMatchExpression(IdentPattern("y"), FloatExpression(1.0))
+                    ),
+                ),
+            ]
+        ),
+        {},
+        NumberType(),
+        {},
+    )
+
+    # BASE ERRORS behavior
+    assert_type_check_expression_error(
+        # cond do
+        #   1 -> x
+        #   false -> 4
+        # end
+        (
+            CondExpression(
+                [(IntegerExpression(1), IdentExpression("x")), (AtomLiteralExpression("false"), IntegerExpression(4))]
+            ),
+            {},
+        ),
+        [((CondExpressionContext, {"branch": 0, "cond": True}), ExpressionErrorEnum.type_is_not_boolean)],
+    )
+    assert_type_check_expression_error(
+        # cond do
+        #   1 -> x
+        #   :a -> y
+        # end
+        (
+            CondExpression(
+                [(IntegerExpression(1), IdentExpression("x")), (AtomLiteralExpression("a"), IdentExpression("y"))]
+            ),
+            {},
+        ),
+        [
+            ((CondExpressionContext, {"branch": 0, "cond": True}), ExpressionErrorEnum.type_is_not_boolean),
+            ((CondExpressionContext, {"branch": 1, "cond": True}), ExpressionErrorEnum.type_is_not_boolean),
+        ],
+    )
+    assert_type_check_expression_error(
+        # cond do
+        #   true -> 1
+        #   false -> :a
+        # end
+        (
+            CondExpression(
+                [
+                    (AtomLiteralExpression("true"), IntegerExpression(1)),
+                    (AtomLiteralExpression("false"), AtomLiteralExpression("a")),
+                ]
+            ),
+            {},
+        ),
+        ExpressionErrorEnum.incompatible_types_for_cond,
+    )
+
+    # NESTED ERRORS behavior
+    assert_type_check_expression_error(
+        # cond do
+        #   x -> 1
+        #   :a -> w
+        #   true -> w
+        # end
+        (
+            CondExpression([
+                (IdentExpression("x"), IntegerExpression(1)),
+                (AtomLiteralExpression("a"), IdentExpression("w")),
+                (AtomLiteralExpression("true"), IdentExpression("w"))
+            ]),
+            {},
+        ),
+        [
+            ((CondExpressionContext, {"branch": 0, "cond": True}), identifier_not_found_in_environment),
+            ((CondExpressionContext, {"branch": 1, "cond": True}), ExpressionErrorEnum.type_is_not_boolean),
+            ((CondExpressionContext, {"branch": 2, "cond": False}), identifier_not_found_in_environment),
+        ]
+    )
+
+    assert_type_check_expression_error(
+        # cond do
+        #   false -> not b
+        #   :a -> b
+        # end
+        (
+            CondExpression([
+                (AtomLiteralExpression("false"), UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b"))),
+                (AtomLiteralExpression("a"), IdentExpression("b")),
+            ]),
+            {"b": BooleanType()}
+        ),
+        [((CondExpressionContext, {"branch": 1, "cond": True}), ExpressionErrorEnum.type_is_not_boolean)]
+    )
+
+    print()
+    assert_type_check_expression_error(
+        # cond do
+        #   cond do
+        #     false -> not b
+        #     :a -> b
+        #   end -> x
+        #   true ->
+        #     cond do
+        #       true -> :a
+        #       b -> 1.0
+        #     end
+        # end
+        (
+            CondExpression([
+                (
+                    CondExpression([
+                        (AtomLiteralExpression("false"), UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b"))),
+                        (AtomLiteralExpression("a"), IdentExpression("b")),
+                    ]),
+                    IdentExpression("x")
+                ),
+                (
+                    AtomLiteralExpression("true"),
+                    CondExpression([
+                        (AtomLiteralExpression("true"), AtomLiteralExpression("a")),
+                        (IdentExpression("b"), IntegerExpression(1)),
+                    ])
+                )
+            ]),
+            {"b": BooleanType()},
+        ),
+        [
+            (
+                (CondExpressionContext, {"branch": 0, "cond": True}),
+                [((CondExpressionContext, {"branch": 1, "cond": True}), ExpressionErrorEnum.type_is_not_boolean)]
+            ),
+            ((CondExpressionContext, {"branch": 1, "cond": False}), ExpressionErrorEnum.incompatible_types_for_cond),
+        ]
     )
