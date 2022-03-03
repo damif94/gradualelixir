@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
-from gradualelixir import types, utils
+from gradualelixir import types as gtypes
+from gradualelixir import utils
 
 integer = "integer"
 float = "float"
@@ -13,21 +14,21 @@ false = False
 
 
 def supremum(sigma, tau):
-    result = types.supremum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, types.SupremumError):
+    result = gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
+    if isinstance(result, gtypes.SupremumError):
         return result
     return utils.unparse_type(result)
 
 
 def infimum(sigma, tau):
-    result = types.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, types.SupremumError):
+    result = gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
+    if isinstance(result, gtypes.SupremumError):
         return result
     return utils.unparse_type(result)
 
 
 def is_subtype(tau, sigma):
-    return types.is_subtype(utils.parse_type(tau), utils.parse_type(sigma))
+    return gtypes.is_subtype(utils.parse_type(tau), utils.parse_type(sigma))
 
 
 def sett(*args):
@@ -51,13 +52,13 @@ def assert_infimum_ok(input, output):
 
 def assert_supremum_error(sigma, tau, sup=True):
     result = supremum(sigma, tau)
-    assert isinstance(result, types.SupremumError)
+    assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
 
 
 def assert_infimum_error(sigma, tau, sup=False):
     result = infimum(sigma, tau)
-    assert isinstance(result, types.SupremumError)
+    assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
 
 
@@ -184,9 +185,7 @@ def test_subtype_function():
     assert is_subtype((atom, "->", integer), (boolean, "->", any))
     assert is_subtype((any, "->", integer), (boolean, "->", number))
     assert is_subtype((any, "->", integer), (boolean, "->", any))
-    assert is_subtype(
-        ((any, integer), "->", [integer]), ((boolean, integer), "->", [any])
-    )
+    assert is_subtype(((any, integer), "->", [integer]), ((boolean, integer), "->", [any]))
 
     assert not is_subtype(("->", integer), (any, "->", integer))
     assert not is_subtype(("->", integer), (boolean, "->", integer))
@@ -375,12 +374,8 @@ def test_supremum_map():
         ({1: sett(1), 2: sett(2)}, {1: sett(3), 2: sett(2)}), {1: sett(), 2: sett(2)}
     )
 
-    assert_supremum_ok(
-        ({1: integer, 2: float}, {1: integer, 2: integer}), {1: integer, 2: number}
-    )
-    assert_supremum_ok(
-        ({1: integer, 2: float}, {2: integer, 1: integer}), {1: integer, 2: number}
-    )
+    assert_supremum_ok(({1: integer, 2: float}, {1: integer, 2: integer}), {1: integer, 2: number})
+    assert_supremum_ok(({1: integer, 2: float}, {2: integer, 1: integer}), {1: integer, 2: number})
 
     assert_supremum_error({1: integer}, {1: boolean})
     assert_supremum_error({1: integer, 2: integer}, {1: boolean, 2: integer})
@@ -398,12 +393,8 @@ def test_infimum_map():
     assert_infimum_ok(({1: {1: sett(1)}}, {1: {1: sett(2)}}), {1: {1: sett(1, 2)}})
     assert_infimum_ok(({1: {2: sett(1)}}, {1: {2: sett(2)}}), {1: {2: sett(1, 2)}})
 
-    assert_infimum_ok(
-        ({1: sett(3)}, {1: sett(1), 2: sett(2)}), {1: sett(1, 3), 2: sett(2)}
-    )
-    assert_infimum_ok(
-        ({1: sett(1), 2: sett(2)}, {1: sett(3)}), {1: sett(1, 3), 2: sett(2)}
-    )
+    assert_infimum_ok(({1: sett(3)}, {1: sett(1), 2: sett(2)}), {1: sett(1, 3), 2: sett(2)})
+    assert_infimum_ok(({1: sett(1), 2: sett(2)}, {1: sett(3)}), {1: sett(1, 3), 2: sett(2)})
     assert_infimum_ok(
         ({1: sett(1), 2: sett(2)}, {1: sett(3), 2: sett(2)}),
         {1: sett(1, 3), 2: sett(2)},
@@ -427,9 +418,7 @@ def test_supremum_function():
     assert_supremum_ok((("->", integer), ("->", integer)), ("->", integer))
     assert_supremum_ok((("->", integer), ("->", float)), ("->", number))
     assert_supremum_ok((("->", float), ("->", integer)), ("->", number))
-    assert_supremum_ok(
-        ((sett(1), "->", ()), (sett(2), "->", ())), (sett(1, 2), "->", ())
-    )
+    assert_supremum_ok(((sett(1), "->", ()), (sett(2), "->", ())), (sett(1, 2), "->", ()))
     assert_supremum_ok(
         ((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(1, 2), "->", sett())
     )

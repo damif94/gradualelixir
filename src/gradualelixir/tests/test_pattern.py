@@ -101,38 +101,26 @@ def test_tp_pin():
 
 def test_tp_wild():
     assert_pattern_match_ok(("_", integer, {}, {}), (integer, {}))
-    assert_pattern_match_ok(
-        ("_", integer, {x: float}, {y: number}), (integer, {x: float})
-    )
-    assert_pattern_match_ok(
-        ("_", [float], {x: float}, {y: number}), ([float], {x: float})
-    )
+    assert_pattern_match_ok(("_", integer, {x: float}, {y: number}), (integer, {x: float}))
+    assert_pattern_match_ok(("_", [float], {x: float}, {y: number}), ([float], {x: float}))
 
 
 def test_tp_var():
     assert_pattern_match_ok((x, integer, {}, {}), (integer, {x: integer}))
     assert_pattern_match_ok((x, integer, {}, {x: float}), (integer, {x: integer}))
-    assert_pattern_match_ok(
-        (x, integer, {y: float}, {}), (integer, {x: integer, y: float})
-    )
+    assert_pattern_match_ok((x, integer, {y: float}, {}), (integer, {x: integer, y: float}))
     assert_pattern_match_ok((x, [float], {}, {}), ([float], {x: [float]}))
 
 
 def test_tp_varn():
     assert_pattern_match_ok((x, integer, {x: integer}, {}), (integer, {x: integer}))
-    assert_pattern_match_ok(
-        (x, sett(1), {x: sett(2)}, {}), (sett(1, 2), {x: sett(1, 2)})
-    )
-    assert_pattern_match_ok(
-        (x, sett(1), {x: sett(2)}, {x: sett(3)}), (sett(1, 2), {x: sett(1, 2)})
-    )
+    assert_pattern_match_ok((x, sett(1), {x: sett(2)}, {}), (sett(1, 2), {x: sett(1, 2)}))
+    assert_pattern_match_ok((x, sett(1), {x: sett(2)}, {x: sett(3)}), (sett(1, 2), {x: sett(1, 2)}))
     assert_pattern_match_ok(
         (x, sett(1), {x: sett(2), y: sett(3)}, {}),
         (sett(1, 2), {x: sett(1, 2), y: sett(3)}),
     )
-    assert_pattern_match_ok(
-        (x, sett(1), {x: sett(2)}, {y: sett(3)}), (sett(1, 2), {x: sett(1, 2)})
-    )
+    assert_pattern_match_ok((x, sett(1), {x: sett(2)}, {y: sett(3)}), (sett(1, 2), {x: sett(1, 2)}))
     assert_pattern_match_error(
         (x, integer, {x: float}, {}),
         context_path=[pattern.PatternErrorEnum.incompatible_type_for_variable],
@@ -165,9 +153,7 @@ def test_tp_list():
     assert_pattern_match_ok(([x], [integer], {}, {}), ([integer], {x: integer}))
     assert_pattern_match_ok(([1, 1.0], [number], {}, {}), ([number], {}))
     assert_pattern_match_ok(([x, x], [integer], {}, {}), ([integer], {x: integer}))
-    assert_pattern_match_ok(
-        ([x, x], [sett(1)], {x: sett(2)}, {}), ([sett(1, 2)], {x: sett(1, 2)})
-    )
+    assert_pattern_match_ok(([x, x], [sett(1)], {x: sett(2)}, {}), ([sett(1, 2)], {x: sett(1, 2)}))
     assert_pattern_match_ok(
         ([x, y], [sett(1)], {y: sett(2)}, {}), ([sett(1)], {x: sett(1), y: sett(1, 2)})
     )
@@ -246,12 +232,8 @@ def test_tp_tuple():
 
 def test_tp_map():
     assert_pattern_match_ok(({}, {}, {}, {}), ({}, {}))
-    assert_pattern_match_ok(
-        ({1: x}, {1: integer}, {}, {}), ({1: integer}, {x: integer})
-    )
-    assert_pattern_match_ok(
-        ({}, {1: integer}, {}, {}), ({1: integer}, {})
-    )
+    assert_pattern_match_ok(({1: x}, {1: integer}, {}, {}), ({1: integer}, {x: integer}))
+    assert_pattern_match_ok(({}, {1: integer}, {}, {}), ({1: integer}, {}))
     assert_pattern_match_ok(
         ({1: x, 2: 2.0}, {1: integer, 2: float}, {}, {}),
         ({1: integer, 2: float}, {x: integer}),
@@ -389,34 +371,28 @@ def test_tp_any():
     assert_pattern_match_ok(([x], any, {}, {}), ([any], {x: any}))
     assert_pattern_match_ok(([x], any, {x: number}, {}), ([any], {x: any}))
     assert_pattern_match_ok(([x, y], any, {x: number}, {}), ([any], {x: any, y: any}))
-    assert_pattern_match_ok(
-        ([x, y], any, {x: number, y: number}, {}), ([any], {x: any, y: any})
-    )
+    assert_pattern_match_ok(([x, y], any, {x: number, y: number}, {}), ([any], {x: any, y: any}))
 
     assert_pattern_match_ok(((), any, {}, {}), ((), ({})))
     assert_pattern_match_ok(((x,), any, {}, {}), ((any,), ({x: any})))
     assert_pattern_match_ok(((x, y), any, {}, {}), ((any, any), ({x: any, y: any})))
     assert_pattern_match_ok(((x, x), any, {}, {}), ((any, any), ({x: any})))
 
-    assert_pattern_match_ok(
-        ({1: x, 2: y}, any, {}, {}), ({1: any, 2: any}, {x: any, y: any})
-    )
+    assert_pattern_match_ok(({1: x, 2: y}, any, {}, {}), ({1: any, 2: any}, {x: any, y: any}))
 
     assert_pattern_match_error(
         ([1, True], any, {}, {}),
-        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern],
     )
     assert_pattern_match_error(
         ([(1, 2), (True, 2)], any, {}, {}),
-        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern],
     )
     assert_pattern_match_error(
         ([{1: (1, 2)}, {1: (True, 2)}], any, {}, {}),
-        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern]
+        context_path=[pattern.PatternErrorEnum.incompatible_type_for_pattern],
     )
-    assert_pattern_match_ok(
-        ([{1: (1, 2)}, {2: (True, 2)}], any, {}, {}), ([{}], {})
-    )
+    assert_pattern_match_ok(([{1: (1, 2)}, {2: (True, 2)}], any, {}, {}), ([{}], {}))
 
 
 def test_tp_ok_progressions():
@@ -434,9 +410,7 @@ def test_tp_ok_progressions():
     )
 
     assert_pattern_match_ok(([[1], [1.0]], [[number]], {}, {}), ([[number]], {}))
-    assert_pattern_match_ok(
-        ([[[1]], [[1.0]]], [[[number]]], {}, {}), ([[[number]]], {})
-    )
+    assert_pattern_match_ok(([[[1]], [[1.0]]], [[[number]]], {}, {}), ([[[number]]], {}))
     assert_pattern_match_ok(
         ([[[1]], [[1.0]], [[1, 1.0]]], [[[number]]], {}, {}), ([[[number]]], {})
     )
@@ -463,9 +437,7 @@ def test_tp_ok_progressions():
     )
 
     assert_pattern_match_ok(([x], any, {x: number}, {}), ([any], {x: any}))
-    assert_pattern_match_ok(
-        (([x], (x, x)), any, {x: number}, {}), (([any], (any, any)), {x: any})
-    )
+    assert_pattern_match_ok((([x], (x, x)), any, {x: number}, {}), (([any], (any, any)), {x: any}))
     assert_pattern_match_ok(
         ({1: ([x], (x, x)), 2: x}, any, {x: number}, {}),
         ({1: ([any], (any, any)), 2: any}, {x: any}),

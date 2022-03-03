@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from gradualelixir import expression, pattern, types as gtypes
-from gradualelixir.types import MapKey
+from gradualelixir import expression, pattern
+from gradualelixir import types as gtypes
 
 
 def parse_key(j) -> gtypes.MapKey:
@@ -132,8 +132,7 @@ def parse_expression(j) -> expression.Expression:
                     return expression.SeqExpression(left_expression, right_expression)
             elif aux := [
                 symbol
-                for symbol in list(expression.UnaryOpEnum)
-                + list(expression.BinaryOpEnum)
+                for symbol in list(expression.UnaryOpEnum) + list(expression.BinaryOpEnum)
                 if symbol.value == op
             ]:
                 if len(children_nodes) == 1:
@@ -172,7 +171,5 @@ def parse_expression(j) -> expression.Expression:
         tail_expression: expression.Expression = expression.ElistExpression()
         for node in reversed(j):
             head_expression = parse_expression(node)
-            tail_expression = expression.ListExpression(
-                head_expression, tail_expression
-            )
+            tail_expression = expression.ListExpression(head_expression, tail_expression)
         return tail_expression

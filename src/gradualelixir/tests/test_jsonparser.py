@@ -5,23 +5,23 @@ from collections import OrderedDict
 from gradualelixir import PROJECT_PATH, jsonparser
 from gradualelixir.expression import (
     AtomLiteralExpression,
+    BinaryOpEnum,
+    BinaryOpExpression,
+    CaseExpression,
+    CondExpression,
     ElistExpression,
     FloatExpression,
+    FunctionCallExpression,
+    IdentExpression,
+    IfElseExpression,
     IntegerExpression,
     ListExpression,
     MapExpression,
     PatternMatchExpression,
-    TupleExpression,
-    IfElseExpression,
-    UnaryOpExpression,
-    UnaryOpEnum,
-    IdentExpression,
-    BinaryOpEnum,
-    BinaryOpExpression,
-    CondExpression,
-    CaseExpression,
     SeqExpression,
-    FunctionCallExpression,
+    TupleExpression,
+    UnaryOpEnum,
+    UnaryOpExpression,
     VarCallExpression,
 )
 from gradualelixir.pattern import (
@@ -90,29 +90,47 @@ def test_parse_data_expressions():
     )
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
-            [(MapKey(42.0), TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
+            [
+                (
+                    MapKey(42.0),
+                    TupleExpression([IntegerExpression(1), IntegerExpression(2)]),
+                )
+            ]
         )
     )
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
-            [(MapKey(42.0), TupleExpression([IntegerExpression(1), IntegerExpression(2)]))]
+            [
+                (
+                    MapKey(42.0),
+                    TupleExpression([IntegerExpression(1), IntegerExpression(2)]),
+                )
+            ]
         )
     )
     assert parse_expression("%{42.0 => %{1 => 2}}") == MapExpression(
-        OrderedDict([(MapKey(42.0), MapExpression(OrderedDict([(MapKey(1), IntegerExpression(2))])))])
+        OrderedDict(
+            [
+                (
+                    MapKey(42.0),
+                    MapExpression(OrderedDict([(MapKey(1), IntegerExpression(2))])),
+                )
+            ]
+        )
     )
     assert parse_expression("%{42.0 => %{1 => :x}, :a => {}}") == MapExpression(
         OrderedDict(
             [
-                (MapKey(42.0), MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("x"))]))),
+                (
+                    MapKey(42.0),
+                    MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("x"))])),
+                ),
                 (MapKey("a"), TupleExpression([])),
             ]
         )
     )
     assert parse_expression("[]") == ElistExpression()
-    assert parse_expression("[1]") == ListExpression(
-        IntegerExpression(1), ElistExpression()
-    )
+    assert parse_expression("[1]") == ListExpression(IntegerExpression(1), ElistExpression())
     assert parse_expression("[1, :a]") == (
         ListExpression(
             IntegerExpression(1),
@@ -168,9 +186,7 @@ def test_base_pattern():
 def test_parse_data_patterns():
     assert parse_pattern("{}") == TuplePattern([])
     assert parse_pattern("{1}") == TuplePattern([IntegerPattern(1)])
-    assert parse_pattern("{1,2}") == TuplePattern(
-        [IntegerPattern(1), IntegerPattern(2)]
-    )
+    assert parse_pattern("{1,2}") == TuplePattern([IntegerPattern(1), IntegerPattern(2)])
     assert parse_pattern("{1,2,3}") == TuplePattern(
         [IntegerPattern(1), IntegerPattern(2), IntegerPattern(3)]
     )
@@ -197,7 +213,10 @@ def test_parse_data_patterns():
     assert parse_pattern("%{42.0 => %{1 => :x}, :a => {}}") == MapPattern(
         OrderedDict(
             [
-                (MapKey(42.0), MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("x"))]))),
+                (
+                    MapKey(42.0),
+                    MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("x"))])),
+                ),
                 (MapKey("a"), TuplePattern([])),
             ]
         )
@@ -205,21 +224,15 @@ def test_parse_data_patterns():
     assert parse_pattern("[]") == ElistPattern()
     assert parse_pattern("[1]") == ListPattern(IntegerPattern(1), ElistPattern())
     assert parse_pattern("[1, :a]") == (
-        ListPattern(
-            IntegerPattern(1), ListPattern(AtomLiteralPattern("a"), ElistPattern())
-        )
+        ListPattern(IntegerPattern(1), ListPattern(AtomLiteralPattern("a"), ElistPattern()))
     )
-    assert parse_expression("[1|[]]") == ListExpression(
-        IntegerExpression(1), ElistExpression()
-    )
+    assert parse_expression("[1|[]]") == ListExpression(IntegerExpression(1), ElistExpression())
     assert parse_pattern("[1|[]]") == ListPattern(IntegerPattern(1), ElistPattern())
     assert parse_pattern("[1|_]") == ListPattern(IntegerPattern(1), WildPattern())
     assert parse_pattern("[_|_]") == ListPattern(WildPattern(), WildPattern())
     assert parse_pattern("[{1, [2]}, :a, %{:x => 2.0}, []]") == (
         ListPattern(
-            TuplePattern(
-                [IntegerPattern(1), ListPattern(IntegerPattern(2), ElistPattern())]
-            ),
+            TuplePattern([IntegerPattern(1), ListPattern(IntegerPattern(2), ElistPattern())]),
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
@@ -231,9 +244,7 @@ def test_parse_data_patterns():
     )
     assert parse_pattern("[{1, [2]}, :a, %{:x => 2.0}, []]") == (
         ListPattern(
-            TuplePattern(
-                [IntegerPattern(1), ListPattern(IntegerPattern(2), ElistPattern())]
-            ),
+            TuplePattern([IntegerPattern(1), ListPattern(IntegerPattern(2), ElistPattern())]),
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
@@ -245,16 +256,12 @@ def test_parse_data_patterns():
     )
     assert parse_pattern("[{^x, [2]}, z, %{:x => _}, [1|_]]") == (
         ListPattern(
-            TuplePattern(
-                [PinIdentPattern("x"), ListPattern(IntegerPattern(2), ElistPattern())]
-            ),
+            TuplePattern([PinIdentPattern("x"), ListPattern(IntegerPattern(2), ElistPattern())]),
             ListPattern(
                 IdentPattern("z"),
                 ListPattern(
                     MapPattern(OrderedDict([(MapKey("x"), WildPattern())])),
-                    ListPattern(
-                        ListPattern(IntegerPattern(1), WildPattern()), ElistPattern()
-                    ),
+                    ListPattern(ListPattern(IntegerPattern(1), WildPattern()), ElistPattern()),
                 ),
             ),
         )
@@ -262,15 +269,9 @@ def test_parse_data_patterns():
 
 
 def test_operations():
-    assert parse_expression("-1") == UnaryOpExpression(
-        UnaryOpEnum.negative, IntegerExpression(1)
-    )
-    assert parse_expression("!x") == UnaryOpExpression(
-        UnaryOpEnum.negation, IdentExpression("x")
-    )
-    assert parse_expression("![]") == UnaryOpExpression(
-        UnaryOpEnum.negation, ElistExpression()
-    )
+    assert parse_expression("-1") == UnaryOpExpression(UnaryOpEnum.negative, IntegerExpression(1))
+    assert parse_expression("!x") == UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
+    assert parse_expression("![]") == UnaryOpExpression(UnaryOpEnum.negation, ElistExpression())
     assert parse_expression("1 + 2.0") == BinaryOpExpression(
         BinaryOpEnum.sum, IntegerExpression(1), FloatExpression(2)
     )
@@ -312,37 +313,21 @@ def test_operations():
 
 
 def test_control_flow_expressions():
-    assert parse_expression(
-        "if true do\n" 
-        "  1\n" 
-        "end\n"
-    ) == (
+    assert parse_expression("if true do\n" "  1\n" "end\n") == (
         IfElseExpression(
             condition=AtomLiteralExpression("true"),
             if_expression=IntegerExpression(1),
             else_expression=None,
         )
     )
-    assert parse_expression(
-        "if true do\n" 
-        "  {1, 1}\n" 
-        "else\n" 
-        "  {2, 2}\n" 
-        "end\n"
-    ) == (
+    assert parse_expression("if true do\n" "  {1, 1}\n" "else\n" "  {2, 2}\n" "end\n") == (
         IfElseExpression(
             condition=AtomLiteralExpression("true"),
             if_expression=TupleExpression([IntegerExpression(1), IntegerExpression(1)]),
-            else_expression=TupleExpression(
-                [IntegerExpression(2), IntegerExpression(2)]
-            ),
+            else_expression=TupleExpression([IntegerExpression(2), IntegerExpression(2)]),
         )
     )
-    assert parse_expression(
-        "cond do\n" 
-        "  1 == x -> 2\n" 
-        "end\n"
-    ) == (
+    assert parse_expression("cond do\n" "  1 == x -> 2\n" "end\n") == (
         CondExpression(
             clauses=[
                 (
@@ -356,12 +341,7 @@ def test_control_flow_expressions():
             ]
         )
     )
-    assert parse_expression(
-        "cond do\n" 
-        "  1 == x -> 2\n" 
-        "  x and y -> 3\n" 
-        "end\n"
-    ) == (
+    assert parse_expression("cond do\n" "  1 == x -> 2\n" "  x and y -> 3\n" "end\n") == (
         CondExpression(
             clauses=[
                 (
@@ -383,12 +363,7 @@ def test_control_flow_expressions():
             ]
         )
     )
-    assert parse_expression(
-        "case {x,y} do\n" 
-        "  {^x,1} -> 2\n" 
-        "  _ -> 3\n" 
-        "end\n"
-    ) == (
+    assert parse_expression("case {x,y} do\n" "  {^x,1} -> 2\n" "  _ -> 3\n" "end\n") == (
         CaseExpression(
             expression=TupleExpression([IdentExpression("x"), IdentExpression("y")]),
             clauses=[
@@ -400,9 +375,7 @@ def test_control_flow_expressions():
             ],
         )
     )
-    assert parse_expression("x; y") == SeqExpression(
-        IdentExpression("x"), IdentExpression("y")
-    )
+    assert parse_expression("x; y") == SeqExpression(IdentExpression("x"), IdentExpression("y"))
     assert parse_expression(
         "h = case {x,y} do\n"
         "  {^x,1} -> {u, 2} = x; u\n"
@@ -417,9 +390,7 @@ def test_control_flow_expressions():
         PatternMatchExpression(
             IdentPattern("h"),
             CaseExpression(
-                expression=TupleExpression(
-                    [IdentExpression("x"), IdentExpression("y")]
-                ),
+                expression=TupleExpression([IdentExpression("x"), IdentExpression("y")]),
                 clauses=[
                     (
                         TuplePattern([PinIdentPattern("x"), IntegerPattern(1)]),
@@ -439,10 +410,14 @@ def test_control_flow_expressions():
             BinaryOpExpression(BinaryOpEnum.equality, IdentExpression("h"), IntegerExpression(1)),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("true")),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("false")),
-        )
+        ),
     )
 
 
 def test_function():
-    assert parse_expression("f(2,{})") == FunctionCallExpression("f", [IntegerExpression(2), TupleExpression([])])
-    assert parse_expression("f.(2,{})") == VarCallExpression("f", [IntegerExpression(2), TupleExpression([])])
+    assert parse_expression("f(2,{})") == FunctionCallExpression(
+        "f", [IntegerExpression(2), TupleExpression([])]
+    )
+    assert parse_expression("f.(2,{})") == VarCallExpression(
+        "f", [IntegerExpression(2), TupleExpression([])]
+    )

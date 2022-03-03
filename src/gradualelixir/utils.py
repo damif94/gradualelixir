@@ -4,19 +4,19 @@ from collections import OrderedDict
 from gradualelixir import pattern
 from gradualelixir import types as gtypes
 
-S = t.TypeVar("S")
 T = t.TypeVar("T")
 
+
 class Bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def parse_type(x):
@@ -39,9 +39,7 @@ def parse_type(x):
             return gtypes.AnyType()
     if isinstance(x, tuple):
         if len(x) >= 2 and x[-2] == "->":
-            return gtypes.FunctionType(
-                [parse_type(y) for y in x[:-2]], parse_type(x[-1])
-            )
+            return gtypes.FunctionType([parse_type(y) for y in x[:-2]], parse_type(x[-1]))
         else:
             return gtypes.TupleType([parse_type(y) for y in x])
     if isinstance(x, dict):
@@ -77,9 +75,7 @@ def unparse_type(x):
     if isinstance(x, gtypes.TupleType):
         return tuple([unparse_type(y) for y in x.types])
     if isinstance(x, gtypes.FunctionType):
-        return tuple(
-            [unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)]
-        )
+        return tuple([unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)])
     else:
         assert isinstance(x, gtypes.MapType)
         return {k: unparse_type(x.map_type[k]) for k in x.map_type}
@@ -104,9 +100,7 @@ def parse_pattern(x):
     elif isinstance(x, tuple):
         return pattern.TuplePattern([parse_pattern(y) for y in x])
     if isinstance(x, dict):
-        return pattern.MapPattern(
-            OrderedDict([(k, parse_pattern(v)) for k, v in x.items()])
-        )
+        return pattern.MapPattern(OrderedDict([(k, parse_pattern(v)) for k, v in x.items()]))
     else:
         assert isinstance(x, list)
         if len(x) == 0:
@@ -119,3 +113,21 @@ def parse_pattern(x):
 
 def flatten(x: t.List[t.List[T]]) -> t.List[T]:
     return [item for sublist in x for item in sublist]
+
+
+def ordinal(n: int):
+    return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
+
+
+def enumerate_list(items: t.List[str]) -> str:
+    if len(items) == 0:
+        return ""
+    if len(items) == 1:
+        return str(items[0])
+    else:
+        return ",".join([str(item) for item in items[:-1]]) + " and " + str(items[-1])
+
+
+long_line = (
+    "--------------------------------------------------------------------------------------------"
+)

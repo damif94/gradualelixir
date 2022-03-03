@@ -28,9 +28,7 @@ def base_supremum(tau, sigma):
 
 
 def base_infimum(tau, sigma):
-    return utils.unparse_type(
-        gtypes.base_infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
+    return utils.unparse_type(gtypes.base_infimum(utils.parse_type(tau), utils.parse_type(sigma)))
 
 
 def is_static_type(tau) -> bool:
@@ -46,15 +44,11 @@ def is_materialization(tau, sigma) -> bool:
 
 
 def supremum(tau, sigma):
-    return utils.unparse_type(
-        gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
+    return utils.unparse_type(gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma)))
 
 
 def infimum(tau, sigma):
-    return utils.unparse_type(
-        gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    )
+    return utils.unparse_type(gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma)))
 
 
 def pattern_match(pat, tau, gamma_env, sigma_env):
