@@ -19,6 +19,12 @@ class Bcolors:
     UNDERLINE = "\033[4m"
 
 
+def parse_key(x):
+    if isinstance(x, bool):
+        return gtypes.MapKey("true" if x else "false")
+    return gtypes.MapKey(x)
+
+
 def parse_type(x):
     if isinstance(x, bool):
         return gtypes.AtomLiteralType(atom="true" if x else "false")
@@ -43,7 +49,7 @@ def parse_type(x):
         else:
             return gtypes.TupleType([parse_type(y) for y in x])
     if isinstance(x, dict):
-        return gtypes.MapType({k: parse_type(x[k]) for k in x})
+        return gtypes.MapType({parse_key(k): parse_type(x[k]) for k in x})
     if isinstance(x, list):
         if len(x) == 0:
             return gtypes.ElistType()
@@ -100,7 +106,7 @@ def parse_pattern(x):
     elif isinstance(x, tuple):
         return pattern.TuplePattern([parse_pattern(y) for y in x])
     if isinstance(x, dict):
-        return pattern.MapPattern(OrderedDict([(k, parse_pattern(v)) for k, v in x.items()]))
+        return pattern.MapPattern(OrderedDict([(parse_key(k), parse_pattern(v)) for k, v in x.items()]))
     else:
         assert isinstance(x, list)
         if len(x) == 0:
@@ -128,6 +134,4 @@ def enumerate_list(items: t.List[str]) -> str:
         return ",".join([str(item) for item in items[:-1]]) + " and " + str(items[-1])
 
 
-long_line = (
-    "--------------------------------------------------------------------------------------------"
-)
+long_line = "--------------------------------------------------------------------------------------------"

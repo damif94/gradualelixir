@@ -351,9 +351,7 @@ class TypedExpression(Expression):
 
 class ExpressionErrorEnum(Enum):
     identifier_not_found_in_environment = "Couldn't find variable {identifier} in the environment"
-    incompatible_type_for_unary_operator = (
-        "The argument of type {tau} is not a valid argument for {op}/1"
-    )
+    incompatible_type_for_unary_operator = "The argument of type {tau} is not a valid argument for {op}/1"
     incompatible_types_for_binary_operator = (
         "The arguments, of types {tau1} and {tau2}, are not together valid arguments for {op}/2"
     )
@@ -361,17 +359,13 @@ class ExpressionErrorEnum(Enum):
         "Couldn't match the inferred type of the expression in the right, {tau}, with {pattern}\n"
         " > {pattern_match_error}"
     )
-    incompatible_types_for_list = (
-        "The type for the head, {tau1}, and the type for the tail, {tau2} don't have supremum"
-    )
+    incompatible_types_for_list = "The type for the head, {tau1}, and the type for the tail, {tau2} don't have supremum"
     incompatible_types_for_if_else = (
         "The type inferred for the if branch, {tau1}, and the type inferred for the else branch, "
         "{tau2} don't have supremum"
     )
     type_is_not_boolean = "The type inferred for {tau} is not a subtype of boolean"
-    incompatible_types_for_cond = (
-        "The types inferred for the branches, {taus}, don't have a joint supremum"
-    )
+    incompatible_types_for_cond = "The types inferred for the branches, {taus}, don't have a joint supremum"
 
 
 class ExpressionContext:
@@ -450,6 +444,18 @@ class IfElseExpressionContext(ExpressionContext):
 
 
 @dataclass
+class SeqExpressionContext(ExpressionContext):
+    expression: SeqExpression
+    is_left: bool
+
+    def __str__(self):
+        if self.is_left:
+            return "In the left side"
+        else:
+            return "In the right side"
+
+
+@dataclass
 class CondExpressionContext(ExpressionContext):
     expression: CondExpression
     cond: bool
@@ -475,18 +481,6 @@ class CaseExpressionContext(ExpressionContext):
         return f"In the {ordinal(self.branch + 1)} expression"
 
 
-@dataclass
-class SeqExpressionContext(ExpressionContext):
-    expression: SeqExpression
-    is_left: bool
-
-    def __str__(self):
-        if self.is_left:
-            return "In the left side"
-        else:
-            return "In the right side"
-
-
 class ExpressionTypeCheckError:
     def message(self, padding="", original_env: "TypeEnv" = None, specs_env: "SpecsEnv" = None):
         return ""
@@ -503,9 +497,7 @@ class ExpressionTypeCheckError:
                 f"{ident[0]}/{ident[1]}({','.join([str(s) for s in spec[0]])}) |-> {spec[1]}"
                 for ident, spec in specs_env.items()
             ]
-            specs_msg = (
-                f"{padding}{Bcolors.OKBLUE}Specs:{Bcolors.ENDC} [{','.join(specs_msg_aux)}]\n"
-            )
+            specs_msg = f"{padding}{Bcolors.OKBLUE}Specs:{Bcolors.ENDC} [{','.join(specs_msg_aux)}]\n"
         return original_env_msg + specs_msg
 
 
@@ -521,14 +513,12 @@ class BaseExpressionTypeCheckError(ExpressionTypeCheckError):
     def message(self, padding="", **kwargs):
         expression_msg = format_elixir_code(str(self.expression))
         if len(expression_msg.split("\n")) > 2:
-            expression_msg = "\n\n" + "\n".join(
-                [padding + "    " + m for m in expression_msg.split("\n")]
-            )
+            expression_msg = "\n\n" + "\n".join([padding + "    " + m for m in expression_msg.split("\n")])
         error_msg = self.kind.value.format(**{k: str(arg) for k, arg in self.args.items()})
         env_msg = self.env_message(padding, **kwargs)
         return (
             f"{padding}{Bcolors.OKBLUE}Type error found inside expression{Bcolors.ENDC} {expression_msg}{Bcolors.ENDC}\n\n"
-            f"{env_msg}\n"
+            f"{env_msg}"
             f"{padding}{Bcolors.FAIL}    {error_msg}{Bcolors.ENDC}\n"
         )
 
@@ -544,12 +534,13 @@ class NestedExpressionTypeCheckError(ExpressionTypeCheckError):
     def message(self, padding="", **kwargs):
         expression_msg = format_elixir_code(str(self.expression))
         if len(expression_msg.split("\n")) > 2:
-            expression_msg = "\n\n" + "\n".join(
-                [padding + "    " + m for m in expression_msg.split("\n")]
-            )
+            expression_msg = "\n\n" + "\n".join([padding + "    " + m for m in expression_msg.split("\n")])
 
         env_msg = self.env_message(padding, **kwargs)
-        msg = f"\n{env_msg}\n{padding}{Bcolors.OKBLUE}Type errors found inside expression{Bcolors.ENDC}{expression_msg}\n"
+        msg = (
+            f"\n{env_msg}\n{padding}{Bcolors.OKBLUE}Type errors found inside expression{Bcolors.ENDC} "
+            f"{expression_msg}\n"
+        )
         for context, error in self.errors:
             bullet_msg = error.message(padding + "    ", **kwargs)
             msg += f"{padding}{Bcolors.OKBLUE}  > {context}:{Bcolors.ENDC}\n" + f"{bullet_msg}\n"
@@ -576,20 +567,18 @@ class ExpressionTypeCheckSuccess:
         ]
         new_env_msg = [f"{ident} |-> {type}" for ident, type in self.env.items()]
         return (
-            f"{Bcolors.OKBLUE}Type check success for{Bcolors.ENDC} {expression_msg}{Bcolors.ENDC}\n"
+            f"{Bcolors.OKBLUE}Type check success for{Bcolors.ENDC} {expression_msg}\n"
             f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} [{','.join(original_env_msg)}]\n"
             f"{Bcolors.OKBLUE}Specs:{Bcolors.ENDC} [{','.join(specs_msg)}]\n"
             f"{Bcolors.OKBLUE}Assigned Type:{Bcolors.ENDC} {self.type}\n"
-            f"{Bcolors.OKBLUE}New Variables:{Bcolors.ENDC} [{','.join(new_env_msg)}]\n"
+            f"{Bcolors.OKBLUE}Exported Variables:{Bcolors.ENDC} [{','.join(new_env_msg)}]\n"
         )
 
 
 ExpressionTypeCheckResult = t.Union[ExpressionTypeCheckSuccess, ExpressionTypeCheckError]
 
 
-def type_check(
-    expr: Expression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check(expr: Expression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     if isinstance(expr, LiteralExpression):
         return type_check_literal(expr, gamma_env, delta_env)
     if isinstance(expr, IdentExpression):
@@ -620,15 +609,11 @@ def type_check(
         pass
 
 
-def type_check_literal(
-    expr: LiteralExpression, gamma_env: TypeEnv, _delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_literal(expr: LiteralExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     return ExpressionTypeCheckSuccess(expr.type, gamma_env)
 
 
-def type_check_ident(
-    expr: IdentExpression, gamma_env: TypeEnv, _delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_ident(expr: IdentExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     if (sigma := gamma_env.get(expr.identifier)) is not None:
         return ExpressionTypeCheckSuccess(sigma, gamma_env)
     else:
@@ -639,15 +624,11 @@ def type_check_ident(
         )
 
 
-def type_check_elist(
-    _expr: ElistExpression, gamma_env: TypeEnv, _delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_elist(_expr: ElistExpression, gamma_env: TypeEnv, _delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     return ExpressionTypeCheckSuccess(gtypes.ElistType(), gamma_env)
 
 
-def type_check_list(
-    expr: ListExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_list(expr: ListExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     head_type_check_result = type_check(expr.head, gamma_env, delta_env)
     tail_type_check_result = type_check(expr.tail, gamma_env, delta_env)
     if isinstance(head_type_check_result, ExpressionTypeCheckError) and isinstance(
@@ -670,9 +651,7 @@ def type_check_list(
             expression=expr,
             errors=[(ListExpressionContext(expr, head=False), tail_type_check_result)],
         )
-    result_type = gtypes.supremum(
-        gtypes.ListType(head_type_check_result.type), tail_type_check_result.type
-    )
+    result_type = gtypes.supremum(gtypes.ListType(head_type_check_result.type), tail_type_check_result.type)
     if not isinstance(result_type, gtypes.TypingError):
         return ExpressionTypeCheckSuccess(
             type=result_type,
@@ -686,9 +665,7 @@ def type_check_list(
         )
 
 
-def type_check_tuple(
-    expr: TupleExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_tuple(expr: TupleExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     type_check_results = []
     errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     for i in range(len(expr.items)):
@@ -703,14 +680,10 @@ def type_check_tuple(
         gamma_env = {}
         for item in type_check_results:
             gamma_env = {**gamma_env, **item.env}
-        return ExpressionTypeCheckSuccess(
-            type=gtypes.TupleType([e.type for e in type_check_results]), env=gamma_env
-        )
+        return ExpressionTypeCheckSuccess(type=gtypes.TupleType([e.type for e in type_check_results]), env=gamma_env)
 
 
-def type_check_map(
-    expr: MapExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_map(expr: MapExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     type_check_results_dict = {}
     errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     for k in expr.map:
@@ -731,9 +704,7 @@ def type_check_map(
         )
 
 
-def type_check_unary_op(
-    expr: UnaryOpExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_unary_op(expr: UnaryOpExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     expression_type_check_result = type_check(expr.expression, gamma_env, delta_env)
     if isinstance(expression_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
@@ -753,9 +724,7 @@ def type_check_unary_op(
     )
 
 
-def type_check_binary_op(
-    expr: BinaryOpExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_binary_op(expr: BinaryOpExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     left_type_check_result = type_check(expr.left_expression, gamma_env, delta_env)
     right_type_check_result = type_check(expr.right_expression, gamma_env, delta_env)
     if isinstance(left_type_check_result, ExpressionTypeCheckError) and isinstance(
@@ -850,9 +819,7 @@ def type_check_pattern_match(
         )
 
 
-def type_check_if_else(
-    expr: IfElseExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_if_else(expr: IfElseExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     cond_type_check_result = type_check(expr.condition, gamma_env, delta_env)
     if isinstance(cond_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
@@ -888,9 +855,7 @@ def type_check_if_else(
             )
         )
     if expr.else_expression is not None:
-        else_type_check_result = type_check(
-            expr.else_expression, cond_type_check_result.env, delta_env
-        )
+        else_type_check_result = type_check(expr.else_expression, cond_type_check_result.env, delta_env)
         if isinstance(else_type_check_result, ExpressionTypeCheckError):
             errors.append(
                 (
@@ -921,9 +886,7 @@ def type_check_if_else(
     return ExpressionTypeCheckSuccess(ret_type, cond_type_check_result.env)
 
 
-def type_check_seq(
-    expr: SeqExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_seq(expr: SeqExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     left_type_check_expression = type_check(expr.left_expression, gamma_env, delta_env)
     if isinstance(left_type_check_expression, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
@@ -931,9 +894,7 @@ def type_check_seq(
             errors=[(SeqExpressionContext(expr, is_left=True), left_type_check_expression)],
         )
     else:
-        right_type_check_expression = type_check(
-            expr.right_expression, left_type_check_expression.env, delta_env
-        )
+        right_type_check_expression = type_check(expr.right_expression, left_type_check_expression.env, delta_env)
         if isinstance(right_type_check_expression, ExpressionTypeCheckError):
             return NestedExpressionTypeCheckError(
                 expression=expr,
@@ -950,9 +911,7 @@ def type_check_seq(
         )
 
 
-def type_check_cond(
-    expr: CondExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_cond(expr: CondExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     errors: t.List[t.Tuple[ExpressionContext, ExpressionTypeCheckError]] = []
     branches_type_check_results = []
     for i in range(len(expr.clauses)):
@@ -978,9 +937,7 @@ def type_check_cond(
             )
             continue
 
-        do_type_check_expression = type_check(
-            expr.clauses[i][1], cond_type_check_expression.env, delta_env
-        )
+        do_type_check_expression = type_check(expr.clauses[i][1], cond_type_check_expression.env, delta_env)
         if isinstance(do_type_check_expression, ExpressionTypeCheckError):
             errors.append(
                 (
@@ -999,17 +956,13 @@ def type_check_cond(
             return BaseExpressionTypeCheckError(
                 expression=expr,
                 kind=ExpressionErrorEnum.incompatible_types_for_cond,
-                args={
-                    "taus": enumerate_list([str(item.type) for item in branches_type_check_results])
-                },
+                args={"taus": enumerate_list([str(item.type) for item in branches_type_check_results])},
             )
         ret_type = aux
     return ExpressionTypeCheckSuccess(ret_type, gamma_env)
 
 
-def type_check_case(
-    expr: CaseExpression, gamma_env: TypeEnv, delta_env: TypeEnv
-) -> ExpressionTypeCheckResult:
+def type_check_case(expr: CaseExpression, gamma_env: TypeEnv, delta_env: TypeEnv) -> ExpressionTypeCheckResult:
     case_input_type_check_result = type_check(expr.expression, gamma_env, delta_env)
     if isinstance(case_input_type_check_result, ExpressionTypeCheckError):
         return NestedExpressionTypeCheckError(
@@ -1045,9 +998,7 @@ def type_check_case(
             continue
 
         assert isinstance(pattern_match_result, pattern.PatternMatchSuccess)
-        do_type_check_expression = type_check(
-            expr.clauses[i][1], pattern_match_result.env, delta_env
-        )
+        do_type_check_expression = type_check(expr.clauses[i][1], pattern_match_result.env, delta_env)
         if isinstance(do_type_check_expression, ExpressionTypeCheckError):
             errors.append(
                 (

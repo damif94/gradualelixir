@@ -125,6 +125,9 @@ class MapKey:
         else:
             return str(self.value)
 
+    def __repr__(self):
+        return f"MapKey(value={str(self.value)})"
+
     @property
     def type(self) -> LiteralType:
         if self.type_class == AtomLiteralType:
@@ -140,7 +143,7 @@ class MapType(CompositeType):
     def __str__(self):
         keys = self.map_type.keys()
         str_values = [str(v) for v in self.map_type.values()]
-        return "%{" + ",".join([f"{k} => {v}" for (k, v) in zip(keys, str_values)]) + "}"
+        return "%{" + ", ".join([f"{k} => {v}" for (k, v) in zip(keys, str_values)]) + "}"
 
 
 @dataclass
@@ -149,7 +152,7 @@ class FunctionType(CompositeType):
     ret_type: Type
 
     def __str__(self):
-        return f'({",".join([str(ty) for ty in self.arg_types])}) -> {str(self.ret_type)}'
+        return f'({", ".join([str(ty) for ty in self.arg_types])}) -> {str(self.ret_type)}'
 
 
 class TypeErrorEnum(Enum):
@@ -203,13 +206,9 @@ def is_base_subtype(tau: BaseType, sigma: BaseType) -> bool:
     if any(
         [
             tau == sigma,
-            isinstance(tau, AtomLiteralType)
-            and tau.atom in ["true", "false"]
-            and isinstance(sigma, BooleanType),
+            isinstance(tau, AtomLiteralType) and tau.atom in ["true", "false"] and isinstance(sigma, BooleanType),
             isinstance(tau, BooleanType) and isinstance(sigma, AtomType),
-            isinstance(tau, AtomLiteralType)
-            and isinstance(sigma, AtomLiteralType)
-            and tau.atom == sigma.atom,
+            isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomLiteralType) and tau.atom == sigma.atom,
             isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomType),
             isinstance(tau, AtomType) and isinstance(sigma, AtomType),
             isinstance(tau, IntegerType) and isinstance(sigma, NumberType),
@@ -264,9 +263,7 @@ def is_static_type(tau: Type) -> bool:
     elif isinstance(tau, MapType):
         return all([is_static_type(sigma) for sigma in tau.map_type.values()])
     elif isinstance(tau, FunctionType):
-        return all([is_static_type(sigma) for sigma in tau.arg_types]) and is_static_type(
-            tau.ret_type
-        )
+        return all([is_static_type(sigma) for sigma in tau.arg_types]) and is_static_type(tau.ret_type)
     else:
         assert isinstance(tau, AnyType)
         return False
@@ -310,9 +307,9 @@ def is_subtype(tau: Type, sigma: Type) -> bool:
             [is_subtype(tau.map_type[k], sigma.map_type[k]) for k in sigma.map_type.keys()]
         )
     elif isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
-        return is_subtype(
-            TupleType(types=sigma.arg_types), TupleType(types=tau.arg_types)
-        ) and is_subtype(tau.ret_type, sigma.ret_type)
+        return is_subtype(TupleType(types=sigma.arg_types), TupleType(types=tau.arg_types)) and is_subtype(
+            tau.ret_type, sigma.ret_type
+        )
     else:
         return False
 
@@ -395,17 +392,13 @@ def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Ty
         return supremum_infimum_aux_function(sigma, tau, is_supremum)
 
 
-def supremum_infimum_aux_base(
-    tau: BaseType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_base(tau: BaseType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     if isinstance(sigma, BaseType):
         return base_supremum(tau, sigma) if is_supremum else base_infimum(tau, sigma)
     return SupremumError(is_supremum=is_supremum)
 
 
-def supremum_infimum_aux_elist(
-    tau: ElistType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_elist(tau: ElistType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     if isinstance(sigma, ElistType):
         return sigma
     elif isinstance(sigma, ListType):
@@ -413,9 +406,7 @@ def supremum_infimum_aux_elist(
     return SupremumError(is_supremum=is_supremum)
 
 
-def supremum_infimum_aux_list(
-    tau: ListType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_list(tau: ListType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     if isinstance(sigma, ElistType):
         return tau
     if isinstance(sigma, ListType):
@@ -426,9 +417,7 @@ def supremum_infimum_aux_list(
     return SupremumError(is_supremum=is_supremum)
 
 
-def supremum_infimum_aux_tuple(
-    tau: TupleType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_tuple(tau: TupleType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     if isinstance(sigma, TupleType) and len(tau.types) == len(sigma.types):
         supremum_results = []
         for i in range(len(tau.types)):
@@ -441,9 +430,7 @@ def supremum_infimum_aux_tuple(
         return SupremumError(is_supremum=is_supremum)
 
 
-def supremum_infimum_aux_map(
-    tau: MapType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_map(tau: MapType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     # TODO make supremum_infimum_aux_map(types: t.List[Type]) -> t.Union[Type, TypingError]
     #  to support arbitrary arity correctness with respect to gradual lifting
     if isinstance(sigma, MapType):
@@ -451,12 +438,8 @@ def supremum_infimum_aux_map(
         tau_map_type = tau.map_type.copy()
         sigma_map_type = sigma.map_type.copy()
         if not is_supremum:
-            tau_keys_not_in_sigma = [
-                k for k in tau.map_type.keys() if k not in sigma.map_type.keys()
-            ]
-            sigma_keys_not_in_tau = [
-                k for k in sigma.map_type.keys() if k not in tau.map_type.keys()
-            ]
+            tau_keys_not_in_sigma = [k for k in tau.map_type.keys() if k not in sigma.map_type.keys()]
+            sigma_keys_not_in_tau = [k for k in sigma.map_type.keys() if k not in tau.map_type.keys()]
             tau_map_type.update({k: sigma_map_type[k] for k in sigma_keys_not_in_tau})
             sigma_map_type.update({k: tau_map_type[k] for k in tau_keys_not_in_sigma})
             keys += tau_keys_not_in_sigma + sigma_keys_not_in_tau
@@ -470,15 +453,11 @@ def supremum_infimum_aux_map(
     return SupremumError(is_supremum=is_supremum)
 
 
-def supremum_infimum_aux_function(
-    tau: FunctionType, sigma: Type, is_supremum: bool
-) -> t.Union[Type, TypingError]:
+def supremum_infimum_aux_function(tau: FunctionType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
     if isinstance(sigma, FunctionType) and len(tau.arg_types) == len(sigma.arg_types):
         args_supremum_results = []
         for i in range(len(tau.arg_types)):
-            arg_supremum = supremum_infimum_aux(
-                tau.arg_types[i], sigma.arg_types[i], not is_supremum
-            )
+            arg_supremum = supremum_infimum_aux(tau.arg_types[i], sigma.arg_types[i], not is_supremum)
             if isinstance(arg_supremum, TypingError):
                 return arg_supremum
             args_supremum_results.append(arg_supremum)

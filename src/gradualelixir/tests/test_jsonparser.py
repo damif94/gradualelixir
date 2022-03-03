@@ -45,9 +45,7 @@ def parse_expression(code):
     if isinstance(code, list):
         code = "\n".join(code)
 
-    elixir_ast = subprocess.run(
-        [f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True
-    )
+    elixir_ast = subprocess.run([f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True)
     print("---------------------------------------")
     print(code)
     res = jsonparser.parse_expression(json.loads(elixir_ast.stdout))
@@ -72,19 +70,13 @@ def test_parse_literal_expression():
 def test_parse_data_expressions():
     assert parse_expression("{}") == TupleExpression([])
     assert parse_expression("{1}") == TupleExpression([IntegerExpression(1)])
-    assert parse_expression("{1,2}") == TupleExpression(
-        [IntegerExpression(1), IntegerExpression(2)]
-    )
+    assert parse_expression("{1,2}") == TupleExpression([IntegerExpression(1), IntegerExpression(2)])
     assert parse_expression("{1,2,3}") == TupleExpression(
         [IntegerExpression(1), IntegerExpression(2), IntegerExpression(3)]
     )
     assert parse_expression("%{}") == MapExpression(OrderedDict([]))
-    assert parse_expression("%{1 => :a}") == MapExpression(
-        OrderedDict([(MapKey(1), AtomLiteralExpression("a"))])
-    )
-    assert parse_expression("%{:a => 42.0}") == MapExpression(
-        OrderedDict([(MapKey("a"), FloatExpression(42))])
-    )
+    assert parse_expression("%{1 => :a}") == MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("a"))]))
+    assert parse_expression("%{:a => 42.0}") == MapExpression(OrderedDict([(MapKey("a"), FloatExpression(42))]))
     assert parse_expression("%{42.1 => true}") == MapExpression(
         OrderedDict([(MapKey(42.1), AtomLiteralExpression("true"))])
     )
@@ -187,19 +179,11 @@ def test_parse_data_patterns():
     assert parse_pattern("{}") == TuplePattern([])
     assert parse_pattern("{1}") == TuplePattern([IntegerPattern(1)])
     assert parse_pattern("{1,2}") == TuplePattern([IntegerPattern(1), IntegerPattern(2)])
-    assert parse_pattern("{1,2,3}") == TuplePattern(
-        [IntegerPattern(1), IntegerPattern(2), IntegerPattern(3)]
-    )
+    assert parse_pattern("{1,2,3}") == TuplePattern([IntegerPattern(1), IntegerPattern(2), IntegerPattern(3)])
     assert parse_pattern("%{}") == MapPattern(OrderedDict([]))
-    assert parse_pattern("%{1 => :a}") == MapPattern(
-        OrderedDict([(MapKey(1), AtomLiteralPattern("a"))])
-    )
-    assert parse_pattern("%{:a => 42.0}") == MapPattern(
-        OrderedDict([(MapKey("a"), FloatPattern(42))])
-    )
-    assert parse_pattern("%{42.1 => true}") == MapPattern(
-        OrderedDict([(MapKey(42.1), AtomLiteralPattern("true"))])
-    )
+    assert parse_pattern("%{1 => :a}") == MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("a"))]))
+    assert parse_pattern("%{:a => 42.0}") == MapPattern(OrderedDict([(MapKey("a"), FloatPattern(42))]))
+    assert parse_pattern("%{42.1 => true}") == MapPattern(OrderedDict([(MapKey(42.1), AtomLiteralPattern("true"))]))
     # TODO this one should be error...should fix it somehow!
     assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
         OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
@@ -272,15 +256,11 @@ def test_operations():
     assert parse_expression("-1") == UnaryOpExpression(UnaryOpEnum.negative, IntegerExpression(1))
     assert parse_expression("!x") == UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
     assert parse_expression("![]") == UnaryOpExpression(UnaryOpEnum.negation, ElistExpression())
-    assert parse_expression("1 + 2.0") == BinaryOpExpression(
-        BinaryOpEnum.sum, IntegerExpression(1), FloatExpression(2)
-    )
+    assert parse_expression("1 + 2.0") == BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), FloatExpression(2))
     assert parse_expression("3 - 1 == 2.0") == (
         BinaryOpExpression(
             BinaryOpEnum.equality,
-            BinaryOpExpression(
-                BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)
-            ),
+            BinaryOpExpression(BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)),
             FloatExpression(2),
         )
     )
@@ -290,9 +270,7 @@ def test_operations():
     assert parse_expression("3 - 1 == 2.1") == (
         BinaryOpExpression(
             BinaryOpEnum.equality,
-            BinaryOpExpression(
-                BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)
-            ),
+            BinaryOpExpression(BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)),
             FloatExpression(2.1),
         )
     )
@@ -415,9 +393,5 @@ def test_control_flow_expressions():
 
 
 def test_function():
-    assert parse_expression("f(2,{})") == FunctionCallExpression(
-        "f", [IntegerExpression(2), TupleExpression([])]
-    )
-    assert parse_expression("f.(2,{})") == VarCallExpression(
-        "f", [IntegerExpression(2), TupleExpression([])]
-    )
+    assert parse_expression("f(2,{})") == FunctionCallExpression("f", [IntegerExpression(2), TupleExpression([])])
+    assert parse_expression("f.(2,{})") == VarCallExpression("f", [IntegerExpression(2), TupleExpression([])])

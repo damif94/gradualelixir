@@ -55,18 +55,16 @@ from . import TEST_ENV
 identifier_not_found_in_environment = ExpressionErrorEnum.identifier_not_found_in_environment
 
 
-def assert_type_check_expression_ok(
-    expr, env=None, expected_type=None, expected_env=None, specs_env=None
-):
+def assert_type_check_expression_ok(expr, env=None, expected_type=None, expected_env=None, specs_env=None):
     env = env or {}
-    new_env = expected_env or env
+    expected_env = expected_env or env
     specs_env = specs_env or {}
     assert expected_type is not None
 
     ret = expression.type_check(expr, env, {})
     assert isinstance(ret, expression.ExpressionTypeCheckSuccess)
     assert ret.type == expected_type
-    assert ret.env == new_env
+    assert ret.env == expected_env
     if TEST_ENV.get("display_results"):
         print(f"\n{long_line}\n{ret.message(expr, env, specs_env)}")
 
@@ -76,9 +74,7 @@ def check_context_path(error_data: ExpressionTypeCheckError, context_path):
         assert isinstance(context_path, list)
         assert len(error_data.errors) == len(context_path)
         for i in range(len(error_data.errors)):
-            error_instance = context_path[i][0][0](
-                expression=error_data.expression, **context_path[i][0][1]
-            )
+            error_instance = context_path[i][0][0](expression=error_data.expression, **context_path[i][0][1])
             assert error_data.errors[i][0] == error_instance
             check_context_path(error_data.errors[i][1], context_path[i][1])
     else:
@@ -86,7 +82,7 @@ def check_context_path(error_data: ExpressionTypeCheckError, context_path):
         assert error_data.kind is context_path
 
 
-def assert_type_check_expression_error(type_check_input, context_path):
+def assert_type_check_expression_error(type_check_input, expected_context):
     code, original_env, specs_env = type_check_input, {}, {}
     if isinstance(type_check_input, tuple) and len(type_check_input) == 2:
         code, original_env = type_check_input
@@ -100,20 +96,16 @@ def assert_type_check_expression_error(type_check_input, context_path):
         if isinstance(code, list):
             code = "\n".join(code)
 
-        elixir_ast = subprocess.run(
-            [f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True
-        )
+        elixir_ast = subprocess.run([f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True)
         expr = jsonparser.parse_expression(json.loads(elixir_ast.stdout))
     else:
         expr = code
     ret = expression.type_check(expr, original_env, {})
     assert isinstance(ret, ExpressionTypeCheckError)
-    check_context_path(ret, context_path)
+    check_context_path(ret, expected_context)
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
         env_args = (
-            {"original_env": original_env, "specs_env": specs_env}
-            if TEST_ENV.get("display_results_verbose")
-            else {}
+            {"original_env": original_env, "specs_env": specs_env} if TEST_ENV.get("display_results_verbose") else {}
         )
         print(f"\n{long_line}\n{ret.message(padding='', **env_args)}")
 
@@ -581,9 +573,7 @@ def test_map():
                                 [
                                     (
                                         MapKey(1),
-                                        PatternMatchExpression(
-                                            IdentPattern("x"), FloatExpression(1.0)
-                                        ),
+                                        PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                                     )
                                 ]
                             )
@@ -811,33 +801,25 @@ def test_binary_op():
         for t2 in [IntegerType(), FloatType(), NumberType()]:
             # x / y
             assert_type_check_expression_ok(
-                BinaryOpExpression(
-                    BinaryOpEnum.division, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.division, IdentExpression("x"), IdentExpression("y")),
                 {"x": t1, "y": t2},
                 FloatType(),
             )
 
     for b1 in [True, False]:
         for b2 in [True, False]:
-            t1, t2 = AtomLiteralType("true" if b1 else "false"), AtomLiteralType(
-                "true" if b2 else "false"
-            )
+            t1, t2 = AtomLiteralType("true" if b1 else "false"), AtomLiteralType("true" if b2 else "false")
             t3 = AtomLiteralType("true" if b1 and b2 else "false")
             assert_type_check_expression_ok(
                 # x and y
-                BinaryOpExpression(
-                    BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")),
                 {"x": t1, "y": t2},
                 t3,
             )
             t4 = AtomLiteralType("true" if b1 or b2 else "false")
             assert_type_check_expression_ok(
                 # x or y
-                BinaryOpExpression(
-                    BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")),
                 {"x": t1, "y": t2},
                 t4,
             )
@@ -881,17 +863,13 @@ def test_binary_op():
 
     assert_type_check_expression_ok(
         # div(x, y)
-        BinaryOpExpression(
-            BinaryOpEnum.integer_division, IdentExpression("x"), IdentExpression("y")
-        ),
+        BinaryOpExpression(BinaryOpEnum.integer_division, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": IntegerType()},
         IntegerType(),
     )
     assert_type_check_expression_ok(
         # rem(x, y)
-        BinaryOpExpression(
-            BinaryOpEnum.integer_reminder, IdentExpression("x"), IdentExpression("y")
-        ),
+        BinaryOpExpression(BinaryOpEnum.integer_reminder, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": IntegerType()},
         IntegerType(),
     )
@@ -962,9 +940,7 @@ def test_binary_op():
     )
 
     # BASE ERRORS behavior
-    incompatible_type_for_binary_operator = (
-        ExpressionErrorEnum.incompatible_types_for_binary_operator
-    )
+    incompatible_type_for_binary_operator = ExpressionErrorEnum.incompatible_types_for_binary_operator
     for t in [
         BooleanType(),
         AtomType(),
@@ -982,9 +958,7 @@ def test_binary_op():
         assert_type_check_expression_error(
             # max(x, y)
             (
-                BinaryOpExpression(
-                    BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
                 {"x": IntegerType(), "y": t},
             ),
             incompatible_type_for_binary_operator,
@@ -1036,9 +1010,7 @@ def test_binary_op():
         assert_type_check_expression_error(
             # x and y
             (
-                BinaryOpExpression(
-                    BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")),
                 {"x": t, "y": BooleanType()},
             ),
             incompatible_type_for_binary_operator,
@@ -1046,9 +1018,7 @@ def test_binary_op():
         assert_type_check_expression_error(
             # x or y
             (
-                BinaryOpExpression(
-                    BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")
-                ),
+                BinaryOpExpression(BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")),
                 {"x": t, "y": BooleanType()},
             ),
             incompatible_type_for_binary_operator,
@@ -1093,6 +1063,24 @@ def test_binary_op():
                 ],
             ),
         ],
+    )
+
+
+def test_seq():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        # x ; y
+        SeqExpression(IdentExpression("x"), IdentExpression("y")),
+        {"x": IntegerType(), "y": AtomLiteralType("a")},
+        AtomLiteralType("a"),
+    )
+    assert_type_check_expression_ok(
+        # if true do
+        #   x
+        # end
+        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), None),
+        {"x": IntegerType()},
+        IntegerType(),
     )
 
 
@@ -1188,9 +1176,7 @@ def test_if_else():
         #   :a
         # end
         (
-            IfElseExpression(
-                IntegerExpression(1), IntegerExpression(1), AtomLiteralExpression("a")
-            ),
+            IfElseExpression(IntegerExpression(1), IntegerExpression(1), AtomLiteralExpression("a")),
             {},
         ),
         [
@@ -1225,9 +1211,7 @@ def test_if_else():
         #   :a
         # end
         (
-            IfElseExpression(
-                IdentExpression("x"), IntegerExpression(1), AtomLiteralExpression("a")
-            ),
+            IfElseExpression(IdentExpression("x"), IntegerExpression(1), AtomLiteralExpression("a")),
             {},
         ),
         [
