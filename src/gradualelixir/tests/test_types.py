@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
-from gradualelixir import types as gtypes
-from gradualelixir import utils
+from gradualelixir import gtypes, utils
 
 integer = "integer"
 float = "float"
@@ -360,9 +359,7 @@ def test_supremum_map():
 
     assert_supremum_ok(({1: sett(3)}, {1: sett(1), 2: sett(2)}), {1: sett()})
     assert_supremum_ok(({1: sett(1), 2: sett(2)}, {1: sett(3)}), {1: sett()})
-    assert_supremum_ok(
-        ({1: sett(1), 2: sett(2)}, {1: sett(3), 2: sett(2)}), {1: sett(), 2: sett(2)}
-    )
+    assert_supremum_ok(({1: sett(1), 2: sett(2)}, {1: sett(3), 2: sett(2)}), {1: sett(), 2: sett(2)})
 
     assert_supremum_ok(({1: integer, 2: float}, {1: integer, 2: integer}), {1: integer, 2: number})
     assert_supremum_ok(({1: integer, 2: float}, {2: integer, 1: integer}), {1: integer, 2: number})
@@ -409,9 +406,7 @@ def test_supremum_function():
     assert_supremum_ok((("->", integer), ("->", float)), ("->", number))
     assert_supremum_ok((("->", float), ("->", integer)), ("->", number))
     assert_supremum_ok(((sett(1), "->", ()), (sett(2), "->", ())), (sett(1, 2), "->", ()))
-    assert_supremum_ok(
-        ((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(1, 2), "->", sett())
-    )
+    assert_supremum_ok(((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(1, 2), "->", sett()))
     assert_supremum_ok(
         ((sett(1), sett(3), "->", sett(1)), (sett(2), sett(4), "->", sett(2))),
         (sett(1, 2), sett(3, 4), "->", sett()),
@@ -429,9 +424,7 @@ def test_infimum_function():
     assert_infimum_ok((("->", sett(1)), ("->", sett(2))), ("->", sett(1, 2)))
     assert_infimum_ok((("->", sett(2)), ("->", sett(1))), ("->", sett(1, 2)))
     assert_infimum_ok(((sett(1), "->", ()), (sett(2), "->", ())), (sett(), "->", ()))
-    assert_infimum_ok(
-        ((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(), "->", sett(1, 2))
-    )
+    assert_infimum_ok(((sett(1), "->", sett(1)), (sett(2), "->", sett(2))), (sett(), "->", sett(1, 2)))
     assert_infimum_ok(
         ((sett(1), sett(3), "->", sett(1)), (sett(2), sett(4), "->", sett(2))),
         (sett(), sett(), "->", sett(1, 2)),
@@ -464,9 +457,9 @@ def test_supremum_any():
     assert_supremum_ok((any, {}), {})
     assert_supremum_ok((any, {1: integer, 2: number}), {})
     assert_supremum_ok((any, (integer, number)), (any, number))
-    assert_supremum_ok((any, (integer, '->', integer)), (integer, '->', any))
-    assert_supremum_ok((any, (integer, '->', number)), (integer, '->', number))
-    assert_supremum_ok((any, (number, '->', integer)), (any, '->', any))
+    assert_supremum_ok((any, (integer, "->", integer)), (integer, "->", any))
+    assert_supremum_ok((any, (integer, "->", number)), (integer, "->", number))
+    assert_supremum_ok((any, (number, "->", integer)), (any, "->", any))
 
     assert_supremum_ok(((any, integer), (float, any)), (any, any))
     assert_supremum_ok(({1: any}, {1: integer, 2: float}), {1: any})

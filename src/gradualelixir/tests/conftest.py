@@ -11,6 +11,14 @@ _options = {
         "--display-results-verbose",
         {"action": "store_true", "default": False},
     ),
+    "success_only": (
+        "--success-only",
+        {"action": "store_true", "default": False},
+    ),
+    "errors_only": (
+        "--errors-only",
+        {"action": "store_true", "default": False},
+    ),
 }
 
 

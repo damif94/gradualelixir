@@ -24,6 +24,7 @@ from gradualelixir.expression import (
     UnaryOpExpression,
     VarCallExpression,
 )
+from gradualelixir.gtypes import MapKey
 from gradualelixir.pattern import (
     AtomLiteralPattern,
     ElistPattern,
@@ -36,7 +37,6 @@ from gradualelixir.pattern import (
     TuplePattern,
     WildPattern,
 )
-from gradualelixir.types import MapKey
 
 
 def parse_expression(code):

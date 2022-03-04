@@ -1,7 +1,5 @@
 import gradualelixir.utils
-from gradualelixir import pattern
-from gradualelixir import types as gtypes
-from gradualelixir import utils
+from gradualelixir import gtypes, pattern, utils
 
 term = "term"
 none = "none"

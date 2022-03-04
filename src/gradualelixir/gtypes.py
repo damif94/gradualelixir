@@ -344,6 +344,7 @@ def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Ty
     #     Take (integer, any, float):
     #       *  integer \/ (any \/ float) = integer \/ any = any
     #       *  \/{integer, any, float} = number
+    #  This will eventually impact on the cond expression, case expression and list pattern typing rules
 
     # TODO[thesis] this is the non standard part: explain this with full detail
     #  any \/\ any = any
@@ -361,13 +362,12 @@ def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Ty
     #  % any /\ %{ki => si} = any (Adding gradual maps would yield {ki => si, any}
     #  (s1, ..., sn) -> s0 \/\ (t1, ..., tn) -> t1 = (s1 /\/ t1, ..., sn /\/ tn) -> s0 \/\ t0
     #  any \/\ (s1, ..., sn) -> s0 = (any /\/ s1, ..., any /\/ sn) -> any \/\ s0
-
     if isinstance(tau, AnyType) and isinstance(sigma, AnyType):
         return tau
     if isinstance(tau, BaseType):
         return supremum_infimum_aux_base(tau, sigma, is_supremum)
     elif isinstance(sigma, BaseType):
-        return supremum_infimum_aux_base(sigma, sigma, is_supremum)
+        return supremum_infimum_aux_base(sigma, tau, is_supremum)
     elif isinstance(tau, ElistType):
         return supremum_infimum_aux_elist(tau, sigma, is_supremum)
     elif isinstance(sigma, ElistType):
@@ -501,3 +501,65 @@ def supremum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
 
 def infimum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
     return supremum_infimum_aux(tau, sigma, False)
+
+
+@dataclass
+class SpecsEnv:
+    env: t.Dict[t.Tuple[str, int], t.Tuple[t.List[Type], Type]]
+
+    def __init__(self, env: t.Dict[t.Tuple[str, int], t.Tuple[t.List[Type], Type]] = None):
+        self.env = env or {}
+
+    def __getitem__(self, item: t.Tuple[str, int]) -> t.Tuple[t.List[Type], Type]:
+        return self.env[item]
+
+    def __setitem__(self, key: t.Tuple[str, int], value: t.Tuple[t.List[Type], Type]):
+        self.env[key] = value
+
+    def __str__(self):
+        return "[" + ",".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
+
+    def copy(self):
+        return SpecsEnv(self.env.copy())
+
+    def get(self, item: t.Tuple[str, int]) -> t.Optional[t.Tuple[t.List[Type], Type]]:
+        return self.env.get(item)
+
+    def items(self):
+        return self.env.items()
+
+    @classmethod
+    def merge(cls, one: "SpecsEnv", other: "SpecsEnv") -> "SpecsEnv":
+        return cls({**one.env, **other.env})
+
+
+@dataclass
+class TypeEnv:
+    env: t.Dict[str, Type]
+
+    def __init__(self, env: t.Dict[str, Type] = None):
+        self.env = env or {}
+
+    def __getitem__(self, item: str) -> Type:
+        return self.env[item]
+
+    def __setitem__(self, key: str, value: Type):
+        self.env[key] = value
+
+    def __str__(self):
+        return "[" + ",".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
+
+    def copy(self):
+        return TypeEnv(self.env.copy())
+
+    def get(self, item: str) -> t.Optional[Type]:
+        return self.env.get(item)
+
+    def items(self):
+        return self.env.items()
+
+    @classmethod
+    def merge(cls, one: "TypeEnv", other: "TypeEnv") -> "TypeEnv":
+        res_env = TypeEnv()
+        res_env.env = {**one.env, **other.env}
+        return res_env

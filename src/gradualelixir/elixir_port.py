@@ -1,15 +1,10 @@
 import enum
 import json
+import subprocess
 from collections import OrderedDict
 from typing import Any
 
-from gradualelixir import expression, pattern
-from gradualelixir import types as gtypes
-
-
-import subprocess
-
-from gradualelixir import PROJECT_PATH
+from gradualelixir import PROJECT_PATH, expression, gtypes, pattern
 from gradualelixir.exception import ElixirProcessException
 
 
@@ -17,24 +12,21 @@ def format_code(elixir_code: str) -> str:
     with open(f"{PROJECT_PATH}/format.ex", "w") as f:
         f.write(elixir_code)
 
-    formatter_output = subprocess.run(
-        ["mix", "format", f"{PROJECT_PATH}/format.ex"], capture_output=True
-    )
+    formatter_output = subprocess.run(["mix", "format", f"{PROJECT_PATH}/format.ex"], capture_output=True)
 
     if error := formatter_output.stderr:
         raise Exception(f"Mix formatter failed for code {elixir_code}\n" + error.decode("ascii"))
 
     with open(f"{PROJECT_PATH}/format.ex", "r") as f:
         text = "".join(f.readlines())
-        return text
+        return text[:-1]
 
 
-def to_internal_representation(elixir_code: str, syntactic_level: 'SyntacticLevel') -> Any:
-    
+def to_internal_representation(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
     elixir_ast_converter_output = subprocess.run(
         [f"{PROJECT_PATH}/elixir_port/elixir_port", elixir_code], capture_output=True
     )
-    
+
     if error := elixir_ast_converter_output.stderr:
         raise ElixirProcessException(f"Elixir ast converter failed for code {elixir_code}\n" + error.decode("ascii"))
     print("aaa")
@@ -46,7 +38,7 @@ class SyntacticLevel(enum.Enum):
     type = "type"
     pattern = "pattern"
     expression = "expression"
-    
+
     def parse(self, j) -> Any:
         if self is SyntacticLevel.key:
             return parse_key(j)
@@ -185,9 +177,7 @@ def parse_expression(j) -> expression.Expression:
                     right_expression = SyntacticLevel.expression.parse([op, meta, children_nodes[1:]])
                     return expression.SeqExpression(left_expression, right_expression)
             elif aux := [
-                symbol
-                for symbol in list(expression.UnaryOpEnum) + list(expression.BinaryOpEnum)
-                if symbol.value == op
+                symbol for symbol in list(expression.UnaryOpEnum) + list(expression.BinaryOpEnum) if symbol.value == op
             ]:
                 if len(children_nodes) == 1:
                     symbol = aux[0]
