@@ -1,7 +1,5 @@
 import typing as t
-from collections import OrderedDict
 
-from gradualelixir import pattern
 from gradualelixir import types as gtypes
 
 T = t.TypeVar("T")
@@ -23,6 +21,15 @@ def parse_key(x):
     if isinstance(x, bool):
         return gtypes.MapKey("true" if x else "false")
     return gtypes.MapKey(x)
+
+
+def unparse_key(x: gtypes.MapKey):
+    if isinstance(x.type, gtypes.AtomLiteralType):
+        if x.value in ["true", "false"]:
+            return x.value == "true"
+        else:
+            return x.value
+    return x.value
 
 
 def parse_type(x):
@@ -84,37 +91,7 @@ def unparse_type(x):
         return tuple([unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)])
     else:
         assert isinstance(x, gtypes.MapType)
-        return {k: unparse_type(x.map_type[k]) for k in x.map_type}
-
-
-def parse_pattern(x):
-    if isinstance(x, bool):
-        return pattern.AtomLiteralPattern(value="true" if x else "false")
-    elif isinstance(x, int):
-        return pattern.IntegerPattern(value=x)
-    elif isinstance(x, float):
-        return pattern.FloatPattern(value=x)
-    elif isinstance(x, str):
-        if x.startswith(":"):
-            return pattern.AtomLiteralPattern(value=x[1:])
-        if x == "_":
-            return pattern.WildPattern()
-        elif x.startswith("^"):
-            return pattern.PinIdentPattern(identifier=x[1:])
-        else:
-            return pattern.IdentPattern(identifier=x)
-    elif isinstance(x, tuple):
-        return pattern.TuplePattern([parse_pattern(y) for y in x])
-    if isinstance(x, dict):
-        return pattern.MapPattern(OrderedDict([(parse_key(k), parse_pattern(v)) for k, v in x.items()]))
-    else:
-        assert isinstance(x, list)
-        if len(x) == 0:
-            return pattern.ElistPattern()
-        else:
-            if len(x) == 3 and x[1] == "|":
-                return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[2]))
-            return pattern.ListPattern(parse_pattern(x[0]), parse_pattern(x[1:]))
+        return {unparse_key(k): unparse_type(x.map_type[k]) for k in x.map_type}
 
 
 def flatten(x: t.List[t.List[T]]) -> t.List[T]:
@@ -134,4 +111,4 @@ def enumerate_list(items: t.List[str]) -> str:
         return ",".join([str(item) for item in items[:-1]]) + " and " + str(items[-1])
 
 
-long_line = "--------------------------------------------------------------------------------------------"
+long_line = "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"

@@ -134,7 +134,7 @@ class PatternErrorEnum(enum.Enum):
     )
     incompatible_tuples_error = "Couldn't match tuple {pattern} against type {tau} because they have different sizes"
     incompatible_maps_error = (
-        "Couldn't match tuple {pattern} against type {tau} because they some of {tau} keys "
+        "Couldn't match tuple {pattern} against type {tau} they some of {tau} keys "
         "are not present in {pattern}"
     )
     incompatible_constructors_error = "Error matching {pattern} with type {tau}: wrong shape"
@@ -480,7 +480,7 @@ class PatternMatchSuccess:
             else ""
         )
         return (
-            f"{Bcolors.OKBLUE}Pattern match type check success for{Bcolors.ENDC} {pattern} = {original_type}\n"
+            f"{Bcolors.OKBLUE}Pattern match type check success for{Bcolors.ENDC} {pattern} = {original_type}\n\n"
             f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} [{','.join(original_env_msg_aux)}]\n"
             f"{hijacked_pattern_env_msg}"
             f"{Bcolors.OKBLUE}Refined Type:{Bcolors.ENDC} {self.type}\n"

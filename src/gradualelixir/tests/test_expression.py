@@ -1,8 +1,5 @@
-import json
-import subprocess
 from collections import OrderedDict
 
-from gradualelixir import PROJECT_PATH, expression, jsonparser
 from gradualelixir.expression import (
     AtomLiteralExpression,
     BaseExpressionTypeCheckError,
@@ -12,7 +9,6 @@ from gradualelixir.expression import (
     CondExpression,
     CondExpressionContext,
     ElistExpression,
-    Expression,
     ExpressionErrorEnum,
     ExpressionTypeCheckError,
     FloatExpression,
@@ -32,8 +28,10 @@ from gradualelixir.expression import (
     UnaryOpContext,
     UnaryOpEnum,
     UnaryOpExpression,
+    type_check,
+    ExpressionTypeCheckSuccess, ContextExpressionTypeCheckError,
 )
-from gradualelixir.pattern import IdentPattern
+from gradualelixir.pattern import IdentPattern, TuplePattern
 from gradualelixir.types import (
     AnyType,
     AtomLiteralType,
@@ -49,7 +47,6 @@ from gradualelixir.types import (
     TupleType,
 )
 from gradualelixir.utils import long_line
-
 from . import TEST_ENV
 
 identifier_not_found_in_environment = ExpressionErrorEnum.identifier_not_found_in_environment
@@ -61,8 +58,8 @@ def assert_type_check_expression_ok(expr, env=None, expected_type=None, expected
     specs_env = specs_env or {}
     assert expected_type is not None
 
-    ret = expression.type_check(expr, env, {})
-    assert isinstance(ret, expression.ExpressionTypeCheckSuccess)
+    ret = type_check(expr, env, {})
+    assert isinstance(ret, ExpressionTypeCheckSuccess)
     assert ret.type == expected_type
     assert ret.env == expected_env
     if TEST_ENV.get("display_results"):
@@ -72,35 +69,24 @@ def assert_type_check_expression_ok(expr, env=None, expected_type=None, expected
 def check_context_path(error_data: ExpressionTypeCheckError, context_path):
     if isinstance(error_data, NestedExpressionTypeCheckError):
         assert isinstance(context_path, list)
-        assert len(error_data.errors) == len(context_path)
-        for i in range(len(error_data.errors)):
-            error_instance = context_path[i][0][0](expression=error_data.expression, **context_path[i][0][1])
-            assert error_data.errors[i][0] == error_instance
-            check_context_path(error_data.errors[i][1], context_path[i][1])
+        assert len(error_data.bullets) == len(context_path)
+        for i in range(len(error_data.bullets)):
+            context_instance = context_path[i][0][0](expression=error_data.expression, **context_path[i][0][1])
+            assert error_data.bullets[i].context == context_instance
+            check_context_path(error_data.bullets[i].error, context_path[i][1])
     else:
         assert isinstance(error_data, BaseExpressionTypeCheckError)
         assert error_data.kind is context_path
 
 
 def assert_type_check_expression_error(type_check_input, expected_context):
-    code, original_env, specs_env = type_check_input, {}, {}
+    expr, original_env, specs_env = type_check_input, {}, {}
     if isinstance(type_check_input, tuple) and len(type_check_input) == 2:
-        code, original_env = type_check_input
+        expr, original_env = type_check_input
     if isinstance(type_check_input, tuple) and len(type_check_input) == 3:
-        code, original_env, specs_env = type_check_input
+        expr, original_env, specs_env = type_check_input
 
-    if not isinstance(code, Expression):
-        code, original_env, specs_env = type_check_input
-        if isinstance(code, tuple):
-            code = "\n".join(list(code))
-        if isinstance(code, list):
-            code = "\n".join(code)
-
-        elixir_ast = subprocess.run([f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True)
-        expr = jsonparser.parse_expression(json.loads(elixir_ast.stdout))
-    else:
-        expr = code
-    ret = expression.type_check(expr, original_env, {})
+    ret = type_check(expr, original_env, {})
     assert isinstance(ret, ExpressionTypeCheckError)
     check_context_path(ret, expected_context)
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
@@ -677,32 +663,32 @@ def test_unary_op():
     # RESULT TYPE behavior
     for t in [IntegerType(), FloatType(), NumberType()]:
         assert_type_check_expression_ok(
-            UnaryOpExpression(expression.UnaryOpEnum.negative, IdentExpression("x")),
+            UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
             {"x": t},
             t,
             {"x": t},
         )
         assert_type_check_expression_ok(
-            UnaryOpExpression(expression.UnaryOpEnum.absolute_value, IdentExpression("x")),
+            UnaryOpExpression(UnaryOpEnum.absolute_value, IdentExpression("x")),
             {"x": t},
             t,
             {"x": t},
         )
     assert_type_check_expression_ok(
         # not x
-        UnaryOpExpression(expression.UnaryOpEnum.negation, IdentExpression("x")),
+        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": AtomLiteralType("true")},
         AtomLiteralType("false"),
     )
     assert_type_check_expression_ok(
         # not x
-        UnaryOpExpression(expression.UnaryOpEnum.negation, IdentExpression("x")),
+        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": AtomLiteralType("false")},
         AtomLiteralType("true"),
     )
     assert_type_check_expression_ok(
         # not x
-        UnaryOpExpression(expression.UnaryOpEnum.negation, IdentExpression("x")),
+        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": BooleanType()},
         BooleanType(),
     )
@@ -711,7 +697,7 @@ def test_unary_op():
     assert_type_check_expression_ok(
         # -(x = 1)
         UnaryOpExpression(
-            expression.UnaryOpEnum.negative,
+            UnaryOpEnum.negative,
             PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
         ),
         expected_type=IntegerType(),
@@ -728,7 +714,7 @@ def test_unary_op():
         assert_type_check_expression_error(
             # -x
             (
-                UnaryOpExpression(expression.UnaryOpEnum.negative, IdentExpression("x")),
+                UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
                 {"x": t},
             ),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
@@ -736,7 +722,7 @@ def test_unary_op():
         assert_type_check_expression_error(
             # abs(x)
             (
-                UnaryOpExpression(expression.UnaryOpEnum.absolute_value, IdentExpression("x")),
+                UnaryOpExpression(UnaryOpEnum.absolute_value, IdentExpression("x")),
                 {"x": t},
             ),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
@@ -751,7 +737,7 @@ def test_unary_op():
         assert_type_check_expression_error(
             # not x
             (
-                UnaryOpExpression(expression.UnaryOpEnum.negation, IdentExpression("x")),
+                UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
                 {"x": t},
             ),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
@@ -760,7 +746,7 @@ def test_unary_op():
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
         # not x
-        (UnaryOpExpression(expression.UnaryOpEnum.negation, IdentExpression("x")), {}),
+        (UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")), {}),
         [((UnaryOpContext, {}), identifier_not_found_in_environment)],
     )
 
@@ -1068,19 +1054,67 @@ def test_binary_op():
 
 def test_seq():
     # RESULT TYPE behavior
+    # assert_type_check_expression_ok(
+    #     # x ; y
+    #     SeqExpression(IdentExpression("x"), IdentExpression("y")),
+    #     {"x": IntegerType(), "y": AtomLiteralType("a")},
+    #     AtomLiteralType("a"),
+    # )
+    # assert_type_check_expression_ok(
+    #     # x ; {1,true}
+    #     SeqExpression(IdentExpression("x"), TupleExpression([IntegerExpression(1), AtomLiteralExpression("true")])),
+    #     {"x": IntegerType(), "y": AtomLiteralType("a")},
+    #     TupleType([IntegerType(), AtomLiteralType("true")]),
+    # )
+    #
+    # # VARIABLE EXPORT behavior
+    # assert_type_check_expression_ok(
+    #     # x ; y
+    #     SeqExpression(PatternMatchExpression(IdentPattern("x"), IdentExpression("y")), IntegerExpression(1)),
+    #     {"y": AtomLiteralType("a")},
+    #     IntegerType(),
+    #     {"x": AtomLiteralType("a"), "y": AtomLiteralType("a")},
+    # )
+    # assert_type_check_expression_ok(
+    #     # x ; y
+    #     SeqExpression(
+    #         PatternMatchExpression(IdentPattern("x"), IdentExpression("y")),
+    #         IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), AtomLiteralExpression("c"))
+    #     ),
+    #     {"y": AtomLiteralType("a")},
+    #     AtomType(),
+    #     {"x": AtomLiteralType("a"), "y": AtomLiteralType("a")},
+    # )
     assert_type_check_expression_ok(
         # x ; y
-        SeqExpression(IdentExpression("x"), IdentExpression("y")),
-        {"x": IntegerType(), "y": AtomLiteralType("a")},
-        AtomLiteralType("a"),
+        SeqExpression(
+            PatternMatchExpression(
+                TuplePattern([IdentPattern("x"), IdentPattern("y")]),
+                TupleExpression([IdentExpression("u"), IdentExpression("u")])
+            ),
+            PatternMatchExpression(IdentPattern("y"), AtomLiteralExpression("true"))
+        ),
+        {"u": NumberType()},
+        AtomLiteralType("true"),
+        {"u": NumberType(), "x": NumberType(), "y": AtomLiteralType("true")},
     )
     assert_type_check_expression_ok(
-        # if true do
-        #   x
-        # end
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), None),
-        {"x": IntegerType()},
-        IntegerType(),
+        # x ; y
+        SeqExpression(
+            PatternMatchExpression(
+                IdentPattern("y"), IntegerExpression(1)
+            ),
+            SeqExpression(
+                PatternMatchExpression(
+                    IdentPattern("z"), IdentExpression("y")
+                ),
+                PatternMatchExpression(
+                    IdentPattern("y"), FloatExpression(1)
+                )
+            )
+        ),
+        expected_type=FloatType(),
+        expected_env={"y": FloatType(),"z": IntegerType()}
     )
 
 
@@ -1485,10 +1519,10 @@ def test_cond():
 
     assert_type_check_expression_error(
         # cond do
-        #   b ->
+        #   c = b ->
         #     cond do
-        #       false -> not b
-        #       :a -> b
+        #       false -> not c
+        #       :a -> c
         #    end
         #  true ->
         #    cond do
@@ -1500,7 +1534,7 @@ def test_cond():
             CondExpression(
                 [
                     (
-                        IdentExpression("b"),
+                        PatternMatchExpression(IdentPattern("c"), IdentExpression("b")),
                         CondExpression(
                             [
                                 (

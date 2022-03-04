@@ -13,20 +13,6 @@ true = True
 false = False
 
 
-def supremum(sigma, tau):
-    result = gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, gtypes.SupremumError):
-        return result
-    return utils.unparse_type(result)
-
-
-def infimum(sigma, tau):
-    result = gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
-    if isinstance(result, gtypes.SupremumError):
-        return result
-    return utils.unparse_type(result)
-
-
 def is_subtype(tau, sigma):
     return gtypes.is_subtype(utils.parse_type(tau), utils.parse_type(sigma))
 
@@ -42,22 +28,26 @@ def sett(*args):
 
 def assert_supremum_ok(input, output):
     sigma, tau = input
-    assert supremum(sigma, tau) == output
+    result = gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
+    assert isinstance(result, gtypes.Type)
+    assert utils.unparse_type(result) == output
 
 
 def assert_infimum_ok(input, output):
     sigma, tau = input
-    assert infimum(sigma, tau) == output
+    result = gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
+    assert isinstance(result, gtypes.Type)
+    assert utils.unparse_type(result) == output
 
 
 def assert_supremum_error(sigma, tau, sup=True):
-    result = supremum(sigma, tau)
+    result = gtypes.supremum(utils.parse_type(tau), utils.parse_type(sigma))
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
 
 
 def assert_infimum_error(sigma, tau, sup=False):
-    result = infimum(sigma, tau)
+    result = gtypes.infimum(utils.parse_type(tau), utils.parse_type(sigma))
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
 
@@ -468,6 +458,16 @@ def test_supremum_any():
     assert_supremum_ok((":a", any), any)
     assert_supremum_ok((any, ":a"), any)
 
+    assert_supremum_ok((any, ()), ())
+    assert_supremum_ok((any, (integer, float)), (any, any))
+    assert_supremum_ok((any, (integer, number)), (any, number))
+    assert_supremum_ok((any, {}), {})
+    assert_supremum_ok((any, {1: integer, 2: number}), {})
+    assert_supremum_ok((any, (integer, number)), (any, number))
+    assert_supremum_ok((any, (integer, '->', integer)), (integer, '->', any))
+    assert_supremum_ok((any, (integer, '->', number)), (integer, '->', number))
+    assert_supremum_ok((any, (number, '->', integer)), (any, '->', any))
+
     assert_supremum_ok(((any, integer), (float, any)), (any, any))
     assert_supremum_ok(({1: any}, {1: integer, 2: float}), {1: any})
     assert_supremum_ok(
@@ -481,17 +481,20 @@ def test_supremum_any():
 
 
 def test_infimum_any():
+    assert_infimum_ok((any, ()), ())
     assert_infimum_ok((any, any), any)
-    assert_infimum_ok((integer, any), any)
-    assert_infimum_ok((any, integer), any)
-    assert_infimum_ok(((any, integer), (float, any)), (any, any))
-    assert_infimum_ok(({1: any}, {1: integer, 2: float}), {1: any, 2: float})
+    assert_infimum_ok((integer, any), integer)
+    assert_infimum_ok((any, integer), integer)
+    assert_infimum_ok((number, any), any)
+    assert_infimum_ok((any, number), any)
+    assert_infimum_ok(((any, integer), (number, any)), (any, integer))
+    assert_infimum_ok(({1: any}, {1: number, 2: float}), {1: any, 2: float})
     assert_infimum_ok(({1: any}, {1: any, 2: float}), {1: any, 2: float})
     assert_infimum_ok(
         ((sett(1), any, "->", integer), (sett(2), any, "->", integer)),
         (sett(), any, "->", integer),
     )
-    assert_infimum_ok(
-        ((any, sett(1), "->", integer), (sett(2), any, "->", integer)),
-        (any, any, "->", integer),
-    )
+    # assert_infimum_ok(
+    #     ((any, {1: {}}, "->", integer), ({2: {}}, any, "->", integer)),
+    #     (any, any, "->", integer),
+    # )

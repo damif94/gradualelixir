@@ -190,18 +190,6 @@ def is_minimal(tau: Type) -> bool:
     return any([isinstance(tau, klass) for klass in [LiteralType]])
 
 
-def grounding(tau: CompositeType) -> Type:
-    any = AnyType()
-    if isinstance(tau, ListType):
-        return ListType(any)
-    elif isinstance(tau, TupleType):
-        return TupleType([any for _ in tau.types])
-    elif isinstance(tau, MapType):
-        return MapType({k: any for k in tau.map_type})
-    assert isinstance(tau, FunctionType)
-    return FunctionType([any for _ in tau.arg_types], any)
-
-
 def is_base_subtype(tau: BaseType, sigma: BaseType) -> bool:
     if any(
         [
@@ -350,21 +338,32 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
 
 
 def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Type, TypingError]:
+    # TODO make supremum_infimum_aux(types: t.List[Type]) -> t.Union[Type, TypingError]
+    #  to support arbitrary arity correctness with respect to gradual lifting
+    #  => It may be the case that t1 \/ (t2 \/ t3) != \/{t1, t2, t2}
+    #     Take (integer, any, float):
+    #       *  integer \/ (any \/ float) = integer \/ any = any
+    #       *  \/{integer, any, float} = number
 
-    if isinstance(tau, AnyType) or isinstance(sigma, AnyType):
-        tau, sigma = (tau, sigma) if isinstance(tau, AnyType) else (sigma, tau)
-        if isinstance(sigma, AnyType):
-            return tau
-        elif isinstance(sigma, BaseType):
-            if is_supremum and is_maximal(sigma):
-                return sigma
-            if not is_supremum and is_minimal(sigma):
-                return sigma
-            return tau
-        else:
-            assert isinstance(sigma, CompositeType)
-            tau = grounding(sigma)
+    # TODO[thesis] this is the non standard part: explain this with full detail
+    #  any \/\ any = any
+    #  any /\ b = b when b is minimal else any
+    #  any \/ b = b when b is maximal else any
+    #  any \/ [] = any
+    #  any /\ [] = []
+    #  any \/ [s] = [any \/ s]
+    #  any /\ [s] = any (I think we can adapt the AGT adjunction to have [any] as result)
+    #  (s1, ..., sn) \/\ (t1, ..., tn) = (s1 \/\ t1, ..., sn \/\ tn)
+    #  any \/\ (s1, ..., sn) = (any \/\ s1, ..., any \/\ sn)
+    #  %{ki => ti, kj => tj} \/ %{ki => si, kl => sl} = %{ki => ti /\ si}
+    #  % any \/ %{ki => si} = %{}
+    #  %{ki => ti, kj => tj} /\ %{ki => si, kl => sl} = %{ki => ti /\ si, kj => tj, kl => sl}
+    #  % any /\ %{ki => si} = any (Adding gradual maps would yield {ki => si, any}
+    #  (s1, ..., sn) -> s0 \/\ (t1, ..., tn) -> t1 = (s1 /\/ t1, ..., sn /\/ tn) -> s0 \/\ t0
+    #  any \/\ (s1, ..., sn) -> s0 = (any /\/ s1, ..., any /\/ sn) -> any \/\ s0
 
+    if isinstance(tau, AnyType) and isinstance(sigma, AnyType):
+        return tau
     if isinstance(tau, BaseType):
         return supremum_infimum_aux_base(tau, sigma, is_supremum)
     elif isinstance(sigma, BaseType):
@@ -388,25 +387,44 @@ def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Ty
     elif isinstance(tau, FunctionType):
         return supremum_infimum_aux_function(tau, sigma, is_supremum)
     else:
-        assert isinstance(sigma, FunctionType)
+        try:
+            assert isinstance(sigma, FunctionType)
+        except AssertionError as e:
+            print(sigma)
+            print(tau)
+            raise e
         return supremum_infimum_aux_function(sigma, tau, is_supremum)
 
 
 def supremum_infimum_aux_base(tau: BaseType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
+    if isinstance(any := sigma, AnyType):
+        if is_supremum and is_maximal(tau):
+            return tau
+        if not is_supremum and is_minimal(tau):
+            return tau
+        return any
     if isinstance(sigma, BaseType):
         return base_supremum(tau, sigma) if is_supremum else base_infimum(tau, sigma)
     return SupremumError(is_supremum=is_supremum)
 
 
 def supremum_infimum_aux_elist(tau: ElistType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
+    if isinstance(any := sigma, AnyType):
+        return any if is_supremum else tau
     if isinstance(sigma, ElistType):
         return sigma
-    elif isinstance(sigma, ListType):
+    if isinstance(sigma, ListType):
         return sigma if is_supremum else tau
     return SupremumError(is_supremum=is_supremum)
 
 
 def supremum_infimum_aux_list(tau: ListType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
+    if isinstance(any := sigma, AnyType):
+        if is_supremum:
+            sigma = ListType(any)
+        else:
+            return sigma
+
     if isinstance(sigma, ElistType):
         return tau
     if isinstance(sigma, ListType):
@@ -418,6 +436,9 @@ def supremum_infimum_aux_list(tau: ListType, sigma: Type, is_supremum: bool) -> 
 
 
 def supremum_infimum_aux_tuple(tau: TupleType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
+    if isinstance(any := sigma, AnyType):
+        sigma = TupleType([any for _ in tau.types])
+
     if isinstance(sigma, TupleType) and len(tau.types) == len(sigma.types):
         supremum_results = []
         for i in range(len(tau.types)):
@@ -431,8 +452,9 @@ def supremum_infimum_aux_tuple(tau: TupleType, sigma: Type, is_supremum: bool) -
 
 
 def supremum_infimum_aux_map(tau: MapType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
-    # TODO make supremum_infimum_aux_map(types: t.List[Type]) -> t.Union[Type, TypingError]
-    #  to support arbitrary arity correctness with respect to gradual lifting
+    if isinstance(any := sigma, AnyType):
+        return MapType({}) if is_supremum else any
+
     if isinstance(sigma, MapType):
         keys = [k for k in tau.map_type.keys() if k in sigma.map_type.keys()]
         tau_map_type = tau.map_type.copy()
@@ -454,6 +476,9 @@ def supremum_infimum_aux_map(tau: MapType, sigma: Type, is_supremum: bool) -> t.
 
 
 def supremum_infimum_aux_function(tau: FunctionType, sigma: Type, is_supremum: bool) -> t.Union[Type, TypingError]:
+    if isinstance(any := sigma, AnyType):
+        sigma = FunctionType([any for _ in tau.arg_types], any)
+
     if isinstance(sigma, FunctionType) and len(tau.arg_types) == len(sigma.arg_types):
         args_supremum_results = []
         for i in range(len(tau.arg_types)):

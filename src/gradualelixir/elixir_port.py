@@ -1,7 +1,61 @@
+import enum
+import json
 from collections import OrderedDict
+from typing import Any
 
 from gradualelixir import expression, pattern
 from gradualelixir import types as gtypes
+
+
+import subprocess
+
+from gradualelixir import PROJECT_PATH
+from gradualelixir.exception import ElixirProcessException
+
+
+def format_code(elixir_code: str) -> str:
+    with open(f"{PROJECT_PATH}/format.ex", "w") as f:
+        f.write(elixir_code)
+
+    formatter_output = subprocess.run(
+        ["mix", "format", f"{PROJECT_PATH}/format.ex"], capture_output=True
+    )
+
+    if error := formatter_output.stderr:
+        raise Exception(f"Mix formatter failed for code {elixir_code}\n" + error.decode("ascii"))
+
+    with open(f"{PROJECT_PATH}/format.ex", "r") as f:
+        text = "".join(f.readlines())
+        return text
+
+
+def to_internal_representation(elixir_code: str, syntactic_level: 'SyntacticLevel') -> Any:
+    
+    elixir_ast_converter_output = subprocess.run(
+        [f"{PROJECT_PATH}/elixir_port/elixir_port", elixir_code], capture_output=True
+    )
+    
+    if error := elixir_ast_converter_output.stderr:
+        raise ElixirProcessException(f"Elixir ast converter failed for code {elixir_code}\n" + error.decode("ascii"))
+    print("aaa")
+    return syntactic_level.parse(json.loads(elixir_ast_converter_output.stdout))
+
+
+class SyntacticLevel(enum.Enum):
+    key = "key"
+    type = "type"
+    pattern = "pattern"
+    expression = "expression"
+    
+    def parse(self, j) -> Any:
+        if self is SyntacticLevel.key:
+            return parse_key(j)
+        # elif self is SyntacticLevel.type:
+        #     return parse_type(j)
+        elif self is SyntacticLevel.pattern:
+            return parse_pattern(j)
+        elif self is SyntacticLevel.expression:
+            return parse_expression(j)
 
 
 def parse_key(j) -> gtypes.MapKey:
@@ -25,7 +79,7 @@ def parse_pattern(j) -> pattern.Pattern:
         if op == "{}":
             items = []
             for child_node in children_nodes:
-                pat = parse_pattern(child_node)
+                pat = SyntacticLevel.pattern.parse(child_node)
                 items.append(pat)
             return pattern.TuplePattern(items)
         elif op == "%{}":
@@ -33,32 +87,32 @@ def parse_pattern(j) -> pattern.Pattern:
             for child_node in children_nodes:
                 _, _, aux = child_node
                 key_node, value_node = aux
-                key = parse_key(key_node)
-                pat = parse_pattern(value_node)
+                key = SyntacticLevel.key.parse(key_node)
+                pat = SyntacticLevel.pattern.parse(value_node)
                 items_dict[key] = pat
             return pattern.MapPattern(items_dict)
         elif op == "_":
             return pattern.WildPattern()
         elif op == "|":
             left_node, right_node = children_nodes[0]
-            left_pattern = parse_pattern(left_node)
-            right_pattern = parse_pattern(right_node)
+            left_pattern = SyntacticLevel.pattern.parse(left_node)
+            right_pattern = SyntacticLevel.pattern.parse(right_node)
             return pattern.ListPattern(left_pattern, right_pattern)
         elif op.startswith("^"):
-            ident_pattern: pattern.IdentPattern = parse_pattern(children_nodes[0])  # type: ignore
+            ident_pattern: pattern.IdentPattern = SyntacticLevel.pattern.parse(children_nodes[0])  # type: ignore
             return pattern.PinIdentPattern(ident_pattern.identifier)
         elif children_nodes is None:
             return pattern.IdentPattern(j[0])
 
     if len(j) == 1 and isinstance(j[0], list) and len(j[0]) > 0 and j[0][0] == "|":
         left_node, right_node = j[0][2]
-        left_pattern = parse_pattern(left_node)
-        right_pattern = parse_pattern(right_node)
+        left_pattern = SyntacticLevel.pattern.parse(left_node)
+        right_pattern = SyntacticLevel.pattern.parse(right_node)
         return pattern.ListPattern(left_pattern, right_pattern)
 
     tail_pattern: pattern.Pattern = pattern.ElistPattern()
     for node in reversed(j):
-        head_pattern = parse_pattern(node)
+        head_pattern = SyntacticLevel.pattern.parse(node)
         tail_pattern = pattern.ListPattern(head_pattern, tail_pattern)
     return tail_pattern
 
@@ -79,7 +133,7 @@ def parse_expression(j) -> expression.Expression:
             if op == "{}":
                 items = []
                 for child_node in children_nodes:
-                    expr = parse_expression(child_node)
+                    expr = SyntacticLevel.expression.parse(child_node)
                     items.append(expr)
                 return expression.TupleExpression(items)
             elif op == "%{}":
@@ -87,30 +141,30 @@ def parse_expression(j) -> expression.Expression:
                 for child_node in children_nodes:
                     _, _, aux = child_node
                     key_node, value_node = aux
-                    key = parse_key(key_node)
-                    expr = parse_expression(value_node)
+                    key = SyntacticLevel.key.parse(key_node)
+                    expr = SyntacticLevel.expression.parse(value_node)
                     items_dict[key] = expr
                 return expression.MapExpression(items_dict)
             elif op == "=":
                 left_node, right_node = children_nodes
-                pat = parse_pattern(left_node)
-                expr = parse_expression(right_node)
+                pat = SyntacticLevel.pattern.parse(left_node)
+                expr = SyntacticLevel.expression.parse(right_node)
                 return expression.PatternMatchExpression(pat, expr)
             elif op == "if":
                 cond_node, do_node = children_nodes
-                cond_expr = parse_expression(cond_node)
-                if_expr = parse_expression(do_node["do"])
+                cond_expr = SyntacticLevel.expression.parse(cond_node)
+                if_expr = SyntacticLevel.expression.parse(do_node["do"])
                 else_expr = None
                 if "else" in do_node:
-                    else_expr = parse_expression(do_node["else"])
+                    else_expr = SyntacticLevel.expression.parse(do_node["else"])
                 return expression.IfElseExpression(cond_expr, if_expr, else_expr)
             elif op == "case":
                 case_node, clause_nodes = children_nodes
-                case_expression = parse_expression(case_node)
+                case_expression = SyntacticLevel.expression.parse(case_node)
                 branches = []
                 for _, _, node in clause_nodes["do"]:
-                    test_pattern = parse_pattern(node[0][0])
-                    do_expression = parse_expression(node[1])
+                    test_pattern = SyntacticLevel.pattern.parse(node[0][0])
+                    do_expression = SyntacticLevel.expression.parse(node[1])
                     branches.append((test_pattern, do_expression))
                 return expression.CaseExpression(case_expression, branches)
             elif op == "cond":
@@ -119,16 +173,16 @@ def parse_expression(j) -> expression.Expression:
                 for _, _, node in clause_nodes[0]["do"]:
                     cond_node = node[0][0]
                     do_node = node[1]
-                    cond_expression = parse_expression(cond_node)
-                    do_expression = parse_expression(do_node)
+                    cond_expression = SyntacticLevel.expression.parse(cond_node)
+                    do_expression = SyntacticLevel.expression.parse(do_node)
                     branches.append((cond_expression, do_expression))  # type: ignore
                 return expression.CondExpression(branches)  # type: ignore
             elif op == "__block__":
-                left_expression = parse_expression(children_nodes[0])
+                left_expression = SyntacticLevel.expression.parse(children_nodes[0])
                 if len(children_nodes) == 1:
                     return left_expression
                 else:
-                    right_expression = parse_expression([op, meta, children_nodes[1:]])
+                    right_expression = SyntacticLevel.expression.parse([op, meta, children_nodes[1:]])
                     return expression.SeqExpression(left_expression, right_expression)
             elif aux := [
                 symbol
@@ -138,25 +192,25 @@ def parse_expression(j) -> expression.Expression:
                 if len(children_nodes) == 1:
                     symbol = aux[0]
                     assert symbol in expression.UnaryOpEnum
-                    arg_expression = parse_expression(children_nodes[0])
+                    arg_expression = SyntacticLevel.expression.parse(children_nodes[0])
                     return expression.UnaryOpExpression(symbol, arg_expression)
                 else:
                     symbol = aux[0] if aux[0] in expression.BinaryOpEnum else aux[1]
                     assert symbol in expression.BinaryOpEnum
-                    left_expression = parse_expression(children_nodes[0])
-                    right_expression = parse_expression(children_nodes[1])
+                    left_expression = SyntacticLevel.expression.parse(children_nodes[0])
+                    right_expression = SyntacticLevel.expression.parse(children_nodes[1])
                     return expression.BinaryOpExpression(symbol, left_expression, right_expression)  # type: ignore
             elif isinstance(op, list) and len(op) == 3 and op[0][0] == ".":
                 function_name = op[2][0][0]
                 args = []
                 for node in children_nodes:
-                    arg_expression = parse_expression(node)
+                    arg_expression = SyntacticLevel.expression.parse(node)
                     args.append(arg_expression)
                 return expression.VarCallExpression(function_name, args)
             elif children_nodes is not None:
                 args = []
                 for node in children_nodes:
-                    arg_expression = parse_expression(node)
+                    arg_expression = SyntacticLevel.expression.parse(node)
                     args.append(arg_expression)
                 return expression.FunctionCallExpression(op, args)
             elif children_nodes is None:
@@ -164,12 +218,12 @@ def parse_expression(j) -> expression.Expression:
 
         if len(j) == 1 and isinstance(j[0], list) and len(j[0]) > 0 and j[0][0] == "|":
             left_node, right_node = j[0][2]
-            left_expression = parse_expression(left_node)
-            right_expression = parse_expression(right_node)
+            left_expression = SyntacticLevel.expression.parse(left_node)
+            right_expression = SyntacticLevel.expression.parse(right_node)
             return expression.ListExpression(left_expression, right_expression)
 
         tail_expression: expression.Expression = expression.ElistExpression()
         for node in reversed(j):
-            head_expression = parse_expression(node)
+            head_expression = SyntacticLevel.expression.parse(node)
             tail_expression = expression.ListExpression(head_expression, tail_expression)
         return tail_expression
