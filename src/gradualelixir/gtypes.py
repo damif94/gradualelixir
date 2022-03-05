@@ -94,7 +94,7 @@ class TupleType(CompositeType):
     types: t.List[Type]
 
     def __str__(self):
-        return "{" + ",".join([str(ty) for ty in self.types]) + "}"
+        return "{" + ", ".join([str(ty) for ty in self.types]) + "}"
 
 
 @dataclass
@@ -517,7 +517,7 @@ class SpecsEnv:
         self.env[key] = value
 
     def __str__(self):
-        return "[" + ",".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
+        return "[" + ", ".join([f"{ident} |-> {FunctionType(type[0], type[1])}" for ident, type in self.env.items()]) + "]"
 
     def copy(self):
         return SpecsEnv(self.env.copy())
@@ -547,7 +547,7 @@ class TypeEnv:
         self.env[key] = value
 
     def __str__(self):
-        return "[" + ",".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
+        return "[" + ", ".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
 
     def copy(self):
         return TypeEnv(self.env.copy())

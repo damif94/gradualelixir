@@ -539,7 +539,7 @@ class PatternMatchSuccess:
     env: gtypes.TypeEnv
 
     def message(
-        self, pattern: Pattern, type: gtypes.Type, original_env: gtypes.TypeEnv, hijacked_pattern_env: gtypes.TypeEnv
+        self, pattern: Pattern, type: gtypes.Type, external_env: gtypes.TypeEnv, hijacked_pattern_env: gtypes.TypeEnv
     ):
         pattern_msg = format_pattern_match(pattern, type, padding="    ")
         hijacked_pattern_env_msg = (
@@ -549,7 +549,7 @@ class PatternMatchSuccess:
         )
         return (
             f"{Bcolors.OKBLUE}Type check success for{Bcolors.ENDC} {pattern_msg}\n\n"
-            f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {original_env}\n"
+            f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {external_env}\n"
             f"{hijacked_pattern_env_msg}"
             f"{Bcolors.OKBLUE}Refined Type:{Bcolors.ENDC} {self.type}\n"
             f"{Bcolors.OKBLUE}Exported Variables:{Bcolors.ENDC} {self.env}\n"

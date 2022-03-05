@@ -87,7 +87,7 @@ def assert_pattern_match_error(pattern, type, hijacked_pattern_env=None, env=Non
 def check_context_path(error_data: PatternMatchError, context_path):
     if isinstance(error_data, NestedPatternMatchError):
         assert isinstance(context_path, tuple)
-        context_instance = context_path[0][0](**context_path[0][1])
+        context_instance = context_path[0]
         assert error_data.context == context_instance
         check_context_path(error_data.bullet, context_path[1])
     else:
@@ -419,7 +419,7 @@ def test_tp_list():
         ListPattern(PinIdentPattern("x"), ElistPattern()),
         ListType(IntegerType()),
         expected_context=(
-            (ListPatternContext, {"head": True}),
+            ListPatternContext(head=True),
             PatternErrorEnum.pinned_identifier_not_found_in_environment,
         ),
     )
@@ -428,8 +428,8 @@ def test_tp_list():
         ListPattern(IntegerPattern(1), ListPattern(PinIdentPattern("x"), ElistPattern())),
         ListType(IntegerType()),
         expected_context=(
-            (ListPatternContext, {"head": False}),
-            ((ListPatternContext, {"head": True}), PatternErrorEnum.pinned_identifier_not_found_in_environment),
+            ListPatternContext(head=False),
+            (ListPatternContext(head=True), PatternErrorEnum.pinned_identifier_not_found_in_environment),
         ),
     )
 
@@ -538,7 +538,7 @@ def test_tp_tuple():
         TuplePattern([IntegerPattern(1), IdentPattern("x")]),
         TupleType([FloatType(), IntegerType()]),
         expected_context=(
-            (TuplePatternContext, {"n": 1}),
+            TuplePatternContext(n=1),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -564,10 +564,10 @@ def test_tp_tuple():
             ]
         ),
         expected_context=(
-            (TuplePatternContext, {"n": 3}),
+            TuplePatternContext(n=3),
             (
-                (TuplePatternContext, {"n": 1}),
-                ((TuplePatternContext, {"n": 1}), PatternErrorEnum.incompatible_type_for_literal),
+                TuplePatternContext(n=1),
+                (TuplePatternContext(n=1), PatternErrorEnum.incompatible_type_for_literal),
             ),
         ),
     )
@@ -742,7 +742,7 @@ def test_tp_map():
         MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(1)}),
+            MapPatternContext(key=MapKey(1)),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -751,7 +751,7 @@ def test_tp_map():
         MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(1)}),
+            MapPatternContext(key=MapKey(1)),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -760,7 +760,7 @@ def test_tp_map():
         MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
         MapType({MapKey(2): IntegerType(), MapKey(1): FloatType()}),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(1)}),
+            MapPatternContext(key=MapKey(1)),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -769,7 +769,7 @@ def test_tp_map():
         MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(1)}),
+            MapPatternContext(key=MapKey(1)),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -817,11 +817,11 @@ def test_tp_map():
             }
         ),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(3)}),
+            MapPatternContext(key=MapKey(3)),
             (
-                (MapPatternContext, {"key": MapKey(1)}),
+                MapPatternContext(key=MapKey(1)),
                 (
-                    (MapPatternContext, {"key": MapKey(1)}),
+                    MapPatternContext(key=MapKey(1)),
                     PatternErrorEnum.incompatible_type_for_literal,
                 ),
             ),
@@ -871,11 +871,11 @@ def test_tp_map():
             }
         ),
         expected_context=(
-            (MapPatternContext, {"key": MapKey(1)}),
+            MapPatternContext(key=MapKey(1)),
             (
-                (MapPatternContext, {"key": MapKey(1)}),
+                MapPatternContext(key=MapKey(1)),
                 (
-                    (MapPatternContext, {"key": MapKey(2)}),
+                    MapPatternContext(key=MapKey(2)),
                     PatternErrorEnum.incompatible_type_for_literal,
                 ),
             ),
@@ -1433,17 +1433,17 @@ def test_tp_errors():
         ),
         ListType(TupleType([ListType(MapType({MapKey(2): TupleType([])}))])),
         expected_context=(
-            (ListPatternContext, {"head": True}),
+            ListPatternContext(head=True),
             (
-                (TuplePatternContext, {"n": 1}),
+                TuplePatternContext(n=1),
                 (
-                    (ListPatternContext, {"head": False}),
+                    ListPatternContext(head=False),
                     (
-                        (ListPatternContext, {"head": False}),
+                        ListPatternContext(head=False),
                         (
-                            (ListPatternContext, {"head": True}),
+                            ListPatternContext(head=True),
                             (
-                                (MapPatternContext, {"key": MapKey(2)}),
+                                MapPatternContext(key=MapKey(2)),
                                 PatternErrorEnum.incompatible_constructors_error,
                             ),
                         ),

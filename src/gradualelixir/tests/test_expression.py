@@ -30,6 +30,11 @@ from gradualelixir.expression import (
     UnaryOpEnum,
     UnaryOpExpression,
     type_check,
+    SeqExpressionContext,
+    PatternMatchExpressionContext,
+    CaseExpression,
+    CaseExpressionContext,
+    FunctionCallExpression, FunctionCallExpressionContext,
 )
 from gradualelixir.gtypes import (
     AnyType,
@@ -47,10 +52,20 @@ from gradualelixir.gtypes import (
     TupleType,
     TypeEnv,
 )
-from gradualelixir.pattern import IdentPattern, TuplePattern
+from gradualelixir.pattern import (
+    IdentPattern,
+    TuplePattern,
+    IntegerPattern,
+    AtomLiteralPattern,
+    WildPattern,
+    PinIdentPattern,
+    PatternErrorEnum,
+)
 from gradualelixir.utils import long_line
 
 from . import TEST_ENV
+from .test_pattern import check_context_path as check_pattern_context_path
+
 
 identifier_not_found_in_environment = ExpressionErrorEnum.identifier_not_found_in_environment
 
@@ -77,24 +92,28 @@ def check_context_path(error_data: ExpressionTypeCheckError, context_path):
         assert isinstance(context_path, list)
         assert len(error_data.bullets) == len(context_path)
         for i in range(len(error_data.bullets)):
-            context_instance = context_path[i][0][0](**context_path[i][0][1])
+            context_instance = context_path[i][0]
             assert error_data.bullets[i].context == context_instance
             check_context_path(error_data.bullets[i].error, context_path[i][1])
     else:
         assert isinstance(error_data, BaseExpressionTypeCheckError)
-        assert error_data.kind is context_path
+        try:
+            assert error_data.kind is context_path
+        except AssertionError as e:
+            if error_data.kind is ExpressionErrorEnum.pattern_match:
+                check_pattern_context_path(error_data.args["pattern_match_error"], context_path)
+            else:
+                raise e
 
 
-def assert_type_check_expression_error(type_check_input, expected_context):
+def assert_type_check_expression_error(expr, expected_context, env=None, specs_env=None):
     if TEST_ENV.get("success_only"):
         return
-    expr, original_env, specs_env = type_check_input, TypeEnv(), SpecsEnv()
-    if isinstance(type_check_input, tuple) and len(type_check_input) >= 2:
-        expr, original_env = type_check_input[0], TypeEnv(type_check_input[1])
-    if isinstance(type_check_input, tuple) and len(type_check_input) == 3:
-        specs_env.env = TypeEnv(type_check_input[2])
 
-    ret = type_check(expr, original_env, SpecsEnv())
+    original_env = TypeEnv(env)
+    specs_env = SpecsEnv(specs_env)
+
+    ret = type_check(expr, original_env, specs_env)
     assert isinstance(ret, ExpressionTypeCheckError)
     check_context_path(ret, expected_context)
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
@@ -133,12 +152,11 @@ def test_ident():
         TupleType([AtomLiteralType("a")]),
     )
     assert_type_check_expression_error(
-        (IdentExpression("x"), {}),
+        IdentExpression("x"),
         ExpressionErrorEnum.identifier_not_found_in_environment,
     )
     assert_type_check_expression_error(
-        (IdentExpression("x"), {"y": AtomType()}),
-        ExpressionErrorEnum.identifier_not_found_in_environment,
+        IdentExpression("x"), ExpressionErrorEnum.identifier_not_found_in_environment, {"y": AtomType()}
     )
 
 
@@ -233,41 +251,34 @@ def test_list():
 
     # BASE ERRORS behavior
     assert_type_check_expression_error(
-        (
-            ListExpression(
-                IntegerExpression(1),
-                ListExpression(AtomLiteralExpression("true"), ElistExpression()),
-            ),
-            {},
+        ListExpression(
+            IntegerExpression(1),
+            ListExpression(AtomLiteralExpression("true"), ElistExpression()),
         ),
         ExpressionErrorEnum.incompatible_types_for_list,
     )
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (ListExpression(IdentExpression("x"), ElistExpression()), {}),
+        ListExpression(IdentExpression("x"), ElistExpression()),
         [
             (
-                (ListExpressionContext, {"head": True}),
+                ListExpressionContext(head=True),
                 identifier_not_found_in_environment,
             )
         ],
     )
     assert_type_check_expression_error(
-        # [1, x]
-        (
-            ListExpression(
-                IntegerExpression(1),
-                ListExpression(IdentExpression("x"), ElistExpression()),
-            ),
-            {},
+        ListExpression(
+            IntegerExpression(1),
+            ListExpression(IdentExpression("x"), ElistExpression()),
         ),
         [
             (
-                (ListExpressionContext, {"head": False}),
+                ListExpressionContext(head=False),
                 [
                     (
-                        (ListExpressionContext, {"head": True}),
+                        ListExpressionContext(head=True),
                         identifier_not_found_in_environment,
                     )
                 ],
@@ -348,43 +359,37 @@ def test_tuple():
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (TupleExpression([IdentExpression("x")]), {}),
+        TupleExpression([IdentExpression("x")]),
         [
             (
-                (TupleExpressionContext, {"n": 0}),
+                TupleExpressionContext(n=0),
                 identifier_not_found_in_environment,
             )
         ],
     )
     assert_type_check_expression_error(
-        (
-            TupleExpression([IntegerExpression(1), IdentExpression("x"), IntegerExpression(4)]),
-            {},
-        ),
+        TupleExpression([IntegerExpression(1), IdentExpression("x"), IntegerExpression(4)]),
         [
             (
-                (TupleExpressionContext, {"n": 1}),
+                TupleExpressionContext(n=1),
                 identifier_not_found_in_environment,
             )
         ],
     )
     assert_type_check_expression_error(
-        (
-            TupleExpression(
-                [
-                    IntegerExpression(1),
-                    TupleExpression([IdentExpression("x"), IntegerExpression(2)]),
-                    IntegerExpression(4),
-                ]
-            ),
-            {},
+        TupleExpression(
+            [
+                IntegerExpression(1),
+                TupleExpression([IdentExpression("x"), IntegerExpression(2)]),
+                IntegerExpression(4),
+            ]
         ),
         [
             (
-                (TupleExpressionContext, {"n": 1}),
+                TupleExpressionContext(n=1),
                 [
                     (
-                        (TupleExpressionContext, {"n": 0}),
+                        TupleExpressionContext(n=0),
                         identifier_not_found_in_environment,
                     )
                 ],
@@ -568,54 +573,48 @@ def test_map():
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (
-            MapExpression(
-                OrderedDict(
-                    [
-                        (MapKey("a"), IntegerExpression(1)),
-                        (MapKey("b"), IdentExpression("x")),
-                        (MapKey("c"), IntegerExpression(4)),
-                    ]
-                )
-            ),
-            {},
+        MapExpression(
+            OrderedDict(
+                [
+                    (MapKey("a"), IntegerExpression(1)),
+                    (MapKey("b"), IdentExpression("x")),
+                    (MapKey("c"), IntegerExpression(4)),
+                ]
+            )
         ),
         [
             (
-                (MapExpressionContext, {"key": MapKey("b")}),
+                MapExpressionContext(key=MapKey("b")),
                 identifier_not_found_in_environment,
             )
         ],
     )
     assert_type_check_expression_error(
-        (
-            MapExpression(
-                OrderedDict(
-                    [
-                        (MapKey("a"), IntegerExpression(1)),
-                        (
-                            MapKey("b"),
-                            MapExpression(
-                                OrderedDict(
-                                    [
-                                        (MapKey("a"), IdentExpression("x")),
-                                        (MapKey("b"), IntegerExpression(2)),
-                                    ]
-                                )
-                            ),
+        MapExpression(
+            OrderedDict(
+                [
+                    (MapKey("a"), IntegerExpression(1)),
+                    (
+                        MapKey("b"),
+                        MapExpression(
+                            OrderedDict(
+                                [
+                                    (MapKey("a"), IdentExpression("x")),
+                                    (MapKey("b"), IntegerExpression(2)),
+                                ]
+                            )
                         ),
-                        (MapKey("c"), IntegerExpression(4)),
-                    ]
-                )
-            ),
-            {},
+                    ),
+                    (MapKey("c"), IntegerExpression(4)),
+                ]
+            )
         ),
         [
             (
-                (MapExpressionContext, {"key": MapKey("b")}),
+                MapExpressionContext(key=MapKey("b")),
                 [
                     (
-                        (MapExpressionContext, {"key": MapKey("a")}),
+                        MapExpressionContext(key=MapKey("a")),
                         identifier_not_found_in_environment,
                     )
                 ],
@@ -673,18 +672,14 @@ def test_unary_op():
         TupleType([IntegerType(), IntegerType()]),
     ]:
         assert_type_check_expression_error(
-            (
-                UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
-                {"x": t},
-            ),
+            UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
+            {"x": t},
         )
         assert_type_check_expression_error(
-            (
-                UnaryOpExpression(UnaryOpEnum.absolute_value, IdentExpression("x")),
-                {"x": t},
-            ),
+            UnaryOpExpression(UnaryOpEnum.absolute_value, IdentExpression("x")),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
+            {"x": t},
         )
     for t in [
         IntegerType(),
@@ -694,18 +689,15 @@ def test_unary_op():
         AtomLiteralType("a"),
     ]:
         assert_type_check_expression_error(
-            # not x
-            (
-                UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
-                {"x": t},
-            ),
+            UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
             ExpressionErrorEnum.incompatible_type_for_unary_operator,
+            {"x": t},
         )
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")), {}),
-        [((UnaryOpContext, {}), identifier_not_found_in_environment)],
+        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
+        [(UnaryOpContext(), identifier_not_found_in_environment)],
     )
 
 
@@ -871,52 +863,42 @@ def test_binary_op():
         TupleType([IntegerType(), IntegerType()]),
     ]:
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
-                {"x": t, "y": IntegerType()},
-            ),
+            BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": IntegerType()},
         )
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
-                {"x": IntegerType(), "y": t},
-            ),
+            BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
             incompatible_type_for_binary_operator,
+            {"x": IntegerType(), "y": t},
         )
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(
-                    BinaryOpEnum.integer_division,
-                    IdentExpression("x"),
-                    IdentExpression("y"),
-                ),
-                {"x": t, "y": IntegerType()},
+            BinaryOpExpression(
+                BinaryOpEnum.integer_division,
+                IdentExpression("x"),
+                IdentExpression("y"),
             ),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": IntegerType()},
         )
     for t in [FloatType(), NumberType()]:
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(
-                    BinaryOpEnum.integer_reminder,
-                    IdentExpression("x"),
-                    IdentExpression("y"),
-                ),
-                {"x": t, "y": IntegerType()},
+            BinaryOpExpression(
+                BinaryOpEnum.integer_reminder,
+                IdentExpression("x"),
+                IdentExpression("y"),
             ),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": IntegerType()},
         )
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(
-                    BinaryOpEnum.integer_division,
-                    IdentExpression("x"),
-                    IdentExpression("y"),
-                ),
-                {"x": t, "y": IntegerType()},
+            BinaryOpExpression(
+                BinaryOpEnum.integer_division,
+                IdentExpression("x"),
+                IdentExpression("y"),
             ),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": IntegerType()},
         )
     for t in [
         IntegerType(),
@@ -926,56 +908,223 @@ def test_binary_op():
         AtomType(),
     ]:
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")),
-                {"x": t, "y": BooleanType()},
-            ),
+            BinaryOpExpression(BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": BooleanType()},
         )
         assert_type_check_expression_error(
-            (
-                BinaryOpExpression(BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")),
-                {"x": t, "y": BooleanType()},
-            ),
+            BinaryOpExpression(BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")),
             incompatible_type_for_binary_operator,
+            {"x": t, "y": BooleanType()},
         )
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
         # x + 1
-        (
-            BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IntegerExpression(1)),
-            {},
-        ),
-        [((BinaryOpContext, {"is_left": True}), identifier_not_found_in_environment)],
+        BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IntegerExpression(1)),
+        [(BinaryOpContext(is_left=True), identifier_not_found_in_environment)],
     )
     assert_type_check_expression_error(
-        (
-            BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), IdentExpression("x")),
-            {},
-        ),
-        [((BinaryOpContext, {"is_left": False}), identifier_not_found_in_environment)],
+        BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), IdentExpression("x")),
+        [(BinaryOpContext(is_left=False), identifier_not_found_in_environment)],
     )
     assert_type_check_expression_error(
-        (
-            BinaryOpExpression(
-                BinaryOpEnum.sum,
-                IdentExpression("x"),
-                (BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), IdentExpression("y"))),
-            ),
-            {},
+        BinaryOpExpression(
+            BinaryOpEnum.sum,
+            IdentExpression("x"),
+            (BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), IdentExpression("y"))),
         ),
         [
-            ((BinaryOpContext, {"is_left": True}), identifier_not_found_in_environment),
+            (BinaryOpContext(is_left=True), identifier_not_found_in_environment),
             (
-                (BinaryOpContext, {"is_left": False}),
+                BinaryOpContext(is_left=False),
                 [
                     (
-                        (BinaryOpContext, {"is_left": False}),
+                        BinaryOpContext(is_left=False),
                         identifier_not_found_in_environment,
                     )
                 ],
             ),
+        ],
+    )
+
+
+def test_pattern_match():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
+        expected_type=IntegerType(),
+        expected_env={"x": IntegerType()},
+    )
+    assert_type_check_expression_ok(
+        PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
+        {"x": AtomType()},
+        expected_type=IntegerType(),
+        expected_env={"x": IntegerType()},
+    )
+    assert_type_check_expression_ok(
+        PatternMatchExpression(
+            TuplePattern([IdentPattern("x"), IdentPattern("x")]),
+            TupleExpression(
+                [
+                    MapExpression(OrderedDict([(MapKey(1), TupleExpression([])), (MapKey(2), IntegerExpression(1))])),
+                    IdentExpression("y"),
+                ]
+            ),
+        ),
+        {"y": MapType({MapKey(2): NumberType()})},
+        expected_type=TupleType(
+            [
+                MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
+                MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
+            ]
+        ),
+        expected_env={
+            "y": MapType({MapKey(2): NumberType()}),
+            "x": MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
+        },
+    )
+
+    # BASE ERRORS behavior
+    assert_type_check_expression_error(
+        PatternMatchExpression(IntegerPattern(1), IdentExpression("x")),
+        ExpressionErrorEnum.pattern_match,
+        {"x": BooleanType()},
+    )
+
+    assert_type_check_expression_error(
+        PatternMatchExpression(
+            TuplePattern([IdentPattern("x"), IdentPattern("x")]),
+            TupleExpression(
+                [
+                    MapExpression(OrderedDict([(MapKey(1), TupleExpression([])), (MapKey(2), IntegerExpression(1))])),
+                    IdentExpression("y"),
+                ]
+            ),
+        ),
+        ExpressionErrorEnum.pattern_match,
+        {"y": MapType({MapKey(2): AtomType()})},
+    )
+
+    # NESTED ERRORS behavior
+    assert_type_check_expression_error(
+        PatternMatchExpression(IdentPattern("x"), IdentExpression("y")),
+        [(PatternMatchExpressionContext(), identifier_not_found_in_environment)],
+    )
+    assert_type_check_expression_error(
+        PatternMatchExpression(IdentPattern("x"), IdentExpression("x")),
+        [(PatternMatchExpressionContext(), identifier_not_found_in_environment)],
+    )
+    assert_type_check_expression_error(
+        PatternMatchExpression(TuplePattern([]), TupleExpression([IdentExpression("x")])),
+        [(PatternMatchExpressionContext(), [(TupleExpressionContext(n=0), identifier_not_found_in_environment)])],
+    )
+
+
+def test_if_else():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), None),
+        {"x": IntegerType()},
+        IntegerType(),
+    )
+    assert_type_check_expression_ok(
+        IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
+        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
+        NumberType(),
+    )
+    assert_type_check_expression_ok(
+        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("y")),
+        {"x": IntegerType(), "y": AnyType()},
+        AnyType(),
+    )
+    assert_type_check_expression_ok(
+        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("y")),
+        {"x": NumberType(), "y": AnyType()},
+        NumberType(),
+    )
+
+    # VARIABLE EXPORT behavior
+    assert_type_check_expression_ok(
+        IfElseExpression(
+            PatternMatchExpression(IdentPattern("b"), AtomLiteralExpression("true")),
+            SeqExpression(IdentExpression("b"), IntegerExpression(1)),
+            SeqExpression(IdentExpression("b"), FloatExpression(1.0)),
+        ),
+        expected_type=NumberType(),
+        expected_env={"b": AtomLiteralType("true")},
+    )
+    assert_type_check_expression_ok(
+        IfElseExpression(
+            AtomLiteralExpression("true"),
+            PatternMatchExpression(IdentPattern("b"), IntegerExpression(1)),
+            PatternMatchExpression(IdentPattern("b"), FloatExpression(1.0)),
+        ),
+        expected_type=NumberType(),
+    )
+    assert_type_check_expression_ok(
+        IfElseExpression(
+            PatternMatchExpression(IdentPattern("x"), AtomLiteralExpression("true")),
+            PatternMatchExpression(IdentPattern("y"), IntegerExpression(1)),
+            PatternMatchExpression(IdentPattern("z"), FloatExpression(1.0)),
+        ),
+        expected_type=NumberType(),
+        expected_env={"x": AtomLiteralType("true")},
+    )
+
+    # BASE ERRORS behavior
+    assert_type_check_expression_error(
+        IfElseExpression(IntegerExpression(1), IntegerExpression(1), AtomLiteralExpression("a")),
+        [
+            (
+                IfElseExpressionContext(branch=None),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
+            )
+        ],
+    )
+    assert_type_check_expression_error(
+        IfElseExpression(
+            AtomLiteralExpression("true"),
+            IntegerExpression(1),
+            AtomLiteralExpression("a"),
+        ),
+        ExpressionErrorEnum.incompatible_types_for_if_else,
+    )
+
+    # NESTED ERRORS behavior
+    assert_type_check_expression_error(
+        IfElseExpression(IdentExpression("x"), IntegerExpression(1), AtomLiteralExpression("a")),
+        [
+            (
+                IfElseExpressionContext(branch=None),
+                identifier_not_found_in_environment,
+            )
+        ],
+    )
+    assert_type_check_expression_error(
+        IfElseExpression(
+            AtomLiteralExpression("true"),
+            IdentExpression("x"),
+            AtomLiteralExpression("a"),
+        ),
+        [
+            (
+                IfElseExpressionContext(branch=True),
+                identifier_not_found_in_environment,
+            )
+        ],
+    )
+    assert_type_check_expression_error(
+        IfElseExpression(
+            AtomLiteralExpression("true"),
+            IntegerExpression(1),
+            IdentExpression("x"),
+        ),
+        [
+            (
+                IfElseExpressionContext(branch=False),
+                identifier_not_found_in_environment,
+            )
         ],
     )
 
@@ -1033,127 +1182,21 @@ def test_seq():
         expected_env={"y": FloatType(), "z": IntegerType()},
     )
 
-
-def test_if_else():
-    # RESULT TYPE behavior
-    assert_type_check_expression_ok(
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), None),
-        {"x": IntegerType()},
-        IntegerType(),
-    )
-    assert_type_check_expression_ok(
-        IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
-        {"x": IntegerType(), "y": FloatType(), "b": BooleanType()},
-        NumberType(),
-    )
-    assert_type_check_expression_ok(
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("y")),
-        {"x": IntegerType(), "y": AnyType()},
-        AnyType(),
-    )
-    assert_type_check_expression_ok(
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("y")),
-        {"x": NumberType(), "y": AnyType()},
-        NumberType(),
-    )
-
-    # VARIABLE EXPORT behavior
-    assert_type_check_expression_ok(
-        IfElseExpression(
-            PatternMatchExpression(IdentPattern("b"), AtomLiteralExpression("true")),
-            SeqExpression(IdentExpression("b"), IntegerExpression(1)),
-            SeqExpression(IdentExpression("b"), FloatExpression(1.0)),
-        ),
-        expected_type=NumberType(),
-        expected_env={"b": AtomLiteralType("true")},
-    )
-    assert_type_check_expression_ok(
-        IfElseExpression(
-            AtomLiteralExpression("true"),
-            PatternMatchExpression(IdentPattern("b"), IntegerExpression(1)),
-            PatternMatchExpression(IdentPattern("b"), FloatExpression(1.0)),
-        ),
-        expected_type=NumberType(),
-    )
-    assert_type_check_expression_ok(
-        IfElseExpression(
-            PatternMatchExpression(IdentPattern("x"), AtomLiteralExpression("true")),
-            PatternMatchExpression(IdentPattern("y"), IntegerExpression(1)),
-            PatternMatchExpression(IdentPattern("z"), FloatExpression(1.0)),
-        ),
-        expected_type=NumberType(),
-        expected_env={"x": AtomLiteralType("true")},
-    )
-
-    # BASE ERRORS behavior
-    assert_type_check_expression_error(
-        (
-            IfElseExpression(IntegerExpression(1), IntegerExpression(1), AtomLiteralExpression("a")),
-            {},
-        ),
-        [
-            (
-                (IfElseExpressionContext, {"branch": None}),
-                ExpressionErrorEnum.type_is_not_boolean,
-            )
-        ],
-    )
-    assert_type_check_expression_error(
-        (
-            IfElseExpression(
-                AtomLiteralExpression("true"),
-                IntegerExpression(1),
-                AtomLiteralExpression("a"),
-            ),
-            {},
-        ),
-        ExpressionErrorEnum.incompatible_types_for_if_else,
-    )
-
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (
-            IfElseExpression(IdentExpression("x"), IntegerExpression(1), AtomLiteralExpression("a")),
-            {},
-        ),
-        [
-            (
-                (IfElseExpressionContext, {"branch": None}),
-                identifier_not_found_in_environment,
-            )
-        ],
+        SeqExpression(IdentExpression("x"), IdentExpression("x")),
+        [(SeqExpressionContext(is_left=True), identifier_not_found_in_environment)],
     )
+
     assert_type_check_expression_error(
-        (
-            IfElseExpression(
-                AtomLiteralExpression("true"),
-                IdentExpression("x"),
-                AtomLiteralExpression("a"),
-            ),
-            {},
-        ),
-        [
-            (
-                (IfElseExpressionContext, {"branch": True}),
-                identifier_not_found_in_environment,
-            )
-        ],
+        SeqExpression(IdentExpression("x"), IdentExpression("y")),
+        [(SeqExpressionContext(is_left=True), identifier_not_found_in_environment)],
     )
+
     assert_type_check_expression_error(
-        (
-            IfElseExpression(
-                AtomLiteralExpression("true"),
-                IntegerExpression(1),
-                IdentExpression("x"),
-            ),
-            {},
-        ),
-        [
-            (
-                (IfElseExpressionContext, {"branch": False}),
-                identifier_not_found_in_environment,
-            )
-        ],
+        SeqExpression(IdentExpression("x"), IdentExpression("y")),
+        [(SeqExpressionContext(is_left=False), identifier_not_found_in_environment)],
+        {"x": IntegerType()},
     )
 
 
@@ -1232,176 +1275,284 @@ def test_cond():
 
     # BASE ERRORS behavior
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (IntegerExpression(1), IdentExpression("x")),
-                    (AtomLiteralExpression("false"), IntegerExpression(4)),
-                ]
-            ),
-            {},
+        CondExpression(
+            [
+                (IntegerExpression(1), IdentExpression("x")),
+                (AtomLiteralExpression("false"), IntegerExpression(4)),
+            ]
         ),
         [
             (
-                (CondExpressionContext, {"branch": 0, "cond": True}),
-                ExpressionErrorEnum.type_is_not_boolean,
+                CondExpressionContext(branch=0, cond=True),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
             )
         ],
     )
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (IntegerExpression(1), IdentExpression("x")),
-                    (AtomLiteralExpression("a"), IdentExpression("y")),
-                ]
-            ),
-            {},
+        CondExpression(
+            [
+                (IntegerExpression(1), IdentExpression("x")),
+                (AtomLiteralExpression("a"), IdentExpression("y")),
+            ]
         ),
         [
             (
-                (CondExpressionContext, {"branch": 0, "cond": True}),
-                ExpressionErrorEnum.type_is_not_boolean,
+                CondExpressionContext(branch=0, cond=True),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
             ),
             (
-                (CondExpressionContext, {"branch": 1, "cond": True}),
-                ExpressionErrorEnum.type_is_not_boolean,
+                CondExpressionContext(branch=1, cond=True),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
             ),
         ],
     )
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (AtomLiteralExpression("true"), IntegerExpression(1)),
-                    (AtomLiteralExpression("false"), AtomLiteralExpression("a")),
-                ]
-            ),
-            {},
+        CondExpression(
+            [
+                (AtomLiteralExpression("true"), IntegerExpression(1)),
+                (AtomLiteralExpression("false"), AtomLiteralExpression("a")),
+            ]
         ),
-        ExpressionErrorEnum.incompatible_types_for_cond,
+        ExpressionErrorEnum.incompatible_types_for_branches,
     )
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (IdentExpression("x"), IntegerExpression(1)),
-                    (AtomLiteralExpression("a"), IdentExpression("w")),
-                    (AtomLiteralExpression("true"), IdentExpression("w")),
-                ]
-            ),
-            {},
+        CondExpression(
+            [
+                (IdentExpression("x"), IntegerExpression(1)),
+                (AtomLiteralExpression("a"), IdentExpression("w")),
+                (AtomLiteralExpression("true"), IdentExpression("w")),
+            ]
         ),
         [
             (
-                (CondExpressionContext, {"branch": 0, "cond": True}),
+                CondExpressionContext(branch=0, cond=True),
                 identifier_not_found_in_environment,
             ),
             (
-                (CondExpressionContext, {"branch": 1, "cond": True}),
-                ExpressionErrorEnum.type_is_not_boolean,
+                CondExpressionContext(branch=1, cond=True),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
             ),
             (
-                (CondExpressionContext, {"branch": 2, "cond": False}),
+                CondExpressionContext(branch=2, cond=False),
                 identifier_not_found_in_environment,
             ),
         ],
     )
 
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (
-                        AtomLiteralExpression("false"),
-                        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b")),
-                    ),
-                    (AtomLiteralExpression("a"), IdentExpression("b")),
-                ]
-            ),
-            {"b": BooleanType()},
+        CondExpression(
+            [
+                (
+                    AtomLiteralExpression("false"),
+                    UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b")),
+                ),
+                (AtomLiteralExpression("a"), IdentExpression("b")),
+            ]
         ),
         [
             (
-                (CondExpressionContext, {"branch": 1, "cond": True}),
-                ExpressionErrorEnum.type_is_not_boolean,
+                CondExpressionContext(branch=1, cond=True),
+                ExpressionErrorEnum.inferred_type_is_not_as_expected,
             )
         ],
+        {"b": BooleanType()},
     )
 
     assert_type_check_expression_error(
-        (
-            CondExpression(
-                [
-                    (
-                        PatternMatchExpression(IdentPattern("c"), IdentExpression("b")),
-                        CondExpression(
-                            [
-                                (
-                                    AtomLiteralExpression("false"),
-                                    UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b")),
-                                ),
-                                (AtomLiteralExpression("a"), IdentExpression("b")),
-                            ]
-                        ),
+        CondExpression(
+            [
+                (
+                    PatternMatchExpression(IdentPattern("c"), IdentExpression("b")),
+                    CondExpression(
+                        [
+                            (
+                                AtomLiteralExpression("false"),
+                                UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("b")),
+                            ),
+                            (AtomLiteralExpression("a"), IdentExpression("b")),
+                        ]
                     ),
-                    (
-                        AtomLiteralExpression("true"),
-                        CondExpression(
-                            [
-                                (
-                                    AtomLiteralExpression("true"),
-                                    AtomLiteralExpression("a"),
-                                ),
-                                (IdentExpression("b"), IntegerExpression(1)),
-                            ]
-                        ),
+                ),
+                (
+                    AtomLiteralExpression("true"),
+                    CondExpression(
+                        [
+                            (
+                                AtomLiteralExpression("true"),
+                                AtomLiteralExpression("a"),
+                            ),
+                            (IdentExpression("b"), IntegerExpression(1)),
+                        ]
                     ),
-                ]
-            ),
-            {"b": BooleanType()},
+                ),
+            ]
         ),
         [
             (
-                (CondExpressionContext, {"branch": 0, "cond": False}),
+                CondExpressionContext(branch=0, cond=False),
                 [
                     (
-                        (CondExpressionContext, {"branch": 1, "cond": True}),
-                        ExpressionErrorEnum.type_is_not_boolean,
+                        CondExpressionContext(branch=1, cond=True),
+                        ExpressionErrorEnum.inferred_type_is_not_as_expected,
                     )
                 ],
             ),
             (
-                (CondExpressionContext, {"branch": 1, "cond": False}),
-                ExpressionErrorEnum.incompatible_types_for_cond,
+                CondExpressionContext(branch=1, cond=False),
+                ExpressionErrorEnum.incompatible_types_for_branches,
             ),
         ],
+        {"b": BooleanType()},
     )
+
+
+def test_case():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        CaseExpression(IdentExpression("x"), [(AtomLiteralPattern("true"), IntegerExpression(1))]),
+        {"x": BooleanType()},
+        IntegerType(),
+    )
+    assert_type_check_expression_ok(
+        CaseExpression(IdentExpression("x"), [(AtomLiteralPattern("true"), IdentExpression("x"))]),
+        {"x": BooleanType()},
+        BooleanType(),
+    )
+    assert_type_check_expression_ok(
+        CaseExpression(
+            TupleExpression([IdentExpression("x"), IdentExpression("y")]),
+            [
+                (
+                    TuplePattern([IdentPattern("z"), IdentPattern("z")]),
+                    TupleExpression([IdentExpression("z"), IntegerExpression(1)]),
+                )
+            ],
+        ),
+        {"x": MapType({MapKey(1): TupleType([])}), "y": MapType({MapKey(2): TupleType([])})},
+        TupleType([MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}), IntegerType()]),
+    )
+    assert_type_check_expression_ok(
+        CaseExpression(
+            IdentExpression("c"),
+            [(AtomLiteralPattern("true"), IdentExpression("x")), (AtomLiteralPattern("a"), IdentExpression("y"))],
+        ),
+        {"c": AtomType(), "x": IntegerType(), "y": FloatType()},
+        NumberType(),
+    )
+
+    # VARIABLE EXPORT behavior
+    assert_type_check_expression_ok(
+        CaseExpression(
+            PatternMatchExpression(IdentPattern("n"), IntegerExpression(1)),
+            [
+                (
+                    IntegerPattern(1),
+                    PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
+                ),
+                (
+                    WildPattern(),
+                    SeqExpression(
+                        PatternMatchExpression(IdentPattern("n"), FloatExpression(1.0)),
+                        IdentExpression("n"),
+                    ),
+                ),
+            ],
+        ),
+        {},
+        NumberType(),
+        {"n": IntegerType()},
+    )
+
+    # ERRORS behavior
+    assert_type_check_expression_error(
+        CaseExpression(
+            IdentExpression("x"), [(WildPattern(), IntegerExpression(1)), (WildPattern(), AtomLiteralExpression("a"))]
+        ),
+        ExpressionErrorEnum.incompatible_types_for_branches,
+        {"x": BooleanType()},
+    )
+    assert_type_check_expression_error(
+        CaseExpression(IdentExpression("x"), [(PinIdentPattern("y"), IntegerExpression(1))]),
+        [(CaseExpressionContext(pattern=True, branch=0), PatternErrorEnum.incompatible_type_for_pinned_variable)],
+        {"x": BooleanType(), "y": IntegerType()},
+    )
+    assert_type_check_expression_error(
+        CaseExpression(
+            IdentExpression("x"),
+            [
+                (PinIdentPattern("y"), IdentExpression("w")),
+                (AtomLiteralPattern("true"), IdentExpression("w")),
+                (WildPattern(), IdentExpression("x")),
+            ],
+        ),
+        [
+            (CaseExpressionContext(pattern=True, branch=0), PatternErrorEnum.incompatible_type_for_pinned_variable),
+            (CaseExpressionContext(pattern=False, branch=1), identifier_not_found_in_environment),
+        ],
+        {"x": BooleanType(), "y": IntegerType()},
+    )
+    assert_type_check_expression_error(
+        CaseExpression(
+            IdentExpression("x"),
+            [
+                (PinIdentPattern("y"), IdentExpression("w")),
+                (AtomLiteralPattern("true"), IdentExpression("w")),
+            ],
+        ),
+        [
+            (
+                CaseExpressionContext(pattern=True, branch=0),
+                PatternErrorEnum.pinned_identifier_not_found_in_environment,
+            ),
+            (CaseExpressionContext(pattern=False, branch=1), identifier_not_found_in_environment),
+        ],
+        {"x": BooleanType()},
+    )
+    assert_type_check_expression_error(
+        CaseExpression(
+            IdentExpression("x"),
+            [(IdentExpression("y"), IntegerExpression(1)), (WildPattern(), AtomLiteralExpression("a"))],
+        ),
+        [(CaseExpressionContext(pattern=None, branch=None), identifier_not_found_in_environment)],
+    )
+
+
+def test_call():
+    # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        FunctionCallExpression("foo", []), specs_env={("foo", 0): ([], IntegerType())}, expected_type=IntegerType()
+    )
+    assert_type_check_expression_ok(
+        FunctionCallExpression("foo", [IntegerExpression(1)]),
+        specs_env={("foo", 1): ([IntegerType()], FloatType())},
+        expected_type=FloatType(),
+    )
+    assert_type_check_expression_ok(
+        FunctionCallExpression("baz", [FunctionCallExpression("foo", [IntegerExpression(1)]), IdentExpression("x")]),
+        env={"x": AtomLiteralType("a")},
+        specs_env={("foo", 1): ([IntegerType()], FloatType()), ("baz", 2): ([FloatType(), AtomType()], NumberType())},
+        expected_type=NumberType(),
+    )
+
+    # BASE ERRORS behavior
+    assert_type_check_expression_error(
+        FunctionCallExpression("foo", [IntegerExpression(1)]),
+        ExpressionErrorEnum.function_not_declared,
+        specs_env={("foo", 0): ([], IntegerType())},
+    )
+    assert_type_check_expression_error(
+        FunctionCallExpression("foo", [IntegerExpression(1)]),
+        [(FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
+        specs_env={("foo", 1): ([FloatType()], IntegerType())},
+    )
+
 
 
 def test_wip():
     assert_type_check_expression_error(
-        (
-            TupleExpression(
-                [
-                    IntegerExpression(1),
-                    TupleExpression([IdentExpression("x"), IntegerExpression(2)]),
-                    IntegerExpression(4),
-                ]
-            ),
-            {},
-        ),
-        [
-            (
-                (TupleExpressionContext, {"n": 1}),
-                [
-                    (
-                        (TupleExpressionContext, {"n": 0}),
-                        identifier_not_found_in_environment,
-                    )
-                ],
-            )
-        ],
+        FunctionCallExpression("foo", [IntegerExpression(1)]),
+        [(FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
+        specs_env={("foo", 1): ([FloatType()], IntegerType())},
     )
