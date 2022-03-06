@@ -4,7 +4,7 @@ import subprocess
 from collections import OrderedDict
 from typing import Any
 
-from gradualelixir import PROJECT_PATH, expression, gtypes, pattern
+from gradualelixir import PROJECT_PATH, expression, gtypes, module, pattern
 from gradualelixir.exception import ElixirProcessException
 
 
@@ -38,6 +38,9 @@ class SyntacticLevel(enum.Enum):
     type = "type"
     pattern = "pattern"
     expression = "expression"
+    definition = "definition"
+    spec = "spec"
+    module = "module"
 
     def parse(self, j) -> Any:
         if self is SyntacticLevel.key:
@@ -48,6 +51,8 @@ class SyntacticLevel(enum.Enum):
             return parse_pattern(j)
         elif self is SyntacticLevel.expression:
             return parse_expression(j)
+        elif self is SyntacticLevel.definition:
+            return parse_definition(j)
 
 
 def parse_key(j) -> gtypes.MapKey:
@@ -217,3 +222,20 @@ def parse_expression(j) -> expression.Expression:
             head_expression = SyntacticLevel.expression.parse(node)
             tail_expression = expression.ListExpression(head_expression, tail_expression)
         return tail_expression
+
+
+def parse_definition(j) -> module.Definition:
+    assert isinstance(j, list) and len(j) == 3
+    op, meta, children_nodes = j
+    assert op in ["def", "defp"]
+    assert len(children_nodes) == 2
+    assert len(children_nodes[0]) == 3
+
+    function_name = children_nodes[0][0]
+    function_parameters = []
+    for node in children_nodes[0][2]:
+        parameter_pattern = SyntacticLevel.pattern.parse(node)
+        function_parameters.append(parameter_pattern)
+
+    body_expression = SyntacticLevel.expression.parse(children_nodes[0][1])
+    return module.Definition(function_name, function_parameters, body_expression)

@@ -1598,3 +1598,14 @@ def test_wip():
         ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
         env={"x": FunctionType([], IntegerType())},
     )
+
+
+def test_cast():
+    result = type_check(
+        IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
+        TypeEnv({"x": IntegerType(), "y": FloatType(), "b": BooleanType()}),
+        SpecsEnv(),
+    )
+    from gradualelixir.cast import annotate_expression
+
+    return print(format_expression(annotate_expression(result)))
