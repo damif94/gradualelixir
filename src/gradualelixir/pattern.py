@@ -273,150 +273,152 @@ PatternMatchAuxResult = t.Union[PatternMatchAuxSuccess, PatternMatchError]
 
 
 def pattern_match_aux(
-    pattern: Pattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: Pattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
     if isinstance(pattern, LiteralPattern):
-        return pattern_match_aux_literal(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_literal(pattern, type, env, external_env)
     if isinstance(pattern, IdentPattern):
-        return pattern_match_aux_ident(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_ident(pattern, type, env, external_env)
     if isinstance(pattern, PinIdentPattern):
-        return pattern_match_aux_pin_ident(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_pin_ident(pattern, type, env, external_env)
     if isinstance(pattern, WildPattern):
-        return pattern_match_aux_wild(pattern, tau, gamma_env, sigma_env)
-    if isinstance(tau, gtypes.AnyType):
-        return pattern_match_aux_any(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_wild(pattern, type, env, external_env)
+    if isinstance(type, gtypes.AnyType):
+        return pattern_match_aux_any(pattern, type, env, external_env)
     if isinstance(pattern, ElistPattern):
-        return pattern_match_aux_elist(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_elist(pattern, type, env, external_env)
     if isinstance(pattern, ListPattern):
-        return pattern_match_aux_list(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_list(pattern, type, env, external_env)
     if isinstance(pattern, TuplePattern):
-        return pattern_match_aux_tuple(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_tuple(pattern, type, env, external_env)
     else:
         assert isinstance(pattern, MapPattern)
-        return pattern_match_aux_map(pattern, tau, gamma_env, sigma_env)
+        return pattern_match_aux_map(pattern, type, env, external_env)
 
 
 def pattern_match_aux_literal(
-    pattern: LiteralPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, _sigma_env: gtypes.TypeEnv
+    pattern: LiteralPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if gtypes.is_subtype(pattern.type, tau):
-        return PatternMatchAuxSuccess(gamma_env, lambda domain: pattern.type)
+    if gtypes.is_subtype(pattern.type, type):
+        return PatternMatchAuxSuccess(env, lambda domain: pattern.type)
     else:
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
             args={"literal": pattern.value},
         )
 
 
 def pattern_match_aux_ident(
-    pattern: IdentPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, _sigma_env: gtypes.TypeEnv
+    pattern: IdentPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if sigma := gamma_env.get(pattern.identifier):
-        if gtypes.is_higher_order(tau) or gtypes.is_higher_order(sigma):
+    if sigma := env.get(pattern.identifier):
+        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
             return BasePatternMatchError(
                 pattern=pattern,
-                type=tau,
+                type=type,
                 kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
                 args={"identifier": pattern.identifier},
             )
-        if not isinstance(mu := gtypes.infimum(tau, sigma), gtypes.TypingError):
-            gamma_env[pattern.identifier] = mu
-            return PatternMatchAuxSuccess(gamma_env, lambda env: env[pattern.identifier])
+        if not isinstance(mu := gtypes.infimum(type, sigma), gtypes.TypingError):
+            new_env = env.copy()
+            new_env[pattern.identifier] = mu
+            return PatternMatchAuxSuccess(new_env, lambda envv: envv[pattern.identifier])
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_type_for_variable,
             args={"identifier": pattern.identifier},
         )
     else:
-        gamma_env[pattern.identifier] = tau
-        return PatternMatchAuxSuccess(gamma_env, lambda env: env[pattern.identifier])
+        new_env = env.copy()
+        new_env[pattern.identifier] = type
+        return PatternMatchAuxSuccess(new_env, lambda envv: envv[pattern.identifier])
 
 
 def pattern_match_aux_pin_ident(
-    pattern: PinIdentPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: PinIdentPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if sigma := sigma_env.get(pattern.identifier):
-        if gtypes.is_higher_order(tau) or gtypes.is_higher_order(sigma):
+    if sigma := external_env.get(pattern.identifier):
+        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
             return BasePatternMatchError(
                 pattern=pattern,
-                type=tau,
+                type=type,
                 kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
                 args={"identifier": pattern.identifier},
             )
-        elif not isinstance(mu := gtypes.infimum(tau, sigma), gtypes.SupremumError):
-            return PatternMatchAuxSuccess(gamma_env, lambda env: mu)
+        elif not isinstance(mu := gtypes.infimum(type, sigma), gtypes.SupremumError):
+            return PatternMatchAuxSuccess(env, lambda envv: mu)
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_type_for_pinned_variable,
             args={"identifier": pattern.identifier},
         )
     else:
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.pinned_identifier_not_found_in_environment,
             args={"identifier": pattern.identifier},
         )
 
 
 def pattern_match_aux_wild(
-    _pattern: WildPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, _sigma_env: gtypes.TypeEnv
+    _pattern: WildPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    return PatternMatchAuxSuccess(gamma_env, lambda env: tau)
+    return PatternMatchAuxSuccess(env, lambda envv: type)
 
 
 def pattern_match_aux_elist(
-    pattern: ElistPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, _sigma_env: gtypes.TypeEnv
+    pattern: ElistPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if gtypes.is_subtype(gtypes.ElistType(), tau):
-        return PatternMatchAuxSuccess(gamma_env, lambda env: gtypes.ElistType())
+    if gtypes.is_subtype(gtypes.ElistType(), type):
+        return PatternMatchAuxSuccess(env, lambda envv: gtypes.ElistType())
     else:
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
         )
 
 
 def pattern_match_aux_list(
-    pattern: ListPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: ListPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if not isinstance(tau, gtypes.ListType):
+    if not isinstance(type, gtypes.ListType):
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
         )
-    head_pattern_match_result = pattern_match_aux(pattern.head, tau.type, gamma_env, sigma_env)
+    head_pattern_match_result = pattern_match_aux(pattern.head, type.type, env, external_env)
     if isinstance(head_pattern_match_result, PatternMatchError):
         return NestedPatternMatchError(
             pattern=pattern,
-            type=tau,
-            env=gamma_env,
+            type=type,
+            env=env,
             context=ListPatternContext(head=True),
             bullet=head_pattern_match_result,
         )
-    tail_pattern_match_result = pattern_match_aux(pattern.tail, tau, head_pattern_match_result.env, sigma_env)
+    tail_pattern_match_result = pattern_match_aux(pattern.tail, type, head_pattern_match_result.env, external_env)
     if isinstance(tail_pattern_match_result, PatternMatchError):
         return NestedPatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             env=head_pattern_match_result.env,
             context=ListPatternContext(head=False),
             bullet=tail_pattern_match_result,
         )
 
-    def ret_mapping(env: gtypes.TypeEnv):
+    def ret_mapping(envv: gtypes.TypeEnv):
         nonlocal head_pattern_match_result, tail_pattern_match_result
         assert isinstance(head_pattern_match_result, PatternMatchAuxSuccess)
         assert isinstance(tail_pattern_match_result, PatternMatchAuxSuccess)
-        if isinstance(head_type := head_pattern_match_result.mapping(env), gtypes.TypingError):
+        if isinstance(head_type := head_pattern_match_result.mapping(envv), gtypes.TypingError):
             return head_pattern_match_result
-        elif isinstance(tail_type := tail_pattern_match_result.mapping(env), gtypes.TypingError):
+        elif isinstance(tail_type := tail_pattern_match_result.mapping(envv), gtypes.TypingError):
             return tail_pattern_match_result
         else:
             return gtypes.supremum(gtypes.ListType(head_type), tail_type)
@@ -425,112 +427,112 @@ def pattern_match_aux_list(
 
 
 def pattern_match_aux_tuple(
-    pattern: TuplePattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: TuplePattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if not isinstance(tau, gtypes.TupleType):
+    if not isinstance(type, gtypes.TupleType):
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
         )
-    if len(pattern.items) != len(tau.types):
+    if len(pattern.items) != len(type.types):
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_tuples_error,
-            args={"n": len(pattern.items), "m": len(tau.types)},
+            args={"n": len(pattern.items), "m": len(type.types)},
         )
     pattern_match_mapping_results = []
-    gamma_env_aux = gamma_env.copy()
+    env_aux = env.copy()
     for i in range(len(pattern.items)):
-        aux = pattern_match_aux(pattern.items[i], tau.types[i], gamma_env_aux, sigma_env)
+        aux = pattern_match_aux(pattern.items[i], type.types[i], env_aux, external_env)
         if isinstance(aux, PatternMatchError):
             return NestedPatternMatchError(
                 pattern=pattern,
-                type=tau,
-                env=gamma_env_aux,
+                type=type,
+                env=env_aux,
                 context=TuplePatternContext(n=i + 1),
                 bullet=aux,
             )
         else:
             assert isinstance(aux, PatternMatchAuxSuccess)
             pattern_match_mapping_results.append(aux.mapping)
-            gamma_env_aux = aux.env
+            env_aux = aux.env
 
-    def ret_mapping(env: gtypes.TypeEnv):
+    def ret_mapping(envv: gtypes.TypeEnv):
         nonlocal pattern_match_mapping_results
         items = []
         for mapping in pattern_match_mapping_results:
-            aux_type = mapping(env)
+            aux_type = mapping(envv)
             if isinstance(aux_type, gtypes.TypingError):
                 return aux_type
             items.append(aux_type)
         return gtypes.TupleType(items)
 
-    return PatternMatchAuxSuccess(env=gamma_env_aux, mapping=ret_mapping)
+    return PatternMatchAuxSuccess(env=env_aux, mapping=ret_mapping)
 
 
 def pattern_match_aux_map(
-    pattern: MapPattern, tau: gtypes.Type, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: MapPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
-    if not isinstance(tau, gtypes.MapType):
+    if not isinstance(type, gtypes.MapType):
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
-            args={"type": tau},
+            args={"type": type},
         )
-    if len(missing_keys_on_type := [k for k in pattern.map.keys() if k not in tau.map_type.keys()]) > 0:
+    if len(missing_keys_on_type := [k for k in pattern.map.keys() if k not in type.map_type.keys()]) > 0:
         return BasePatternMatchError(
             pattern=pattern,
-            type=tau,
+            type=type,
             kind=PatternErrorEnum.incompatible_maps_error,
             args={"k": missing_keys_on_type[0]},
         )
     pattern_match_mapping_results_dict: t.Dict[
         gtypes.MapKey, t.Callable[[gtypes.TypeEnv], t.Union[gtypes.Type, gtypes.TypingError]]
     ] = {}
-    gamma_env_aux = gamma_env
-    for key in tau.map_type.keys():
+    env_aux = env.copy()
+    for key in type.map_type.keys():
         if key not in pattern.map.keys():
-            value = tau.map_type[key]
+            value = type.map_type[key]
             pattern_match_mapping_results_dict[key] = lambda d: value
             continue
-        aux = pattern_match_aux(pattern.map[key], tau.map_type[key], gamma_env_aux, sigma_env)
+        aux = pattern_match_aux(pattern.map[key], type.map_type[key], env_aux, external_env)
         if isinstance(aux, PatternMatchError):
             return NestedPatternMatchError(
-                pattern=pattern, type=tau, env=gamma_env_aux, context=MapPatternContext(key=key), bullet=aux
+                pattern=pattern, type=type, env=env_aux, context=MapPatternContext(key=key), bullet=aux
             )
         else:
             pattern_match_mapping_results_dict[key] = aux.mapping
-            gamma_env_aux = aux.env
+            env_aux = aux.env
 
-    def ret_mapping(env: gtypes.TypeEnv):
+    def ret_mapping(envv: gtypes.TypeEnv):
         nonlocal pattern_match_mapping_results_dict
         items: t.Dict[gtypes.MapKey, gtypes.Type] = {}
         for k in pattern_match_mapping_results_dict.keys():
-            aux_type = pattern_match_mapping_results_dict[k](env)
+            aux_type = pattern_match_mapping_results_dict[k](envv)
             if isinstance(aux_type, gtypes.TypingError):
                 return aux_type
             items[k] = aux_type
         return gtypes.MapType(items)
 
-    return PatternMatchAuxSuccess(env=gamma_env_aux, mapping=ret_mapping)
+    return PatternMatchAuxSuccess(env=env_aux, mapping=ret_mapping)
 
 
 def pattern_match_aux_any(
-    pattern: Pattern, tau: gtypes.AnyType, gamma_env: gtypes.TypeEnv, sigma_env: gtypes.TypeEnv
+    pattern: Pattern, type: gtypes.AnyType, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> PatternMatchAuxResult:
     if isinstance(pattern, ElistPattern):
-        ground_tau: gtypes.Type = gtypes.ElistType()
+        ground_type: gtypes.Type = gtypes.ElistType()
     elif isinstance(pattern, ListPattern):
-        ground_tau = gtypes.ListType(tau)
+        ground_type = gtypes.ListType(type)
     elif isinstance(pattern, TuplePattern):
-        ground_tau = gtypes.TupleType([tau for _ in pattern.items])
+        ground_type = gtypes.TupleType([type for _ in pattern.items])
     else:
         assert isinstance(pattern, MapPattern)
-        ground_tau = gtypes.MapType({k: tau for k in pattern.map})
-    return pattern_match_aux(pattern, ground_tau, gamma_env, sigma_env)
+        ground_type = gtypes.MapType({k: type for k in pattern.map})
+    return pattern_match_aux(pattern, ground_type, env, external_env)
 
 
 @dataclass
@@ -561,16 +563,16 @@ PatternMatchResult = t.Union[PatternMatchSuccess, PatternMatchError]
 
 def pattern_match(
     pattern: Pattern,
-    tau: gtypes.Type,
-    gamma_env: gtypes.TypeEnv,
-    sigma_env: gtypes.TypeEnv,
+    type: gtypes.Type,
+    env: gtypes.TypeEnv,
+    external_env: gtypes.TypeEnv,
 ) -> PatternMatchResult:
-    pattern_match_result = pattern_match_aux(pattern, tau, gamma_env, sigma_env)
+    pattern_match_result = pattern_match_aux(pattern, type, env, external_env)
     if isinstance(pattern_match_result, PatternMatchError):
         return pattern_match_result
     ret_type = pattern_match_result.mapping(pattern_match_result.env)
     if isinstance(ret_type, gtypes.TypingError):
         return BasePatternMatchError(
-            pattern=pattern, type=tau, kind=PatternErrorEnum.incompatible_type_for_pattern, args={}
+            pattern=pattern, type=type, kind=PatternErrorEnum.incompatible_type_for_pattern, args={}
         )
     return PatternMatchSuccess(type=ret_type, env=pattern_match_result.env)

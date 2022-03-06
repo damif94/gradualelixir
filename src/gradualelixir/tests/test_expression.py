@@ -6,6 +6,8 @@ from gradualelixir.expression import (
     BinaryOpContext,
     BinaryOpEnum,
     BinaryOpExpression,
+    CaseExpression,
+    CaseExpressionContext,
     CondExpression,
     CondExpressionContext,
     ElistExpression,
@@ -13,6 +15,8 @@ from gradualelixir.expression import (
     ExpressionTypeCheckError,
     ExpressionTypeCheckSuccess,
     FloatExpression,
+    FunctionCallExpression,
+    FunctionCallExpressionContext,
     IdentExpression,
     IfElseExpression,
     IfElseExpressionContext,
@@ -23,18 +27,17 @@ from gradualelixir.expression import (
     MapExpressionContext,
     NestedExpressionTypeCheckError,
     PatternMatchExpression,
+    PatternMatchExpressionContext,
     SeqExpression,
+    SeqExpressionContext,
     TupleExpression,
     TupleExpressionContext,
     UnaryOpContext,
     UnaryOpEnum,
     UnaryOpExpression,
+    VarCallExpression,
+    format_expression,
     type_check,
-    SeqExpressionContext,
-    PatternMatchExpressionContext,
-    CaseExpression,
-    CaseExpressionContext,
-    FunctionCallExpression, FunctionCallExpressionContext,
 )
 from gradualelixir.gtypes import (
     AnyType,
@@ -43,6 +46,7 @@ from gradualelixir.gtypes import (
     BooleanType,
     ElistType,
     FloatType,
+    FunctionType,
     IntegerType,
     ListType,
     MapKey,
@@ -53,19 +57,18 @@ from gradualelixir.gtypes import (
     TypeEnv,
 )
 from gradualelixir.pattern import (
-    IdentPattern,
-    TuplePattern,
-    IntegerPattern,
     AtomLiteralPattern,
-    WildPattern,
-    PinIdentPattern,
+    IdentPattern,
+    IntegerPattern,
     PatternErrorEnum,
+    PinIdentPattern,
+    TuplePattern,
+    WildPattern,
 )
 from gradualelixir.utils import long_line
 
 from . import TEST_ENV
 from .test_pattern import check_context_path as check_pattern_context_path
-
 
 identifier_not_found_in_environment = ExpressionErrorEnum.identifier_not_found_in_environment
 
@@ -82,9 +85,9 @@ def assert_type_check_expression_ok(expr, env=None, expected_type=None, expected
     ret = type_check(expr, env, specs_env)
     assert isinstance(ret, ExpressionTypeCheckSuccess)
     assert ret.type == expected_type
-    assert ret.env == expected_env
+    assert ret.exported_env == expected_env
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
-        print(f"\n{long_line}\n{ret.message(expr, env, specs_env)}")
+        print(f"\n{long_line}\n{ret.message()}")
 
 
 def check_context_path(error_data: ExpressionTypeCheckError, context_path):
@@ -1530,13 +1533,30 @@ def test_call():
         expected_type=FloatType(),
     )
     assert_type_check_expression_ok(
+        FunctionCallExpression("foo", [TupleExpression([FloatExpression(1), IdentExpression("x")])]),
+        env={"x": AnyType()},
+        specs_env={("foo", 1): ([TupleType([AnyType(), IntegerType()])], FloatType())},
+        expected_type=FloatType(),
+    )
+    assert_type_check_expression_ok(
         FunctionCallExpression("baz", [FunctionCallExpression("foo", [IntegerExpression(1)]), IdentExpression("x")]),
         env={"x": AtomLiteralType("a")},
         specs_env={("foo", 1): ([IntegerType()], FloatType()), ("baz", 2): ([FloatType(), AtomType()], NumberType())},
         expected_type=NumberType(),
     )
+    assert_type_check_expression_ok(
+        VarCallExpression("z", [FunctionCallExpression("foo", [IntegerExpression(1)]), IdentExpression("x")]),
+        env={"x": AtomLiteralType("a"), "z": FunctionType([FloatType(), AtomType()], NumberType())},
+        specs_env={("foo", 1): ([IntegerType()], FloatType())},
+        expected_type=NumberType(),
+    )
 
-    # BASE ERRORS behavior
+    # ERRORS behavior
+    assert_type_check_expression_error(
+        VarCallExpression("x", [IntegerExpression(1)]),
+        ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
+        env={"x": FunctionType([], IntegerType())},
+    )
     assert_type_check_expression_error(
         FunctionCallExpression("foo", [IntegerExpression(1)]),
         ExpressionErrorEnum.function_not_declared,
@@ -1547,12 +1567,34 @@ def test_call():
         [(FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
         specs_env={("foo", 1): ([FloatType()], IntegerType())},
     )
-
+    assert_type_check_expression_error(
+        FunctionCallExpression("foo", [AtomLiteralExpression("true"), IntegerExpression(1)]),
+        [(FunctionCallExpressionContext(argument=1), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
+        specs_env={("foo", 2): ([AtomType(), FloatType()], IntegerType())},
+    )
+    assert_type_check_expression_error(
+        FunctionCallExpression("foo", [TupleExpression([FloatExpression(1), IntegerExpression(1)])]),
+        [(FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
+        specs_env={("foo", 1): ([TupleType([IntegerType(), AnyType()])], FloatType())},
+    )
+    assert_type_check_expression_error(
+        FunctionCallExpression("foo", [IdentExpression("x"), IntegerExpression(1)]),
+        [
+            (FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.identifier_not_found_in_environment),
+            (FunctionCallExpressionContext(argument=1), ExpressionErrorEnum.inferred_type_is_not_as_expected),
+        ],
+        specs_env={("foo", 2): ([AtomType(), FloatType()], IntegerType())},
+    )
+    assert_type_check_expression_error(
+        VarCallExpression("x", [IntegerExpression(1)]),
+        ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
+        env={"x": FunctionType([], IntegerType())},
+    )
 
 
 def test_wip():
     assert_type_check_expression_error(
-        FunctionCallExpression("foo", [IntegerExpression(1)]),
-        [(FunctionCallExpressionContext(argument=0), ExpressionErrorEnum.inferred_type_is_not_as_expected)],
-        specs_env={("foo", 1): ([FloatType()], IntegerType())},
+        VarCallExpression("x", [IntegerExpression(1)]),
+        ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
+        env={"x": FunctionType([], IntegerType())},
     )
