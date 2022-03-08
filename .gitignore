@@ -155,4 +155,6 @@ cython_debug/
 
 
 format.ex
+swap.ex
+demo.ex
 elixir_port/**

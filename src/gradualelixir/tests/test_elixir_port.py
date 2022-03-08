@@ -2,7 +2,7 @@ import json
 import subprocess
 from collections import OrderedDict
 
-from gradualelixir import PROJECT_PATH, elixir_port
+from gradualelixir import elixir_port
 from gradualelixir.expression import (
     AtomLiteralExpression,
     BinaryOpEnum,
@@ -45,7 +45,7 @@ def parse_expression(code):
     if isinstance(code, list):
         code = "\n".join(code)
 
-    elixir_ast = subprocess.run([f"{PROJECT_PATH}/elixir_port/elixir_port", code], capture_output=True)
+    elixir_ast = subprocess.run([f"{project_path}/elixir_port/elixir_port", code], capture_output=True)
     print("---------------------------------------")
     print(code)
     res = elixir_port.parse_expression(json.loads(elixir_ast.stdout))
