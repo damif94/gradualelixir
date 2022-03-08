@@ -4,3 +4,11 @@ class SyntaxRestrictionException(Exception):
 
 class ElixirProcessException(Exception):
     pass
+
+
+class CommandException(Exception):
+    pass
+
+
+class SevereCommandException(Exception):
+    pass
