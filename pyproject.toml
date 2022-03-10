@@ -5,7 +5,7 @@ line-length = 120
 [tool.mypy]
 files = 'src/gradualelixir/'
 disallow_any_unimported = true
-ignore_missing_imports = false
+ignore_missing_imports = true
 
 [tool.isort]
 known_third_party = 'gradualelixir'

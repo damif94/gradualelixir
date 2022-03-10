@@ -1,14 +1,14 @@
-class SyntaxRestrictionException(Exception):
+class SyntaxRestrictionError(Exception):
     pass
 
 
-class ElixirProcessException(Exception):
+class ElixirProcessError(Exception):
     pass
 
 
-class CommandException(Exception):
+class CommandError(Exception):
     pass
 
 
-class SevereCommandException(Exception):
+class SevereCommandError(Exception):
     pass

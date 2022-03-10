@@ -3,7 +3,7 @@ import typing as t
 from dataclasses import dataclass
 
 from gradualelixir import gtypes
-from gradualelixir.exception import SyntaxRestrictionException
+from gradualelixir.exception import SyntaxRestrictionError
 from gradualelixir.gtypes import LiteralType
 from gradualelixir.utils import Bcolors, ordinal
 
@@ -15,7 +15,7 @@ class Pattern:
 @dataclass
 class WildPattern(Pattern):
     def __str__(self):
-        return "_"
+        return '_'
 
 
 @dataclass
@@ -31,7 +31,7 @@ class PinIdentPattern(Pattern):
     identifier: str
 
     def __str__(self):
-        return "^" + self.identifier
+        return '^' + self.identifier
 
 
 @dataclass
@@ -81,13 +81,13 @@ class TuplePattern(Pattern):
     items: t.List[Pattern]
 
     def __str__(self):
-        return "{" + ", ".join([str(item) for item in self.items]) + "}"
+        return '{' + ', '.join([str(item) for item in self.items]) + '}'
 
 
 @dataclass
 class ElistPattern(Pattern):
     def __str__(self):
-        return "[]"
+        return '[]'
 
 
 @dataclass
@@ -97,12 +97,12 @@ class ListPattern(Pattern):
 
     def __init__(self, head, tail):
         if not (isinstance(tail, ListPattern) or isinstance(tail, ElistPattern) or isinstance(tail, WildPattern)):
-            raise SyntaxRestrictionException("List pattern's tail should be either a List Pattern or an Elist Pattern")
+            raise SyntaxRestrictionError("List pattern's tail should be either a List Pattern or an Elist Pattern")
         self.head = head
         self.tail = tail
 
     def __str__(self):
-        return f"[{str(self.head)} | {str(self.tail)}]"
+        return f'[{str(self.head)} | {str(self.tail)}]'
 
 
 @dataclass
@@ -113,11 +113,11 @@ class MapPattern(Pattern):
     def __str__(self):
         keys = self.map.keys()
         str_values = [str(v) for _, v in self.map.items()]
-        return "%{" + ", ".join([f"{k} => {v}" for (k, v) in zip(keys, str_values)]) + "}"
+        return '%{' + ', '.join([f'{k} => {v}' for (k, v) in zip(keys, str_values)]) + '}'
 
 
-def format_pattern_match(pattern: Pattern, type: gtypes.Type, padding="") -> str:
-    code = f"{pattern} = {type}"
+def format_pattern_match(pattern: Pattern, type: gtypes.Type, padding='') -> str:
+    code = f'{pattern} = {type}'
     needs_formatting = False
     if len(str(code)) > 50:  # pattern match is too long
         needs_formatting = True
@@ -126,9 +126,9 @@ def format_pattern_match(pattern: Pattern, type: gtypes.Type, padding="") -> str
         from gradualelixir.elixir_port import format_code
 
         msg = format_code(code)
-        return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])
+        return '\n\n' + '\n'.join([padding + m for m in msg.split('\n')])
     else:
-        return f" {code}"
+        return f' {code}'
 
 
 class PatternErrorEnum(enum.Enum):
@@ -136,7 +136,7 @@ class PatternErrorEnum(enum.Enum):
     incompatible_type_for_literal = "Couldn't match literal {literal} with this type"
     arrow_types_into_nonlinear_identifier = (
         "Can't match {identifier}'s current type against this type. "
-        "Arrow types can only be used for assignment in pattern matches"
+        'Arrow types can only be used for assignment in pattern matches'
     )
     incompatible_type_for_pinned_variable = (
         "Couldn't match pinned identifier {identifier}'s current type against this type"
@@ -146,7 +146,7 @@ class PatternErrorEnum(enum.Enum):
     )
     arrow_types_into_pinned_identifier = (
         "Can't match ^{identifier}'s current type  in external environment.\n"
-        "Arrow types can only be used for assignment in pattern matches"
+        'Arrow types can only be used for assignment in pattern matches'
     )
     incompatible_tuples_error = "Couldn't match tuples of different sizes ({n} and {m})"
     incompatible_maps_error = "Couldn't match map pattern because of missing {k} key is not present in this type"
@@ -164,8 +164,8 @@ class ListPatternContext(PatternContext):
 
     def __str__(self):
         if self.head:
-            return "In the head pattern"
-        return "In the tail pattern"
+            return 'In the head pattern'
+        return 'In the tail pattern'
 
 
 @dataclass
@@ -173,7 +173,7 @@ class TuplePatternContext(PatternContext):
     n: int
 
     def __str__(self):
-        return f"In the {ordinal(self.n)} pattern"
+        return f'In the {ordinal(self.n)} pattern'
 
 
 @dataclass
@@ -181,38 +181,37 @@ class MapPatternContext(PatternContext):
     key: gtypes.MapKey
 
     def __str__(self):
-        return f"In the pattern for key {self.key}"
+        return f'In the pattern for key {self.key}'
 
 
 class PatternMatchError:
     pattern: Pattern
     type: gtypes.Type
 
-    # should be implemented in any derived instance
-    def _message(self, padding="", env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
-        pass
+    def _message(self, padding='', env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
+        raise NotImplementedError()
 
     @staticmethod
-    def env_message(padding="", env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
-        env_msg = ""
-        external_env_msg = ""
-        eol = ""
+    def env_message(padding='', env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
+        env_msg = ''
+        external_env_msg = ''
+        eol = ''
         if env is not None:
-            env_msg = f"{padding}{Bcolors.OKBLUE}External Variables:{Bcolors.ENDC} {env}\n"
-            eol = "\n"
+            env_msg = f'{padding}{Bcolors.OKBLUE}External Variables:{Bcolors.ENDC} {env}\n'
+            eol = '\n'
         if external_env is not None:
-            external_env_msg = f"{padding}{Bcolors.OKBLUE}Pattern Variables:{Bcolors.ENDC} {external_env}\n"
-            eol = "\n"
+            external_env_msg = f'{padding}{Bcolors.OKBLUE}Pattern Variables:{Bcolors.ENDC} {external_env}\n'
+            eol = '\n'
         return env_msg + external_env_msg + eol
 
-    def message(self, padding="", env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
-        pattern_msg = format_pattern_match(self.pattern, self.type, padding + "    ")
+    def message(self, padding='', env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
+        pattern_msg = format_pattern_match(self.pattern, self.type, padding + '    ')
         env_msg = self.env_message(padding, env, external_env)
         return (
-            f"{padding}{Bcolors.OKBLUE}Pattern match type check failed on pattern match{Bcolors.ENDC} "
-            f"{pattern_msg}\n\n"
-            f"{env_msg}"
-            f"{self._message(padding, env, external_env)}\n"
+            f'{padding}{Bcolors.OKBLUE}Pattern match type check failed on pattern match{Bcolors.ENDC} '
+            f'{pattern_msg}\n\n'
+            f'{env_msg}'
+            f'{self._message(padding, env, external_env)}\n'
         )
 
 
@@ -232,10 +231,10 @@ class BasePatternMatchError(PatternMatchError):
     def __str__(self):
         return self._message()
 
-    def _message(self, padding="", _env: gtypes.TypeEnv = None, _external_env: gtypes.TypeEnv = None):
+    def _message(self, padding='', _env: gtypes.TypeEnv = None, _external_env: gtypes.TypeEnv = None):
         args = {k: str(arg) for k, arg in self.args.items()}
         error_msg = self.kind.value.format(**args)
-        return f"{padding}{Bcolors.FAIL}    {error_msg}{Bcolors.ENDC}\n"
+        return f'{padding}{Bcolors.FAIL}    {error_msg}{Bcolors.ENDC}\n'
 
 
 @dataclass
@@ -249,17 +248,17 @@ class NestedPatternMatchError(PatternMatchError):
     def __str__(self):
         return self._message()
 
-    def _message(self, padding="", env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
-        env_msg = self.env_message(padding + "    ", env, external_env)
+    def _message(self, padding='', env: gtypes.TypeEnv = None, external_env: gtypes.TypeEnv = None):
+        env_msg = self.env_message(padding + '    ', env, external_env)
         bullet_expression_msg = format_pattern_match(
-            pattern=self.bullet.pattern, type=self.bullet.type, padding=padding + "    "
+            pattern=self.bullet.pattern, type=self.bullet.type, padding=padding + '    '
         )
-        bullet_msg = self.bullet._message(padding + "  ", env, external_env)
+        bullet_msg = self.bullet._message(padding + '  ', env, external_env)
         return (
-            f"\n{padding}{Bcolors.OKBLUE}  > {self.context}: {Bcolors.ENDC}"
-            f"{bullet_expression_msg}\n\n"
-            f"{env_msg}"
-            f"{bullet_msg}\n"
+            f'\n{padding}{Bcolors.OKBLUE}  > {self.context}: {Bcolors.ENDC}'
+            f'{bullet_expression_msg}\n\n'
+            f'{env_msg}'
+            f'{bullet_msg}\n'
         )
 
 
@@ -306,7 +305,7 @@ def pattern_match_aux_literal(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
-            args={"literal": pattern.value},
+            args={'literal': pattern.value},
         )
 
 
@@ -319,7 +318,7 @@ def pattern_match_aux_ident(
                 pattern=pattern,
                 type=type,
                 kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
-                args={"identifier": pattern.identifier},
+                args={'identifier': pattern.identifier},
             )
         if not isinstance(mu := gtypes.infimum(type, sigma), gtypes.TypingError):
             new_env = env.copy()
@@ -329,7 +328,7 @@ def pattern_match_aux_ident(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_variable,
-            args={"identifier": pattern.identifier},
+            args={'identifier': pattern.identifier},
         )
     else:
         new_env = env.copy()
@@ -346,7 +345,7 @@ def pattern_match_aux_pin_ident(
                 pattern=pattern,
                 type=type,
                 kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
-                args={"identifier": pattern.identifier},
+                args={'identifier': pattern.identifier},
             )
         elif not isinstance(mu := gtypes.infimum(type, sigma), gtypes.SupremumError):
             return PatternMatchAuxSuccess(env, lambda envv: mu)
@@ -354,14 +353,14 @@ def pattern_match_aux_pin_ident(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_pinned_variable,
-            args={"identifier": pattern.identifier},
+            args={'identifier': pattern.identifier},
         )
     else:
         return BasePatternMatchError(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.pinned_identifier_not_found_in_environment,
-            args={"identifier": pattern.identifier},
+            args={'identifier': pattern.identifier},
         )
 
 
@@ -440,7 +439,7 @@ def pattern_match_aux_tuple(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_tuples_error,
-            args={"n": len(pattern.items), "m": len(type.types)},
+            args={'n': len(pattern.items), 'm': len(type.types)},
         )
     pattern_match_mapping_results = []
     env_aux = env.copy()
@@ -480,14 +479,14 @@ def pattern_match_aux_map(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
-            args={"type": type},
+            args={'type': type},
         )
     if len(missing_keys_on_type := [k for k in pattern.map.keys() if k not in type.map_type.keys()]) > 0:
         return BasePatternMatchError(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_maps_error,
-            args={"k": missing_keys_on_type[0]},
+            args={'k': missing_keys_on_type[0]},
         )
     pattern_match_mapping_results_dict: t.Dict[
         gtypes.MapKey, t.Callable[[gtypes.TypeEnv], t.Union[gtypes.Type, gtypes.TypingError]]
@@ -543,18 +542,18 @@ class PatternMatchSuccess:
     def message(
         self, pattern: Pattern, type: gtypes.Type, external_env: gtypes.TypeEnv, hijacked_pattern_env: gtypes.TypeEnv
     ):
-        pattern_msg = format_pattern_match(pattern, type, padding="    ")
+        pattern_msg = format_pattern_match(pattern, type, padding='    ')
         hijacked_pattern_env_msg = (
-            f"{Bcolors.OKBLUE}Hijacked Pattern Variables:{Bcolors.ENDC} {hijacked_pattern_env}\n"
+            f'{Bcolors.OKBLUE}Hijacked Pattern Variables:{Bcolors.ENDC} {hijacked_pattern_env}\n'
             if hijacked_pattern_env.env != {}
-            else ""
+            else ''
         )
         return (
-            f"{Bcolors.OKBLUE}Type check success for{Bcolors.ENDC} {pattern_msg}\n\n"
-            f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {external_env}\n"
-            f"{hijacked_pattern_env_msg}"
-            f"{Bcolors.OKBLUE}Refined Type:{Bcolors.ENDC} {self.type}\n"
-            f"{Bcolors.OKBLUE}Exported Variables:{Bcolors.ENDC} {self.env}\n"
+            f'{Bcolors.OKBLUE}Type check success for{Bcolors.ENDC} {pattern_msg}\n\n'
+            f'{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {external_env}\n'
+            f'{hijacked_pattern_env_msg}'
+            f'{Bcolors.OKBLUE}Refined Type:{Bcolors.ENDC} {self.type}\n'
+            f'{Bcolors.OKBLUE}Exported Variables:{Bcolors.ENDC} {self.env}\n'
         )
 
 
