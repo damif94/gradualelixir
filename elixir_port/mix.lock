@@ -1,0 +1,4 @@
+%{
+  "json": {:hex, :json, "1.4.1", "8648f04a9439765ad449bc56a3ff7d8b11dd44ff08ffcdefc4329f7c93843dfa", [:mix], [], "hexpm", "9abf218dbe4ea4fcb875e087d5f904ef263d012ee5ed21d46e9dbca63f053d16"},
+  "type_check": {:hex, :type_check, "0.10.7", "38ea953d20837d8d61744af238691b5e3cbb4dc92efc98191c3837fc8f158273", [:mix], [{:stream_data, "~> 0.5.0", [hex: :stream_data, repo: "hexpm", optional: true]}], "hexpm", "d468f0452116f44368cce161008516696bf7d28e37859a2ffaaef3843fe5dbb9"},
+}

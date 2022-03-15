@@ -94,10 +94,6 @@ def unparse_type(x):
         return {unparse_key(k): unparse_type(x.map_type[k]) for k in x.map_type}
 
 
-def flatten(x: t.List[t.List[T]]) -> t.List[T]:
-    return [item for sublist in x for item in sublist]
-
-
 def ordinal(n: int):
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
@@ -111,4 +107,4 @@ def enumerate_list(items: t.List[str]) -> str:
         return ",".join([str(item) for item in items[:-1]]) + " and " + str(items[-1])
 
 
-long_line = "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+long_line = "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
