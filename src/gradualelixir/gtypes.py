@@ -16,13 +16,13 @@ class BaseType(Type):
 @dataclass
 class BooleanType(BaseType):
     def __str__(self):
-        return 'boolean'
+        return "boolean"
 
 
 @dataclass
 class AtomType(BaseType):
     def __str__(self):
-        return 'atom'
+        return "atom"
 
 
 @dataclass
@@ -35,7 +35,7 @@ class IntegerType(LiteralType):
     python_type = int
 
     def __str__(self):
-        return 'integer'
+        return "integer"
 
 
 @dataclass
@@ -45,10 +45,10 @@ class AtomLiteralType(LiteralType):
 
     def __str__(self):
         if self.atom:
-            if self.atom in ['true', 'false']:
+            if self.atom in ["true", "false"]:
                 return self.atom
-            return ':' + self.atom
-        return 'atom'
+            return ":" + self.atom
+        return "atom"
 
 
 @dataclass
@@ -56,19 +56,19 @@ class FloatType(LiteralType):
     python_type = float
 
     def __str__(self):
-        return 'float'
+        return "float"
 
 
 @dataclass
 class NumberType(BaseType):
     def __str__(self):
-        return 'number'
+        return "number"
 
 
 @dataclass
 class AnyType(Type):
     def __str__(self):
-        return 'any'
+        return "any"
 
 
 class CompositeType(Type):
@@ -78,7 +78,7 @@ class CompositeType(Type):
 @dataclass
 class ElistType(CompositeType):
     def __str__(self):
-        return '[]'
+        return "[]"
 
 
 @dataclass
@@ -86,7 +86,7 @@ class ListType(CompositeType):
     type: Type
 
     def __str__(self):
-        return '[' + str(self.type) + ']'
+        return "[" + str(self.type) + "]"
 
 
 @dataclass
@@ -94,7 +94,7 @@ class TupleType(CompositeType):
     types: t.List[Type]
 
     def __str__(self):
-        return '{' + ', '.join([str(ty) for ty in self.types]) + '}'
+        return "{" + ", ".join([str(ty) for ty in self.types]) + "}"
 
 
 @dataclass
@@ -120,13 +120,15 @@ class MapKey:
         return hash(self.type_class) + hash(self.value)
 
     def __str__(self):
-        if isinstance(self.value, str) or isinstance(self.value, bool):
-            return str(AtomLiteralType(self.value))  # type: ignore
+        if isinstance(self.value, str):
+            return str(AtomLiteralType(self.value))
+        elif isinstance(self.value, bool):
+            return str(AtomLiteralType("true" if self.value else "false"))
         else:
             return str(self.value)
 
     def __repr__(self):
-        return f'MapKey(value={str(self.value)})'
+        return f"MapKey(value={str(self.value)})"
 
     @property
     def type(self) -> LiteralType:
@@ -143,7 +145,7 @@ class MapType(CompositeType):
     def __str__(self):
         keys = self.map_type.keys()
         str_values = [str(v) for v in self.map_type.values()]
-        return '%{' + ', '.join([f'{k} => {v}' for (k, v) in zip(keys, str_values)]) + '}'
+        return "%{" + ", ".join([f"{k} => {v}" for (k, v) in zip(keys, str_values)]) + "}"
 
 
 @dataclass
@@ -152,11 +154,11 @@ class FunctionType(CompositeType):
     ret_type: Type
 
     def __str__(self):
-        return f'({", ".join([str(ty) for ty in self.arg_types])}) -> {str(self.ret_type)}'
+        return f'(({", ".join([str(ty) for ty in self.arg_types])}) -> {str(self.ret_type)})'
 
 
 class TypeErrorEnum(Enum):
-    supremum_does_not_exist = '{} does not exist'
+    supremum_does_not_exist = "{} does not exist"
 
 
 class TypingError:
@@ -171,7 +173,7 @@ class SupremumError(TypingError):
     reason = TypeErrorEnum.supremum_does_not_exist
 
     def __init__(self, is_supremum: bool):
-        self.args = ('supremum' if is_supremum else 'infimum',)
+        self.args = ("supremum" if is_supremum else "infimum",)
 
 
 def is_maximal(tau: Type) -> bool:
@@ -194,7 +196,7 @@ def is_base_subtype(tau: BaseType, sigma: BaseType) -> bool:
     if any(
         [
             tau == sigma,
-            isinstance(tau, AtomLiteralType) and tau.atom in ['true', 'false'] and isinstance(sigma, BooleanType),
+            isinstance(tau, AtomLiteralType) and tau.atom in ["true", "false"] and isinstance(sigma, BooleanType),
             isinstance(tau, BooleanType) and isinstance(sigma, AtomType),
             isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomLiteralType) and tau.atom == sigma.atom,
             isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomType),
@@ -213,9 +215,9 @@ def base_supremum(tau: BaseType, sigma: BaseType) -> t.Union[Type, TypingError]:
     if is_base_subtype(sigma, tau):
         return tau
     if isinstance(tau, AtomLiteralType) and isinstance(sigma, AtomLiteralType):
-        if tau.atom == 'true' and sigma.atom == 'false':
+        if tau.atom == "true" and sigma.atom == "false":
             return BooleanType()
-        elif tau.atom == 'false' and sigma.atom == 'true':
+        elif tau.atom == "false" and sigma.atom == "true":
             return BooleanType()
         else:
             return AtomType()
@@ -518,7 +520,7 @@ class SpecsEnv:
 
     def __str__(self):
         return (
-            '[' + ', '.join([f'{ident} |-> {FunctionType(type[0], type[1])}' for ident, type in self.env.items()]) + ']'
+            "[" + ", ".join([f"{ident} |-> {FunctionType(type[0], type[1])}" for ident, type in self.env.items()]) + "]"
         )
 
     def copy(self):
@@ -531,7 +533,7 @@ class SpecsEnv:
         return self.env.items()
 
     @classmethod
-    def merge(cls, one: 'SpecsEnv', other: 'SpecsEnv') -> 'SpecsEnv':
+    def merge(cls, one: "SpecsEnv", other: "SpecsEnv") -> "SpecsEnv":
         return cls({**one.env, **other.env})
 
 
@@ -549,7 +551,7 @@ class TypeEnv:
         self.env[key] = value
 
     def __str__(self):
-        return '[' + ', '.join([f'{ident} |-> {type}' for ident, type in self.env.items()]) + ']'
+        return "[" + ", ".join([f"{ident} |-> {type}" for ident, type in self.env.items()]) + "]"
 
     def copy(self):
         return TypeEnv(self.env.copy())
@@ -561,7 +563,7 @@ class TypeEnv:
         return self.env.items()
 
     @classmethod
-    def merge(cls, one: 'TypeEnv', other: 'TypeEnv') -> 'TypeEnv':
+    def merge(cls, one: "TypeEnv", other: "TypeEnv") -> "TypeEnv":
         res_env = TypeEnv()
         res_env.env = {**one.env, **other.env}
         return res_env

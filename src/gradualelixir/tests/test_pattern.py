@@ -64,10 +64,10 @@ def assert_pattern_match_ok(
 
     ret = pattern_match(pattern, type, hijacked_pattern_env, env)
     assert isinstance(ret, PatternMatchSuccess)
-    assert ret.type == expected_type
-    assert ret.env == expected_pattern_env
+    assert ret.refined_type == expected_type
+    assert ret.exported_env == expected_pattern_env
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
-        print(f"\n{long_line}\n\n{ret.message(pattern, type, env, hijacked_pattern_env)}")
+        print(f"\n{long_line}\n\n{ret}")
 
 
 def assert_pattern_match_error(pattern, type, hijacked_pattern_env=None, env=None, expected_context=None):
@@ -80,8 +80,7 @@ def assert_pattern_match_error(pattern, type, hijacked_pattern_env=None, env=Non
     assert isinstance(ret, PatternMatchError)
     check_context_path(ret, expected_context)
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
-        env_args = {"env": env, "external_env": hijacked_pattern_env} if TEST_ENV.get("display_results_verbose") else {}
-        print(f"\n{long_line}\n\n{ret.message(padding='', **env_args)}")
+        print(f"\n{long_line}\n\n{ret.message(padding='')}")
 
 
 def check_context_path(error_data: PatternMatchError, context_path):

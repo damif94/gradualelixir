@@ -19,7 +19,7 @@ class Spec:
         return f"@spec {self.name}({', '.join([str(param) for param in self.parameter_types])})::{self.return_type}"
 
     def __hash__(self):
-        return hash(','.join([str(type) for type in self.parameter_types + [self.return_type]]))
+        return hash(",".join([str(type) for type in self.parameter_types + [self.return_type]]))
 
 
 @dataclass
@@ -33,10 +33,10 @@ class Definition:
         return len(self.parameters)
 
     def __str__(self):
-        return f"def {self.name}({', '.join([str(param) for param in self.parameters])}) do\n" f'  {self.body}\n' 'end'
+        return f"def {self.name}({', '.join([str(param) for param in self.parameters])}) do\n" f"  {self.body}\n" "end"
 
     def __hash__(self):
-        return hash(','.join([str(param) for param in self.parameters]) + str(self.body))
+        return hash(",".join([str(param) for param in self.parameters]) + str(self.body))
 
 
 @dataclass
@@ -46,51 +46,30 @@ class Module:
     specs: t.List[Spec]
 
     def __str__(self):
-        msg = f'defmodule {self.name} do\n\n'
+        msg = f"defmodule {self.name} do\n\n"
         for definition in self.definitions:
             for spec in self.specs:
                 if spec.name == definition.name:
-                    msg += str(spec) + '\n'
-            msg += str(definition) + '\n\n'
-        msg += 'end\n'
+                    msg += str(spec) + "\n"
+            msg += str(definition) + "\n\n"
+        msg += "end\n"
         return msg
-
-
-@dataclass
-class AnnotatedModule:
-    name: str
-    annotated_definitions: t.List[t.Tuple[Spec, Definition]]
-
-    def __str__(self):
-        msg = f'defmodule {self.name} do\n\n'
-        for definition in self.annotated_definitions:
-            msg += f'{definition[0]}\n{definition[1]}\n\n'
-        msg += 'end'
-        return msg
-
-    @property
-    def specs_env(self):
-        return gtypes.SpecsEnv(
-            {
-                (definition.name, definition.arity): (spec.parameter_types, spec.return_type)
-                for spec, definition in self.annotated_definitions
-            }
-        )
 
 
 @dataclass
 class DefinitionBodyTypeCheckError:
     definition: Definition
-    spec: Spec
+    env: gtypes.TypeEnv
+    specs_env: gtypes.SpecsEnv
     error: expression.ExpressionTypeCheckError
 
-    def message(self, padding=''):
+    def message(self, padding=""):
         from gradualelixir.elixir_port import format_code
 
-        msg = f'\n    {self.spec}\n'
-        msg += '\n'.join(['    ' + line for line in format_code(str(self.definition)).split('\n')]) + '\n\n'
-        msg += f'{padding}{Bcolors.OKBLUE}The body expression has type errors{Bcolors.ENDC}\n'
-        msg += self.error.message(padding=padding + '    ')
+        spec = self.specs_env[(self.definition.name, self.definition.arity)]
+        msg = f"\n    {Spec(name=self.definition.name, parameter_types=spec[0], return_type=spec[1])}\n"
+        msg += "\n".join(["    " + line for line in format_code(str(self.definition)).split("\n")]) + "\n\n"
+        msg += self.error.message(padding=padding, env=self.env, specs_env=self.specs_env)
         return msg
 
 
@@ -100,10 +79,10 @@ class DefinitionReturnTypeError:
     body_type: gtypes.Type
     return_type: gtypes.Type
 
-    def message(self, padding=''):
+    def message(self, padding=""):
         return (
-            f'{padding}{Bcolors.OKBLUE}The type inferred for the body expression, {self.body_type}, '
-            f'is not a subtype of {self.return_type}{Bcolors.ENDC}'
+            f"{padding}{Bcolors.FAIL}The type inferred for the body expression, {self.body_type}, "
+            f"is not a subtype of {self.return_type}{Bcolors.ENDC}"
         )
 
 
@@ -117,23 +96,32 @@ class CollectResultErrors:
     gradual_specs: t.List[Spec]
 
     def __str__(self):
-        msg = ''
+        msg = f"{Bcolors.OKBLUE}Errors collecting specs{Bcolors.ENDC}:\n"
         if self.definitions_missing_specs:
-            msg += f'    {Bcolors.OKBLUE}Definitions missing specs{Bcolors.ENDC}{Bcolors.FAIL}\n        '
-            msg += ', '.join([f'{name}/{arity}' for name, arity in self.definitions_missing_specs]) + '\n\n'
+            msg += f"\n  {Bcolors.OKBLUE}> Definitions missing specs{Bcolors.ENDC}\n"
+            msg += (
+                "    "
+                + ", ".join([f"{definition.name}/{definition.arity}" for definition in self.definitions_missing_specs])
+                + "\n"
+            )
         if self.duplicated_definitions:
-            msg += f'    {Bcolors.OKBLUE}Definitions with multiple declarations{Bcolors.ENDC}{Bcolors.FAIL}\n'
-            msg += '        ' + ', '.join([f'{name}/{arity}' for name, arity in self.duplicated_definitions]) + '\n\n'
+            msg += f"\n  {Bcolors.OKBLUE}> Definitions with multiple declarations{Bcolors.ENDC}\n"
+            msg += (
+                "    "
+                + ", ".join([f"{definition.name}/{definition.arity}" for definition in self.duplicated_definitions])
+                + "\n"
+            )
+        if self.duplicated_definitions:
+            msg += f"\n  {Bcolors.OKBLUE}> Definitions with multiple specs{Bcolors.ENDC}\n"
+            definitions_with_multiple_specs = set((spec.name, spec.arity) for spec in self.duplicated_specs)
+            msg += "    " + ", ".join([f"{name}/{arity}" for name, arity in definitions_with_multiple_specs]) + "\n"
         if self.specs_missing_definitions:
-            msg += f'    {Bcolors.OKBLUE}Specs pointing to non existing definitions{Bcolors.ENDC}{Bcolors.FAIL}\n'
-            msg += ', '.join(['        ' + str(spec) for spec in self.specs_missing_definitions]) + '\n\n'
-        if self.duplicated_definitions:
-            msg += f'    {Bcolors.OKBLUE}Definitions with multiple declarations{Bcolors.ENDC}{Bcolors.FAIL}\n'
-            msg += '\n '.join(['        ' + str(spec) for spec in self.duplicated_specs]) + '\n\n'
+            msg += f"\n  {Bcolors.OKBLUE}> Specs pointing to non existing definitions{Bcolors.ENDC}\n"
+            msg += ", ".join(["    " + str(spec) for spec in self.specs_missing_definitions]) + "\n"
         if self.gradual_specs:
-            msg += f'    {Bcolors.OKBLUE}Specs using non-static types{Bcolors.ENDC}{Bcolors.FAIL}\n'
-            msg += '\n '.join(['        ' + str(spec) for spec in self.gradual_specs]) + '\n\n'
-        return msg + f'{Bcolors.ENDC}'
+            msg += f"\n  {Bcolors.OKBLUE}> Specs using non-static types{Bcolors.ENDC}\n"
+            msg += "\n ".join(["    " + str(spec) for spec in self.gradual_specs]) + "\n"
+        return msg + f"{Bcolors.ENDC}"
 
 
 @dataclass
@@ -141,14 +129,14 @@ class DefinitionSpecsRefinementErrors:
     definition: Definition
     errors: t.List[t.Tuple[int, pattern.PatternMatchError]]
 
-    def message(self, padding=''):
-        msg = ''
+    def message(self, padding=""):
+        msg = ""
         for index, error in self.errors:
             msg += (
                 f"{padding}{Bcolors.OKBLUE}Couldn't match {ordinal(index)} argument "
-                f'with the corresponding type:{Bcolors.ENDC}\n'
+                f"with the corresponding type:{Bcolors.ENDC}\n"
             )
-            msg += error.message(padding=padding + '    ')
+            msg += error.message(padding=padding + "    ")
         return msg
 
 
@@ -157,51 +145,67 @@ class SpecsRefinementErrors:
     module: Module
     errors: t.Dict[Definition, DefinitionSpecsRefinementErrors]
 
+    def __str__(self):
+        msg = f"{Bcolors.OKBLUE}Errors refining specs{Bcolors.ENDC}:\n\n"
+        for definition, errors in self.errors.items():
+            msg += f"    {Bcolors.OKBLUE}On {definition.name}/{definition.arity}{Bcolors.ENDC}: "
+            msg += f"\n{errors.message(padding='    ')}\n\n"
+        return msg
+
 
 @dataclass
 class TypeCheckErrors:
-    module: AnnotatedModule
-    errors: t.Dict[t.Tuple[str, int], t.Union[DefinitionReturnTypeError, DefinitionBodyTypeCheckError]]
+    module: Module
+    errors: t.Dict[Definition, t.Union[DefinitionReturnTypeError, DefinitionBodyTypeCheckError]]
 
     def __str__(self):
-        msg = ''
-        for definition_key, errors in self.errors.items():
-            msg += f'    {Bcolors.OKBLUE}On {definition_key[0]}/{definition_key[1]}{Bcolors.ENDC}\n'
-            msg += errors.message(padding='    ')
+        msg = f"{Bcolors.OKBLUE}Type check errors{Bcolors.ENDC}:\n\n"
+        for definition, errors in self.errors.items():
+            msg += f"    {Bcolors.OKBLUE}On {definition.name}/{definition.arity}{Bcolors.ENDC}: "
+            msg += f"\n{errors.message('    ')}\n\n"
         return msg
 
 
 @dataclass
 class SpecsRefinementSuccess:
-    module: AnnotatedModule
+    module: Module
+    specs_env: gtypes.SpecsEnv
     refined_specs_env: gtypes.SpecsEnv
     pattern_match_spec_success: t.Dict[Definition, t.List[pattern.PatternMatchSuccess]]
 
     def __str__(self):
         refinement_success_msgs = []
-        for spec, definition in self.module.annotated_definitions:
+        for definition in self.module.definitions:
+            spec = Spec(
+                name=definition.name,
+                parameter_types=self.specs_env[(definition.name, definition.arity)][0],
+                return_type=self.specs_env[(definition.name, definition.arity)][1],
+            )
             refined_spec = Spec(
                 name=spec.name,
-                parameter_types=[result.type for _, result in self.pattern_match_spec_success[definition]],
-                return_type=self.pattern_match_spec_success[definition][-1].type,
+                parameter_types=[result.type for result in self.pattern_match_spec_success[definition]],
+                return_type=spec.return_type,
             )
             if refined_spec != spec:
                 refinement_success_msgs += (
-                    f'Spec for {definition.name}/{definition.arity} was refined:\n'
-                    f'    From {spec}\n'
-                    f'    Into {refined_spec}\n'
+                    f"{Bcolors.OKBLUE}Spec for {definition.name}/{definition.arity} was refined:{Bcolors.ENDC}\n"
+                    f"    From {spec}\n"
+                    f"    Into {refined_spec}\n"
                 )
-        return refinement_success_msgs
+        return "".join(refinement_success_msgs)
 
 
 @dataclass
 class TypeCheckSuccess:
-    module: AnnotatedModule
-    specs: gtypes.SpecsEnv
-    definitions_success: t.Dict[t.Tuple[str, int], expression.ExpressionTypeCheckSuccess]
+    module: Module
+    specs_refinement_success: SpecsRefinementSuccess
+    definitions_success: t.Dict[Definition, expression.ExpressionTypeCheckSuccess]
 
-    def message(self, padding=''):
-        return f'{padding}{Bcolors.OKBLUE}Type check success for module {self.module.name}!{Bcolors.ENDC}\n'
+    def message(self, padding=""):
+        return (
+            f"{padding}{Bcolors.OKBLUE}Type check success for module {self.module.name}!{Bcolors.ENDC}\n\n"
+            f"{self.specs_refinement_success}\n"
+        )
 
 
 def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, gtypes.SpecsEnv]:
@@ -218,7 +222,7 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, 
     duplicated_definitions = []
     gradual_specs = []
     for definition, specs_for_definition in specs_by_definitions_dict.items():
-        if len(specs_for_definition) == 0:
+        if len(specs_for_definition) == 0 and static:
             definitions_missing_spec.append(definition)
         elif len(specs_for_definition) > 1:
             duplicated_definitions.append(definition)
@@ -251,10 +255,18 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, 
             gradual_specs=gradual_specs,
         )
     else:
+
+        extended_module_specs = {
+            (spec.name, spec.arity): (spec.parameter_types, spec.return_type) for spec in module.specs
+        }
+        for definition in module.definitions:
+            if len(specs_by_definitions_dict[definition]) == 0:
+                extended_module_specs[(definition.name, definition.arity)] = (
+                    [gtypes.AnyType() for _ in range(definition.arity)],
+                    gtypes.AnyType(),
+                )
         # relation is: (name, arity) - at most one spec exist
-        return gtypes.SpecsEnv(
-            {(spec.name, spec.arity): (spec.parameter_types, spec.return_type) for spec in module.specs}
-        )
+        return gtypes.SpecsEnv(extended_module_specs)
 
 
 def refine_specs(module: Module, specs_env: gtypes.SpecsEnv) -> t.Union[SpecsRefinementSuccess, SpecsRefinementErrors]:
@@ -266,10 +278,7 @@ def refine_specs(module: Module, specs_env: gtypes.SpecsEnv) -> t.Union[SpecsRef
         parameters_match_type_errors = []
         parameters_match_type_results = []
         for i in range(len(definition.parameters)):
-            parameter_type = gtypes.AnyType()
-            if specs_env.get(definition_key):
-                parameter_types, _ = specs_env[definition_key]
-
+            parameter_type = specs_env[definition_key][0][i]
             parameters_match_type_result = pattern.pattern_match(
                 definition.parameters[i], parameter_type, gtypes.TypeEnv(), gtypes.TypeEnv()
             )
@@ -297,41 +306,52 @@ def refine_specs(module: Module, specs_env: gtypes.SpecsEnv) -> t.Union[SpecsRef
             refined_specs_env[(definition.name, definition.arity)] = (parameter_types, return_type)
             annotated_definitions.append((Spec(definition.name, parameter_types, return_type), definition))
         return SpecsRefinementSuccess(
-            module=AnnotatedModule(name=module.name, annotated_definitions=annotated_definitions),
+            module=module,
+            specs_env=specs_env,
             refined_specs_env=refined_specs_env,
             pattern_match_spec_success=refine_specs_results,
         )
 
 
-def type_check_annotated_module(module: AnnotatedModule) -> t.Union[TypeCheckErrors, TypeCheckSuccess]:
+def type_check_aux(specs_refinement_success: SpecsRefinementSuccess) -> t.Union[TypeCheckErrors, TypeCheckSuccess]:
+    module = specs_refinement_success.module
     definition_type_check_errors: t.Dict[
-        t.Tuple[str, int], t.Union[DefinitionReturnTypeError, DefinitionBodyTypeCheckError]
+        Definition, t.Union[DefinitionReturnTypeError, DefinitionBodyTypeCheckError]
     ] = {}
-    definition_type_check_results: t.Dict[t.Tuple[str, int], expression.ExpressionTypeCheckSuccess] = {}
+    definition_type_check_results: t.Dict[Definition, expression.ExpressionTypeCheckSuccess] = {}
 
-    for spec, definition in module.annotated_definitions:
-        definition_key = (definition.name, definition.arity)
-        body_type_check_result = expression.type_check(definition.body, gtypes.TypeEnv(), module.specs_env)
+    for definition in module.definitions:
+        spec = specs_refinement_success.specs_env[(definition.name, definition.arity)]
+        pattern_match_success_list = specs_refinement_success.pattern_match_spec_success[definition]
+        initial_env: t.Dict[str, gtypes.Type] = {}
+        for pattern_match_success in pattern_match_success_list:
+            initial_env = {**initial_env, **pattern_match_success.exported_env.env}
+        body_type_check_result = expression.type_check(
+            definition.body, gtypes.TypeEnv(initial_env), specs_refinement_success.specs_env
+        )
         if isinstance(body_type_check_result, expression.ExpressionTypeCheckError):
-            definition_type_check_errors[definition_key] = DefinitionBodyTypeCheckError(
-                definition=definition, error=body_type_check_result, spec=spec
+            definition_type_check_errors[definition] = DefinitionBodyTypeCheckError(
+                definition=definition,
+                env=gtypes.TypeEnv(initial_env),
+                specs_env=specs_refinement_success.refined_specs_env,
+                error=body_type_check_result,
             )
         else:
             body_type = body_type_check_result.type
-            if not gtypes.is_subtype(body_type_check_result.type, spec.return_type):
-                definition_type_check_errors[definition_key] = DefinitionReturnTypeError(
-                    definition=definition, body_type=body_type, return_type=body_type_check_result.type
+            if not gtypes.is_subtype(body_type_check_result.type, spec[1]):
+                definition_type_check_errors[definition] = DefinitionReturnTypeError(
+                    definition=definition, body_type=body_type, return_type=spec[1]
                 )
             else:
-                definition_type_check_results[(definition.name, definition.arity)] = body_type_check_result
+                definition_type_check_results[definition] = body_type_check_result
 
     if len(definition_type_check_errors.keys()) > 0:
         return TypeCheckErrors(module=module, errors=definition_type_check_errors)
     else:
-        return TypeCheckSuccess(module, module.specs_env, definition_type_check_results)
+        return TypeCheckSuccess(module, specs_refinement_success, definition_type_check_results)
 
 
-def type_check_module(
+def type_check(
     module: Module, static: bool
 ) -> t.Union[CollectResultErrors, SpecsRefinementErrors, TypeCheckErrors, TypeCheckSuccess]:
     collect_result = collect_specs(module, static)
@@ -342,5 +362,5 @@ def type_check_module(
     if isinstance(specs_refine_results, SpecsRefinementErrors):
         return specs_refine_results
 
-    type_check_result = type_check_annotated_module(specs_refine_results.module)
+    type_check_result = type_check_aux(specs_refine_results)
     return type_check_result

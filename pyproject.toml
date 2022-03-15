@@ -3,12 +3,13 @@
 line-length = 120
 
 [tool.mypy]
-files = 'src/gradualelixir/'
+files = "src/gradualelixir/"
 disallow_any_unimported = true
 ignore_missing_imports = true
 
 [tool.isort]
-known_third_party = 'gradualelixir'
+known_third_party = "gradualelixir"
+profile="black"
 
 [tool.poetry]
 name = "gradualelixir"
@@ -22,8 +23,8 @@ pygments-style-github = "^0.4"
 python-dotenv = "^0.19.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.0.1"
-mypy = "^0.931"
+pytest = "^7.1.0"
+mypy = "^0.941"
 black = "^22.1.0"
 isort = "^5.10.1"
 flake8 = "^4.0.1"
