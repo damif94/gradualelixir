@@ -1,6 +1,7 @@
 
 [tool.black]
 line-length = 120
+include = "src/gradualelixir"
 
 [tool.mypy]
 files = "src/gradualelixir/"
@@ -16,6 +17,19 @@ name = "gradualelixir"
 version = "0.1.0"
 description = "A gradual type checker with runtime checks for a mini elixir language"
 authors = ["damif94 <damianferencz@gmail.com>"]
+name = "flake8-markdown"
+license = "MIT"
+readme = "README.md"
+description = "Lints Python code blocks in Markdown files using flake8"
+authors = ["John Franey <johnfraney@gmail.com>"]
+homepage = "https://github.com/damif94/gradualelixir/"
+repository = "https://github.com/damif94/gradualelixir/"
+classifiers = [
+    "Environment :: Console",
+]
+include = [
+    "LICENSE",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"

@@ -70,7 +70,55 @@ def check_command(arguments):
     print(type_check_result.message())
 
 
-def annotate_command(arguments, casts: bool):
+def annotate_types_command(arguments):
+    if len(arguments) == 0:
+        raise SevereCommandError("no modality given for annotate")
+    if arguments[0] not in ["-static", "-gradual"]:
+        raise CommandError(f"{arguments[0]} is not a modality")
+    if len(arguments) == 1:
+        raise CommandError("no <filename> specified")
+    filename = arguments[1]
+
+    base_path = os.path.join(os.environ.get("WORKING_DIR", ""), "")
+    base_name, mime = filename.split(".")
+    with open(f"{base_path}{base_name}.{mime}", "r") as f:
+        code = "".join(f.readlines())
+
+    mod = to_internal_representation(code, syntactic_level=SyntacticLevel.module)
+    type_check_result = module.type_check(mod, static=False)
+    if isinstance(type_check_result, module.CollectResultErrors):
+        print(f"{Bcolors.OKBLUE}Definitions collection errors for module {mod.name}{Bcolors.ENDC}\n")
+        print(type_check_result)
+        return
+
+    if isinstance(type_check_result, module.SpecsRefinementErrors):
+        print(f"{Bcolors.OKBLUE}Definitions collection errors for module {mod.name}{Bcolors.ENDC}\n")
+        print(type_check_result)
+        return
+
+    if isinstance(type_check_result, module.TypeCheckErrors):
+        print(f"{Bcolors.OKBLUE}Type check errors for module {mod.name}{Bcolors.ENDC}\n")
+        print(type_check_result)
+        return
+
+    print(type_check_result.message())
+
+    annotated_code = str(cast.annotate_module(type_check_result, casts=True))
+    print(
+        f"{Bcolors.OKBLUE}An annotated version of {type_check_result.module.name} module was "
+        f"generated in {base_name}_cast.{mime}{Bcolors.ENDC}\n"
+    )
+    formatted_code = format_code(code)
+    formatted_annotated_code = format_code(annotated_code)
+
+    with open(f"{base_path}{base_name}.{mime}", "w") as f:
+        f.write(formatted_code)
+
+    with open(f"{base_path}{base_name}_cast.{mime}", "w") as f:
+        f.write(formatted_annotated_code)
+
+
+def annotate_casts_command(arguments):
     if len(arguments) == 0:
         raise CommandError("no <filename> specified")
     filename = arguments[0]
@@ -99,7 +147,7 @@ def annotate_command(arguments, casts: bool):
 
     print(type_check_result.message())
 
-    annotated_code = str(cast.annotate_module(type_check_result, casts))
+    annotated_code = str(cast.annotate_module(type_check_result, casts=True))
     print(
         f"{Bcolors.OKBLUE}An annotated version of {type_check_result.module.name} module was "
         f"generated in {base_name}_cast.{mime}{Bcolors.ENDC}\n"
@@ -169,9 +217,9 @@ def _main():
     elif command == "check":
         check_command(arguments)
     elif command == "annotate-types":
-        annotate_command(arguments, False)
+        annotate_types_command(arguments)
     elif command == "annotate-casts":
-        annotate_command(arguments, True)
+        annotate_casts_command(arguments)
     elif command == "run":
         run_command(arguments)
     elif command == "help":
