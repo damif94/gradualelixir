@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from gradualelixir.expression import (
+from ..expression import (
     AnonymizedFunctionExpression,
     AtomLiteralExpression,
     BaseExpressionTypeCheckError,
@@ -40,7 +40,7 @@ from gradualelixir.expression import (
     format_expression,
     type_check,
 )
-from gradualelixir.gtypes import (
+from ..gtypes import (
     AnyType,
     AtomLiteralType,
     AtomType,
@@ -57,7 +57,7 @@ from gradualelixir.gtypes import (
     TupleType,
     TypeEnv,
 )
-from gradualelixir.pattern import (
+from ..pattern import (
     AtomLiteralPattern,
     IdentPattern,
     IntegerPattern,
@@ -66,8 +66,7 @@ from gradualelixir.pattern import (
     TuplePattern,
     WildPattern,
 )
-from gradualelixir.utils import long_line
-
+from ..utils import long_line
 from . import TEST_ENV
 from .test_pattern import check_context_path as check_pattern_context_path
 
@@ -1620,6 +1619,6 @@ def test_cast():
         TypeEnv({"x": IntegerType(), "y": FloatType(), "b": BooleanType()}),
         SpecsEnv(),
     )
-    from gradualelixir.cast import annotate_expression
+    from ..cast import annotate_expression
 
     return print(format_expression(annotate_expression(result)))

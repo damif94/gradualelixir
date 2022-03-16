@@ -3,9 +3,9 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 
-from gradualelixir import gtypes, pattern
-from gradualelixir.exception import SyntaxRestrictionError
-from gradualelixir.utils import Bcolors, enumerate_list, ordinal
+from . import gtypes, pattern
+from .exception import SyntaxRestrictionError
+from .utils import Bcolors, enumerate_list, ordinal
 
 
 class UnaryOpEnum(Enum):
@@ -349,7 +349,7 @@ def format_expression(expression: Expression, padding="") -> str:
         needs_formatting = True
 
     if needs_formatting:  # is multiline
-        from gradualelixir.elixir_port import format_code
+        from .elixir_port import format_code
 
         msg = format_code(str(expression))
         return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])

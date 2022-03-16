@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from gradualelixir.gtypes import (
+from ..gtypes import (
     AnyType,
     AtomLiteralType,
     AtomType,
@@ -16,7 +16,7 @@ from gradualelixir.gtypes import (
     TupleType,
     TypeEnv,
 )
-from gradualelixir.pattern import (
+from ..pattern import (
     AtomLiteralPattern,
     BasePatternMatchError,
     ElistPattern,
@@ -37,8 +37,8 @@ from gradualelixir.pattern import (
     WildPattern,
     pattern_match,
 )
-from gradualelixir.tests import TEST_ENV
-from gradualelixir.utils import long_line
+from ..tests import TEST_ENV
+from ..utils import long_line
 
 integer = "integer"
 float = "float"

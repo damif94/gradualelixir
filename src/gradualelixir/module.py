@@ -1,8 +1,8 @@
 import typing as t
 from dataclasses import dataclass
 
-from gradualelixir import expression, gtypes, pattern
-from gradualelixir.utils import Bcolors, ordinal
+from . import expression, gtypes, pattern
+from .utils import Bcolors, ordinal
 
 
 @dataclass
@@ -64,7 +64,7 @@ class DefinitionBodyTypeCheckError:
     error: expression.ExpressionTypeCheckError
 
     def message(self, padding=""):
-        from gradualelixir.elixir_port import format_code
+        from ..elixir_port import format_code
 
         spec = self.specs_env[(self.definition.name, self.definition.arity)]
         msg = f"\n    {Spec(name=self.definition.name, parameter_types=spec[0], return_type=spec[1])}\n"

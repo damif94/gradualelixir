@@ -5,8 +5,8 @@ import subprocess
 from collections import OrderedDict
 from typing import Any
 
-from gradualelixir import expression, gtypes, module, pattern
-from gradualelixir.exception import ElixirProcessError
+from . import expression, gtypes, module, pattern
+from .exception import ElixirProcessError
 
 project_path = os.environ["PROJECT_PATH"]
 

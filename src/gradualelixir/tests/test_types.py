@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from gradualelixir import gtypes, utils
+from . import gtypes, utils
 
 integer = "integer"
 float = "float"

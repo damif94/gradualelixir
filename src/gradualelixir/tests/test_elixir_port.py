@@ -1,8 +1,7 @@
 import os
 from collections import OrderedDict
 
-from gradualelixir import elixir_port
-from gradualelixir.expression import (
+from ..expression import (
     AnonymizedFunctionExpression,
     AtomLiteralExpression,
     BinaryOpEnum,
@@ -25,7 +24,7 @@ from gradualelixir.expression import (
     UnaryOpExpression,
     VarCallExpression,
 )
-from gradualelixir.gtypes import (
+from ..gtypes import (
     AtomLiteralType,
     AtomType,
     ElistType,
@@ -38,8 +37,8 @@ from gradualelixir.gtypes import (
     NumberType,
     TupleType,
 )
-from gradualelixir.module import Spec
-from gradualelixir.pattern import (
+from ..module import Spec
+from ..pattern import (
     AtomLiteralPattern,
     ElistPattern,
     FloatPattern,
@@ -51,6 +50,7 @@ from gradualelixir.pattern import (
     TuplePattern,
     WildPattern,
 )
+from . import elixir_port
 
 project_path = os.environ["PROJECT_PATH"]
 

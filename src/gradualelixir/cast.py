@@ -1,7 +1,7 @@
 import typing as t
 from dataclasses import dataclass
 
-from gradualelixir import expression, gtypes, module, pattern
+from . import expression, gtypes, module, pattern
 
 
 @dataclass
@@ -70,10 +70,20 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         if kwargs.get("skip_ident"):
             return expr
         return AnnotatedExpression(expr, type_derivation.type)
+    if isinstance(expr, expression.TupleExpression):
+        return AnnotatedExpression(
+            expression=expression.TupleExpression(
+                items=[
+                    annotate_expression(type_derivation.children["items"][i], skip_ident=True)
+                    for i in range(len(expr.items))
+                ]
+            ),
+            type=type_derivation.type,
+        )
     if isinstance(expr, expression.UnaryOpExpression):
         annotated_argument = annotate_expression(type_derivation.children["argument"], skip_ident=True)
         return AnnotatedExpression(
-            expression.UnaryOpExpression(
+            expression=expression.UnaryOpExpression(
                 op=expr.op, argument=AnnotatedExpression(annotated_argument, type_derivation.children["argument"].type)
             ),
             type=type_derivation.type,
@@ -82,7 +92,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         annotated_left = annotate_expression(type_derivation.children["left"], skip_ident=True)
         annotated_right = annotate_expression(type_derivation.children["right"], skip_ident=True)
         return AnnotatedExpression(
-            expression.BinaryOpExpression(
+            expression=expression.BinaryOpExpression(
                 op=expr.op,
                 left=AnnotatedExpression(annotated_left, type_derivation.children["left"].type),
                 right=AnnotatedExpression(annotated_right, type_derivation.children["right"].type),
@@ -199,7 +209,7 @@ def annotate_module(type_derivation: module.TypeCheckSuccess, casts: bool) -> An
             parameter_types=specs_env[(definition.name, definition.arity)][0],
             return_type=specs_env[(definition.name, definition.arity)][1],
         )
-        if casts:
+        if not casts:
             annotated_body = annotate_expression(body_derivation)
             if (
                 not isinstance(annotated_body, AnnotatedExpression)
