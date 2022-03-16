@@ -17,11 +17,8 @@ name = "gradualelixir"
 version = "0.1.0"
 description = "A gradual type checker with runtime checks for a mini elixir language"
 authors = ["damif94 <damianferencz@gmail.com>"]
-name = "flake8-markdown"
 license = "MIT"
 readme = "README.md"
-description = "Lints Python code blocks in Markdown files using flake8"
-authors = ["John Franey <johnfraney@gmail.com>"]
 homepage = "https://github.com/damif94/gradualelixir/"
 repository = "https://github.com/damif94/gradualelixir/"
 classifiers = [
@@ -29,6 +26,10 @@ classifiers = [
 ]
 include = [
     "LICENSE",
+    ".env",
+    "elixir_port/elixir_port",
+    "elixir_port/lib/*",
+    "elixir_port/mix.exs"
 ]
 
 [tool.poetry.dependencies]
@@ -45,7 +46,7 @@ flake8 = "^4.0.1"
 Pygments = "^2.11.2"
 
 [tool.poetry.scripts]
-gradualelixir = "src.gradualelixir.cli:main"
+gradualelixir = "gradualelixir.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
