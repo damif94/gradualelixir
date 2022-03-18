@@ -1,4 +1,4 @@
-module Demo do
+defmodule Demo do
   @spec foo_cond(integer, any, any) :: integer
 
   def foo_cond(x, y, b) do
@@ -9,3 +9,5 @@ module Demo do
   end
 end
 
+[x, {y, z}] | {integer, any}  ~> {integer, float}
+{x | integer ~> integer, {y, z}| {integer, any}  ~> {integer, float}}

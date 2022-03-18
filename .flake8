@@ -3,4 +3,4 @@ max-line-length = 88
 extend-ignore = E203
 ignore = E501,W503
 per-file-ignores=
-    src/gradualelixir/tests/test_jsonparser.py:W291
+    src/gradualelixir/tests/test_elixir_port.py:W291

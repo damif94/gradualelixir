@@ -6,7 +6,7 @@ from collections import OrderedDict
 from typing import Any
 
 from gradualelixir import expression, gtypes, module, pattern
-from gradualelixir.exception import ElixirProcessError
+from .exception import ElixirProcessError
 
 project_path = os.environ["PROJECT_PATH"]
 
@@ -266,7 +266,9 @@ def parse_expression(j) -> expression.Expression:
                     arg_expression = SyntacticLevel.expression.parse(node)
                     args.append(arg_expression)
                 return expression.VarCallExpression(function_name, args)
-            elif children_nodes is not None:
+            elif children_nodes is not None and isinstance(meta, dict) and 'line' in meta:
+                # isinstance(meta, dict) and 'line' in meta -> patch to "escape" three
+                # element lists from entering this clause.
                 args = []
                 for node in children_nodes:
                     arg_expression = SyntacticLevel.expression.parse(node)

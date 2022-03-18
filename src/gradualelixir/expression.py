@@ -202,9 +202,12 @@ class ListExpression(Expression):
 
     def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
         if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
-            raise SyntaxRestrictionError(
-                "List pattern's tail should be either a List Expression or an Elist Expression"
-            )
+            # this extra import will be avoided once AnnotatedExpression is declared inside this module
+            from gradualelixir.cast import AnnotatedExpression
+            if not isinstance(tail, AnnotatedExpression):
+                raise SyntaxRestrictionError(
+                    "List pattern's tail should be either a List Expression or an Elist Expression"
+                )
         self.head = head
         self.tail = tail
 
@@ -290,12 +293,11 @@ class SeqExpression(Expression):
 
 
 @dataclass
-class CaseExpression(Expression):
-    test: Expression
-    clauses: t.List[t.Tuple[pattern.Pattern, Expression]]
+class CondExpression(Expression):
+    clauses: t.List[t.Tuple[Expression, Expression]]
 
     def __str__(self):
-        res = f"case {self.test} do\n"
+        res = "cond do\n"
         for clause in self.clauses:
             res += f"{clause[0]} -> {clause[1]}\n"
         res += "end"
@@ -303,11 +305,12 @@ class CaseExpression(Expression):
 
 
 @dataclass
-class CondExpression(Expression):
-    clauses: t.List[t.Tuple[Expression, Expression]]
+class CaseExpression(Expression):
+    test: Expression
+    clauses: t.List[t.Tuple[pattern.Pattern, Expression]]
 
     def __str__(self):
-        res = "cond do\n"
+        res = f"case {self.test} do\n"
         for clause in self.clauses:
             res += f"{clause[0]} -> {clause[1]}\n"
         res += "end"
@@ -349,7 +352,7 @@ def format_expression(expression: Expression, padding="") -> str:
         needs_formatting = True
 
     if needs_formatting:  # is multiline
-        from gradualelixir.elixir_port import format_code
+        from .elixir_port import format_code
 
         msg = format_code(str(expression))
         return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])
