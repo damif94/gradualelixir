@@ -91,7 +91,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         return AnnotatedExpression(
             expression=expression.ListExpression(
                 head=annotate_expression(type_derivation.children["head"]),
-                tail=annotate_expression(type_derivation.children["tail"])
+                tail=annotate_expression(type_derivation.children["tail"]),
             ),
             type=type_derivation.type,
         )
@@ -109,10 +109,12 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         keys_with_positions = [(k, list(expr.map.keys()).index(k)) for k in expr.map.keys()]
         return AnnotatedExpression(
             expression=expression.MapExpression(
-                map=expression.OrderedDict({
-                    k: annotate_expression(type_derivation.children["map"][pos], skip_ident=True)
-                    for k, pos in keys_with_positions
-                })
+                map=expression.OrderedDict(
+                    {
+                        k: annotate_expression(type_derivation.children["map"][pos], skip_ident=True)
+                        for k, pos in keys_with_positions
+                    }
+                )
             ),
             type=type_derivation.type,
         )
@@ -128,11 +130,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         annotated_left = annotate_expression(type_derivation.children["left"], skip_ident=True)
         annotated_right = annotate_expression(type_derivation.children["right"], skip_ident=True)
         return AnnotatedExpression(
-            expression=expression.BinaryOpExpression(
-                op=expr.op,
-                left=annotated_left,
-                right=annotated_right
-            ),
+            expression=expression.BinaryOpExpression(op=expr.op, left=annotated_left, right=annotated_right),
             type=type_derivation.type,
         )
     if isinstance(expr, expression.PatternMatchExpression):
@@ -179,9 +177,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             expression=expression.CaseExpression(annotated_test, annotated_case_clauses), type=type_derivation.type
         )
     if isinstance(expr, expression.AnonymizedFunctionExpression):
-        return AnnotatedExpression(
-            expression=expr, type=type_derivation.type
-        )
+        return AnnotatedExpression(expression=expr, type=type_derivation.type)
     if isinstance(expr, expression.FunctionCallExpression):
         annotated_arguments = []
         for argument_type_derivation in type_derivation.children["arguments"]:
@@ -191,7 +187,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             expression=expression.FunctionCallExpression(
                 function_name=expr.function_name, arguments=annotated_arguments
             ),
-            type=type_derivation.type
+            type=type_derivation.type,
         )
     if isinstance(expr, expression.VarCallExpression):
         annotated_arguments = []
@@ -202,10 +198,8 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         signature = type_derivation.env[expr.ident]
         assert isinstance(signature, gtypes.FunctionType)
         return AnnotatedExpression(
-            expression=expression.VarCallExpression(
-                ident=expr.ident, arguments=annotated_arguments
-            ),
-            type=type_derivation.type
+            expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
+            type=type_derivation.type,
         )
     else:
         return expr
@@ -221,24 +215,19 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
         return expr
     if isinstance(expr, expression.ListExpression):
         return expression.ListExpression(
-            head=CastAnnotatedExpression(
-                expr.head, type_derivation.children["head"].type, type_derivation.type
-            ),
-            tail=CastAnnotatedExpression(
-                expr.tail, type_derivation.children["tail"].type, type_derivation.type
-            ),
+            head=CastAnnotatedExpression(expr.head, type_derivation.children["head"].type, type_derivation.type),
+            tail=CastAnnotatedExpression(expr.tail, type_derivation.children["tail"].type, type_derivation.type),
         )
     if isinstance(expr, expression.TupleExpression):
-        return expression.TupleExpression([
-            cast_annotate_expression(type_derivation.children["items"][i]) for i in range(len(expr.items))
-        ])
+        return expression.TupleExpression(
+            [cast_annotate_expression(type_derivation.children["items"][i]) for i in range(len(expr.items))]
+        )
     if isinstance(expr, expression.MapExpression):
         keys_with_positions = [(k, list(expr.map.keys()).index(k)) for k in expr.map.keys()]
         return expression.MapExpression(
-            map=expression.OrderedDict({
-                k: cast_annotate_expression(type_derivation.children["map"][pos])
-                for k, pos in keys_with_positions
-            })
+            map=expression.OrderedDict(
+                {k: cast_annotate_expression(type_derivation.children["map"][pos]) for k, pos in keys_with_positions}
+            )
         )
     if isinstance(expr, expression.BinaryOpExpression):
         annotated_left = cast_annotate_expression(type_derivation.children["left"])
@@ -283,14 +272,14 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             annotated_argument = CastAnnotatedExpression(
                 expression=cast_annotate_expression(argument_type_derivation),
                 left_type=argument_type_derivation.type,
-                right_type=type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i]
+                right_type=type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i],
             )
             annotated_arguments.append(annotated_argument)
         return AnnotatedExpression(
             expression=expression.FunctionCallExpression(
                 function_name=expr.function_name, arguments=annotated_arguments
             ),
-            type=type_derivation.type
+            type=type_derivation.type,
         )
     if isinstance(expr, expression.VarCallExpression):
         annotated_arguments = []
@@ -299,7 +288,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             annotated_argument = CastAnnotatedExpression(
                 expression=cast_annotate_expression(argument_type_derivation),
                 left_type=argument_type_derivation.type,
-                right_type=type_derivation.specs_env[(expr.ident, len(expr.arguments))][0][i]
+                right_type=type_derivation.specs_env[(expr.ident, len(expr.arguments))][0][i],
             )
             annotated_arguments.append(annotated_argument)
 
@@ -311,9 +300,9 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             expression=CastAnnotatedVarCallExpression(
                 expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
                 ident_left_type=type_derivation.env[expr.ident],
-                ident_right_type=ident_right_type
+                ident_right_type=ident_right_type,
             ),
-            type=type_derivation.type
+            type=type_derivation.type,
         )
     else:
         return expr

@@ -204,6 +204,7 @@ class ListExpression(Expression):
         if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
             # this extra import will be avoided once AnnotatedExpression is declared inside this module
             from gradualelixir.cast import AnnotatedExpression
+
             if not isinstance(tail, AnnotatedExpression):
                 raise SyntaxRestrictionError(
                     "List pattern's tail should be either a List Expression or an Elist Expression"

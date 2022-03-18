@@ -1,8 +1,13 @@
 import os
 import sys
+
 from dotenv import find_dotenv, set_key
 from gradualelixir import cast, module
-from gradualelixir.elixir_port import SyntacticLevel, format_code, to_internal_representation
+from gradualelixir.elixir_port import (
+    SyntacticLevel,
+    format_code,
+    to_internal_representation,
+)
 from gradualelixir.exception import CommandError, SevereCommandError
 from gradualelixir.utils import Bcolors
 from pygments import highlight
