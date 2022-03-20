@@ -143,9 +143,7 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
         # TODO[personal] PR walrus operator type inference mypy
         annotated_condition = annotate_expression(type_derivation.children["condition"])
         annotated_if_clause = annotate_expression(type_derivation.children["if_clause"])
-        annotated_else_clause = None
-        if expr.else_clause:
-            annotated_else_clause = annotate_expression(type_derivation.children["else_clause"])
+        annotated_else_clause = annotate_expression(type_derivation.children["else_clause"])
         return AnnotatedExpression(
             expression=expression.IfElseExpression(
                 condition=annotated_condition,
@@ -242,9 +240,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
     if isinstance(expr, expression.IfElseExpression):
         annotated_condition = cast_annotate_expression(type_derivation.children["condition"])
         annotated_if_clause = cast_annotate_expression(type_derivation.children["if_clause"])
-        annotated_else_clause = None
-        if expr.else_clause:
-            annotated_else_clause = annotate_expression(type_derivation.children["else_clause"])
+        annotated_else_clause = annotate_expression(type_derivation.children["else_clause"])
         return expression.IfElseExpression(
             condition=annotated_condition,
             if_clause=annotated_if_clause,
@@ -266,7 +262,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
     if isinstance(expr, expression.AnonymizedFunctionExpression):
         return expr
     if isinstance(expr, expression.FunctionCallExpression):
-        annotated_arguments = []
+        annotated_arguments: t.List[expression.Expression] = []
         for i in range(len(expr.arguments)):
             argument_type_derivation = type_derivation.children["arguments"][i]
             annotated_argument = CastAnnotatedExpression(
@@ -275,11 +271,8 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
                 right_type=type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i],
             )
             annotated_arguments.append(annotated_argument)
-        return AnnotatedExpression(
-            expression=expression.FunctionCallExpression(
-                function_name=expr.function_name, arguments=annotated_arguments
-            ),
-            type=type_derivation.type,
+        return expression.FunctionCallExpression(
+            function_name=expr.function_name, arguments=annotated_arguments
         )
     if isinstance(expr, expression.VarCallExpression):
         annotated_arguments = []

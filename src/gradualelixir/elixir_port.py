@@ -6,7 +6,7 @@ from collections import OrderedDict
 from typing import Any
 
 from gradualelixir import expression, gtypes, module, pattern
-from gradualelixir.exception import ElixirProcessError
+from gradualelixir.exception import ElixirProcessError, ElixirParseError
 
 project_path = os.environ["PROJECT_PATH"]
 
@@ -46,20 +46,28 @@ class SyntacticLevel(enum.Enum):
     module = "module"
 
     def parse(self, j) -> Any:
-        if self is SyntacticLevel.key:
-            return parse_key(j)
-        elif self is SyntacticLevel.type:
-            return parse_type(j)
-        elif self is SyntacticLevel.pattern:
-            return parse_pattern(j)
-        elif self is SyntacticLevel.expression:
-            return parse_expression(j)
-        elif self is SyntacticLevel.definition:
-            return parse_definition(j)
-        elif self is SyntacticLevel.spec:
-            return parse_spec(j)
-        elif self is SyntacticLevel.module:
-            return parse_module(j)
+        try:
+            if self is SyntacticLevel.key:
+                return parse_key(j)
+            elif self is SyntacticLevel.type:
+                return parse_type(j)
+            elif self is SyntacticLevel.pattern:
+                return parse_pattern(j)
+            elif self is SyntacticLevel.expression:
+                return parse_expression(j)
+            elif self is SyntacticLevel.definition:
+                return parse_definition(j)
+            elif self is SyntacticLevel.spec:
+                return parse_spec(j)
+            elif self is SyntacticLevel.module:
+                return parse_module(j)
+        except ElixirParseError as exc:
+            raise exc
+        except Exception as exc:
+            raise ElixirParseError(
+                f"Error when trying to parse the following elixir ast as a "
+                f"mini elixir {self.value}:\n {j}"
+            ) from exc
 
 
 def parse_key(j) -> gtypes.MapKey:
@@ -211,9 +219,7 @@ def parse_expression(j) -> expression.Expression:
                 cond_node, do_node = children_nodes
                 cond_expr = SyntacticLevel.expression.parse(cond_node)
                 if_expr = SyntacticLevel.expression.parse(do_node["do"])
-                else_expr = None
-                if "else" in do_node:
-                    else_expr = SyntacticLevel.expression.parse(do_node["else"])
+                else_expr = SyntacticLevel.expression.parse(do_node["else"])
                 return expression.IfElseExpression(cond_expr, if_expr, else_expr)
             elif op == "case":
                 case_node, clause_nodes = children_nodes

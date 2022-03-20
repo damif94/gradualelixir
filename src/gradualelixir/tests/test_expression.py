@@ -1615,11 +1615,8 @@ def test_anon():
 
 
 def test_cast():
-    result = type_check(
+    type_check(
         IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
         TypeEnv({"x": IntegerType(), "y": FloatType(), "b": BooleanType()}),
         SpecsEnv(),
     )
-    from gradualelixir.cast import annotate_expression
-
-    return print(format_expression(annotate_expression(result)))

@@ -96,8 +96,15 @@ class ListPattern(Pattern):
     tail: Pattern
 
     def __init__(self, head, tail):
-        if not (isinstance(tail, ListPattern) or isinstance(tail, ElistPattern) or isinstance(tail, WildPattern)):
-            raise SyntaxRestrictionError("List pattern's tail should be either a List Pattern or an Elist Pattern")
+        if not any(
+            [
+                isinstance(tail, ListPattern),
+                isinstance(tail, ElistPattern),
+                isinstance(tail, WildPattern),
+                isinstance(tail, IdentPattern)
+            ]
+        ):
+            raise SyntaxRestrictionError("List pattern's tail is not valid")
         self.head = head
         self.tail = tail
 

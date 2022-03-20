@@ -6,6 +6,10 @@ class ElixirProcessError(Exception):
     pass
 
 
+class ElixirParseError(Exception):
+    pass
+
+
 class CommandError(Exception):
     pass
 

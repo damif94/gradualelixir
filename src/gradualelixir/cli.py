@@ -197,7 +197,7 @@ def run_command(arguments):
     mix_project_path = os.path.join(os.environ.get("PROJECT_PATH", ""), "elixir_port")
     shutil.copy(filename, os.path.join(mix_project_path, ".iex.exs"))
     os.chdir(mix_project_path)
-    pty.spawn(["iex", "-S", "mix"])
+    pty.spawn(["iex", "--erl", "-kernel shell_history enabled", "-S", "mix"])
     os.remove(".iex.exs")
 
 
@@ -239,6 +239,8 @@ def main():
     except SevereCommandError as ce:
         print(f"\n{ce.args[0]}\n")
         help_command()
+    except Exception as e:
+        print(str(e))
 
 
 if __name__ == "__main__":

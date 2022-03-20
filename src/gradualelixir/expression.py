@@ -45,7 +45,14 @@ class BinaryOpEnum(Enum):
     integer_reminder = "rem"
     maximum = "max"
     minimum = "min"
-    equality = "==="
+    equality = "=="
+    inequality = "!="
+    lower = "<"
+    lower_or_equal = "<="
+    greater = ">"
+    greater_or_equal = ">="
+    identity = "==="
+    inidentity = "!=="
 
     @property
     def is_infix(self) -> bool:
@@ -118,15 +125,28 @@ class BinaryOpEnum(Enum):
                 (gtypes.FloatType(), gtypes.FloatType(), gtypes.FloatType()),
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType()),
             ]
-        else:
-            assert self is BinaryOpEnum.equality
+        elif self in [
+            BinaryOpEnum.equality,
+            BinaryOpEnum.inequality,
+            BinaryOpEnum.lower,
+            BinaryOpEnum.lower_or_equal,
+            BinaryOpEnum.greater,
+            BinaryOpEnum.greater_or_equal
+        ]:
+            # TODO if we had term type this could be improved
+            #  (gtypes.TermType(), gtypes.TermType(), gtypes.BooleanType())
             return [
-                # TODO[improvements] improve so that
-                #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=x), gtypes.BooleanType)
+                (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
+                (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
+            ]
+        else:
+            assert self is BinaryOpEnum.identity
+            # TODO[improvements] improve so that if x!= y
+            #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=y)) raises error
+            return [
                 (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
                 (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.BooleanType()),
                 (gtypes.FloatType(), gtypes.FloatType(), gtypes.BooleanType()),
-                (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
             ]
 
 
@@ -201,7 +221,13 @@ class ListExpression(Expression):
     tail: t.Union["ListExpression", Expression]
 
     def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
-        if not (isinstance(tail, ListExpression) or isinstance(tail, ElistExpression)):
+        if not any(
+            [
+                isinstance(tail, ListExpression),
+                isinstance(tail, ElistExpression),
+                isinstance(tail, IdentExpression)
+            ]
+        ):
             # this extra import will be avoided once AnnotatedExpression is declared inside this module
             from gradualelixir.cast import AnnotatedExpression
 
@@ -272,16 +298,16 @@ class PatternMatchExpression(Expression):
 class IfElseExpression(Expression):
     condition: Expression
     if_clause: Expression
-    else_clause: t.Optional[Expression]
+    else_clause: Expression
 
     def __str__(self):
-        res = f"if {self.condition} do\n"
-        res += f"{self.if_clause}\n"
-        if self.else_clause:
-            res += "else\n"
-            res += f"{self.else_clause}\n"
-        res += "end"
-        return res
+        return (
+            f"if {self.condition} do\n"
+            f"  {self.if_clause}\n"
+            f"else\n"
+            f"{self.else_clause}\n"
+            f"end"
+        )
 
 
 @dataclass
