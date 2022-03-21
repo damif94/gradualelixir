@@ -85,13 +85,13 @@ defmodule Cast do
         {:list, :any}
 
       {:tuple, type_list} ->
-        {:tuple, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end)}
+        {:tuple, (0..(length(type_list) - 1)//1) |> Enum.map(fn _ -> :any end)}
 
       {:map, type_map} ->
         {:map, Enum.into(Enum.map(type_map, fn {k, _} -> {k, :any} end), %{})}
 
       {:fun, type_list, _} ->
-        {:fun, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end), :any}
+        {:fun, (0..(length(type_list) - 1)//1) |> Enum.map(fn _ -> :any end), :any}
     end
   end
 
@@ -253,7 +253,6 @@ defmodule Cast do
 end
 
 defmodule UseCast do
-  require Inspects
 
   defmacro __using__(_opts) do
     quote do
