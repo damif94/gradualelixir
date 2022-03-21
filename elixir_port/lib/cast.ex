@@ -3,69 +3,47 @@ defmodule Cast do
 
   defmodule BadArgumentError do
     defexception message: "Cast function couldn't process this argument tuple",
+                 value: nil,
                  left_type: nil,
                  right_type: nil
 
-    def new(%{left_type: left_type, right_type: right_type} = params) do
-      case params do
-        _ when is_nil(left_type) or is_nil(right_type) ->
-          struct(BadArgumentError, params)
+    def new(%{reason: reason, value: value, left_type: left_type, right_type: right_type} = params) do
+      message =
+        case reason do
+          "type_error" ->
+            "#{inspect(value)} is not of type #{inspect(left_type)}"
 
-        _ ->
-          message =
-            "Cast between #{inspect(left_type)} and #{inspect(right_type)} is forbidden because they are not consistent"
+          "inconsistent_types" ->
+            "#{inspect(left_type)} is not consistent with #{inspect(right_type)}"
+        end
 
-          struct(BadArgumentError, Map.put(params, :message, message))
-      end
+      message =
+        "Cast #{inspect(value)} from #{inspect(left_type)} into #{inspect(right_type)} is forbidden:\n #{message}"
+
+      struct(BadArgumentError, Map.put(params, :message, message))
     end
   end
 
   defmodule CastError do
-    defexception message: "Cast error", expression: nil, type: nil
+    defexception message: "Cast error", expression: nil, left_type: nil, right_type: nil
 
-    def new(%{expression: expression, type: type} = params) do
-      case params do
-        _ when is_nil(expression) or is_nil(type) ->
-          struct(CastError, params)
+    def new(%{value: value, left_type: left_type, right_type: right_type} = params) do
+      message =
+        "Couldn't cast #{inspect(value)} from type #{inspect(left_type)} into #{inspect(right_type)}"
 
-        _ ->
-          message = "Couldn't cast #{inspect(expression)} into #{inspect(type)}"
-          struct(CastError, Map.put(params, :message, message))
-      end
+      struct(CastError, Map.put(params, :message, message))
     end
   end
 
-  defguard is_base(type) when is_atom(type) and type != :any
+  defguard is_base(type)
+           when (is_atom(type) and type != :any) or
+                  (tuple_size(type) == 2 and elem(type, 0) == :atom and is_atom(elem(type, 1)))
 
   defguard is_base_value(value)
            when is_atom(value) or is_boolean(value) or is_integer(value) or is_float(value)
 
-  def build_value_from_ast(value_ast) do
-    case value_ast do
-      value when is_base_value(value) ->
-        value
-
-      {value_ast_1, value_ast_2} ->
-        {:tuple, [build_value_from_ast(value_ast_1), build_value_from_ast(value_ast_2)]}
-
-      {:{}, _, value_list_ast} ->
-        {:tuple, Enum.map(value_list_ast, &build_value_from_ast/1)}
-
-      [{:->, _, [value_list_ast, value_ast]}] ->
-        {:fun, Enum.map(value_list_ast, &build_value_from_ast/1), build_value_from_ast(value_ast)}
-
-      {item, _, _} when is_atom(item) ->
-        item
-
-      [] ->
-        :elist
-
-      _ when is_list(value_ast) ->
-        {:list, Enum.map(value_ast, &build_value_from_ast/1)}
-    end
-  end
-
   def build_type_from_ast(type_ast) do
+    #    IO.inspect(type_ast)
     case type_ast do
       {type_ast_1, type_ast_2} ->
         {:tuple, [build_type_from_ast(type_ast_1), build_type_from_ast(type_ast_2)]}
@@ -76,158 +54,235 @@ defmodule Cast do
       [{:->, _, [type_list_ast, type_ast]}] ->
         {:fun, Enum.map(type_list_ast, &build_type_from_ast/1), build_type_from_ast(type_ast)}
 
-      {item, _, _} when is_atom(item) ->
-        item
-
       [] ->
         :elist
 
-      _ when is_list(type_ast) ->
-        {:list, Enum.map(type_ast, &build_type_from_ast/1)}
+      _ when is_list(type_ast) and length(type_ast) == 1 ->
+        [item] = type_ast
+        {:list, build_type_from_ast(item)}
+
+      {:%{}, _, key_type_list} ->
+        aux = Enum.map(key_type_list, fn {key, type} -> {key, build_type_from_ast(type)} end)
+        {:map, Enum.into(aux, %{})}
+
+      {item, _, _} when is_atom(item) ->
+        item
+
+      item when is_atom(item) ->
+        {:atom, item}
     end
   end
 
   def ground(type) do
     case type do
-      _ when is_base(type) -> type
-      :elist -> :elist
-      {:list, type} -> {:list, :any}
-      {:tuple, type_list} -> {:tuple, 1..length(type_list) |> Enum.map(fn _ -> :any end)}
-      {:map, type_map} -> {:map, Enum.into(Enum.map(type_map, fn {k, _} -> {k, :any} end), %{})}
-      {:fun, type_list, type} -> {:fun, 1..length(type_list) |> Enum.map(fn _ -> :any end), :any}
+      _ when is_base(type) ->
+        type
+
+      :elist ->
+        :elist
+
+      {:list, _} ->
+        {:list, :any}
+
+      {:tuple, type_list} ->
+        {:tuple, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end)}
+
+      {:map, type_map} ->
+        {:map, Enum.into(Enum.map(type_map, fn {k, _} -> {k, :any} end), %{})}
+
+      {:fun, type_list, _} ->
+        {:fun, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end), :any}
     end
   end
 
-  def raise_on_bad_argument_errors(left_type, right_type) do
-    #    IO.inspect(left_type)
-    #    IO.inspect(right_type)
-    case {left_type, right_type} do
-      {type, type} when is_base(type) ->
-        nil
-
-      {type, :any} when is_base(type) ->
-        nil
-
-      {left_type, right_type} when is_base(left_type) and is_base(right_type) ->
-        raise BadArgumentError.new(%{left_type: left_type, right_type: right_type})
-
-      {{:tuple, right_type_list}, {:tuple, left_type_list}} ->
-        Enum.reduce(Enum.zip(right_type_list, left_type_list), fn {left_type, right_type} ->
-          raise_on_bad_argument_errors(left_type, right_type)
-        end)
-
-      _ ->
-        raise BadArgumentError.new(%{left_type: left_type, right_type: right_type})
+  def is_base_type_valid_for_base_value(value, type) do
+    case {value, type} do
+      {atom, {:atom, a}} -> is_atom(value) and atom === a
+      {_, :atom} -> is_atom(value)
+      {_, false} -> is_boolean(value) and value
+      {_, true} -> is_boolean(value) and value
+      {_, :boolean} -> is_boolean(value)
+      {_, :integer} -> is_integer(value)
+      {_, :float} -> is_float(value)
+      {_, :number} -> is_integer(value) or is_float(value)
     end
   end
 
-  def cast(expr, left_type, right_type) do
-    case {expr, left_type, right_type} do
-      {_, :any, :any} ->
-        expr
+  def cast(value, left_type, right_type) do
+    #    IO.inspect({value, left_type, right_type})
+    result =
+      case {value, left_type, right_type} do
+        {_, :any, :any} ->
+          value
 
-      {_, type, :any} ->
-        cast(expr, type, ground(type))
+        {_, type, :any} ->
+          cast(value, type, ground(type))
 
-      {_, :any, type} ->
-        cast(expr, ground(type), type)
+        {_, :any, type} ->
+          cast(value, ground(type), type)
 
-      {_, type, type} when is_base(type) ->
-        case {expr, type} do
-          {_, :atom} when is_atom(expr) -> expr
-          {_, :boolean} when is_boolean(expr) -> expr
-          {_, :integer} when is_integer(expr) -> expr
-          {_, :float} when is_float(expr) -> expr
-          _ -> raise CastError.new(%{expression: expr, type: right_type})
-        end
+        _ when is_base(left_type) and is_base(right_type) ->
+          if not is_base_type_valid_for_base_value(value, left_type) do
+            :bad_argument_error
+          else
+            if not is_base_type_valid_for_base_value(value, right_type) do
+              :cast_error
+            else
+              value
+            end
+          end
 
-      {[], :elist, :elist} ->
-        {:list, []}
+        {[], :elist, :elist} ->
+          {:list, []}
 
-      {expr, {:list, left_type}, {:list, right_type}} when is_list(expr) ->
-        {:list, Enum.map(expr, fn expr -> cast(expr, left_type, right_type) end)}
+        {value, {:list, left_type}, {:list, right_type}} ->
+          if not is_list(value) do
+            :bad_argument_error
+          else
+            {:list, Enum.map(value, fn val -> cast(val, left_type, right_type) end)}
+          end
 
-      {expr, {:tuple, left_type_list}, {:tuple, right_type_list}} when is_tuple(expr) ->
-        List.to_tuple(
-          Enum.map(
-            Enum.zip([Tuple.to_list(expr), left_type_list, right_type_list]),
-            fn {expr, left_type, right_type} -> cast(expr, left_type, right_type) end
-          )
-        )
+        {value, {:tuple, left_type_list}, {:tuple, right_type_list}} ->
+          is_left_type_ok = is_tuple(value) and tuple_size(value) == length(left_type_list)
+          left_right_ground_types_consistent = length(left_type_list) == length(right_type_list)
 
-      {f, {:fun, [left_arg_type], left_ret_type}, {:fun, [right_arg_type], right_ret_type}}
-      when is_function(f, 1) ->
-        fn expr ->
-          cast(f.(cast(expr, left_arg_type, right_arg_type)), left_ret_type, right_ret_type)
-        end
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} ->
+              Enum.zip([Tuple.to_list(value), left_type_list, right_type_list])
+              |> Enum.map(fn {val, left_type, right_type} -> cast(val, left_type, right_type) end)
+              |> List.to_tuple()
 
-      {f, {:fun, [], [left_arg_type1, left_arg_type2], left_ret_type},
-       {:fun, [right_arg_type1, right_arg_type2], right_ret_type}}
-      when is_function(f, 2) ->
-        fn expr1, expr2 ->
-          cast(
-            f.(
-              cast(expr1, left_arg_type1, right_arg_type1),
-              cast(expr2, left_arg_type2, right_arg_type2)
-            ),
-            left_ret_type,
-            right_ret_type
-          )
-        end
+            {false, _} ->
+              :bad_argument_error
 
-      {
-        f,
-        {:fun, [], [[left_arg_type1, left_arg_type2, left_arg_type3], left_ret_type]},
-        {:fun, [], [[right_arg_type1, right_arg_type2, right_arg_type3], right_ret_type]}
-      }
-      when is_function(f, 3) ->
-        fn expr1, expr2, expr3 ->
-          cast(
-            f.(
-              cast(expr1, left_arg_type1, right_arg_type1),
-              cast(expr2, left_arg_type2, right_arg_type2),
-              cast(expr3, left_arg_type3, right_arg_type3)
-            ),
-            left_ret_type,
-            right_ret_type
-          )
-        end
+            {true, false} ->
+              :cast_error
+          end
 
-      _ ->
-        raise CastError.new(%{expression: expr, type: right_type})
+        {value, {:map, left_type_map}, {:map, right_type_map}} ->
+          is_left_type_ok =
+            is_map(value) and Enum.all?(Map.keys(left_type_map), &Enum.member?(Map.keys(value), &1))
+
+          left_right_ground_types_consistent =
+            Enum.sort(Map.keys(left_type_map)) === Enum.sort(Map.keys(right_type_map))
+
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} ->
+              Enum.map(value, fn {k, v} -> {k, v, left_type_map[k], right_type_map[k]} end)
+              |> Enum.map(fn {k, v, type1, type2} -> {k, cast(v, type1, type2)} end)
+              |> Enum.into(%{})
+
+            {false, _} ->
+              :bad_argument_error
+
+            {true, false} ->
+              :cast_error
+          end
+
+        {f, {:fun, [left_arg_type], left_ret_type}, {:fun, [right_arg_type], right_ret_type}} ->
+          if not is_function(f, 1) do
+            :bad_argument_error
+          else
+            fn val ->
+              cast(f.(cast(val, left_arg_type, right_arg_type)), left_ret_type, right_ret_type)
+            end
+          end
+
+        {f, {:fun, [], [left_arg_type1, left_arg_type2], left_ret_type},
+         {:fun, [right_arg_type1, right_arg_type2], right_ret_type}} ->
+          if not is_function(f, 2) do
+            :bad_argument_error
+          else
+            fn val1, val2 ->
+              cast(
+                f.(
+                  cast(val1, left_arg_type1, right_arg_type1),
+                  cast(val2, left_arg_type2, right_arg_type2)
+                ),
+                left_ret_type,
+                right_ret_type
+              )
+            end
+          end
+
+        {
+          f,
+          {:fun, [], [[left_arg_type1, left_arg_type2, left_arg_type3], left_ret_type]},
+          {:fun, [], [[right_arg_type1, right_arg_type2, right_arg_type3], right_ret_type]}
+        } ->
+          if not is_function(f, 3) do
+            :bad_argument_error
+          else
+            fn val1, val2, val3 ->
+              cast(
+                f.(
+                  cast(val1, left_arg_type1, right_arg_type1),
+                  cast(val2, left_arg_type2, right_arg_type2),
+                  cast(val3, left_arg_type3, right_arg_type3)
+                ),
+                left_ret_type,
+                right_ret_type
+              )
+            end
+          end
+
+        _ ->
+          :cast_error
+      end
+
+    case result do
+      :bad_argument_error ->
+        raise BadArgumentError.new(%{
+                reason: "type_error",
+                value: value,
+                left_type: left_type,
+                right_type: right_type
+              })
+
+      :cast_error ->
+        raise CastError.new(%{
+                value: value,
+                left_type: left_type,
+                right_type: right_type
+              })
+
+      value ->
+        value
     end
   end
 end
 
- defmodule UseCast do
+defmodule UseCast do
+  require Inspects
+
   defmacro __using__(_opts) do
     quote do
       alias Cast
 
-      defmacro expr_ast | {:~>, _, [left_type_ast, right_type_ast]} do
+      defmacro value_ast | {:~>, _, [left_type_ast, right_type_ast]} do
         context = [
           left_type: Code.string_to_quoted(inspect(left_type_ast)),
           right_type: Code.string_to_quoted(inspect(right_type_ast)),
-          expr_ast: expr_ast
+          value_ast: value_ast
         ]
 
         quote bind_quoted: [context: context] do
           {:ok, left_type} = Keyword.get(context, :left_type)
           {:ok, right_type} = Keyword.get(context, :right_type)
-          expr = Keyword.get(context, :expr_ast)
+          value_ast = Keyword.get(context, :value_ast)
 
           left_type = Cast.build_type_from_ast(left_type)
           right_type = Cast.build_type_from_ast(right_type)
 
-          Cast.cast(expr, left_type, right_type)
+          Cast.cast(value_ast, left_type, right_type)
         end
       end
 
-      defmacro expr_ast | type_ast do
+      defmacro value_ast | type_ast do
         quote do
-          unquote(expr_ast)
+          unquote(value_ast)
         end
       end
     end
   end
- end
+end
