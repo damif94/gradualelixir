@@ -28,8 +28,7 @@ defmodule Cast do
     defexception message: "Cast error", expression: nil, left_type: nil, right_type: nil
 
     def new(%{value: value, left_type: left_type, right_type: right_type} = params) do
-      message =
-        "Couldn't cast #{inspect(value)} from type #{inspect(left_type)} into #{inspect(right_type)}"
+      message = "Couldn't cast #{inspect(value)} from type #{inspect(left_type)} into #{inspect(right_type)}"
 
       struct(CastError, Map.put(params, :message, message))
     end
@@ -37,7 +36,8 @@ defmodule Cast do
 
   defguard is_base(type)
            when (is_atom(type) and type != :any) or
-                  (tuple_size(type) == 2 and elem(type, 0) == :atom and is_atom(elem(type, 1)))
+                  (is_tuple(type) and tuple_size(type) == 2 and elem(type, 0) == :atom and
+                     is_atom(elem(type, 1)))
 
   defguard is_base_value(value)
            when is_atom(value) or is_boolean(value) or is_integer(value) or is_float(value)
@@ -55,7 +55,7 @@ defmodule Cast do
         {:fun, Enum.map(type_list_ast, &build_type_from_ast/1), build_type_from_ast(type_ast)}
 
       [] ->
-        :elist
+        {:elist, []}
 
       _ when is_list(type_ast) and length(type_ast) == 1 ->
         [item] = type_ast
@@ -73,38 +73,95 @@ defmodule Cast do
     end
   end
 
+  def type_for_value(value) do
+    case value do
+      _ when is_boolean(value) -> {:atom, value}
+      _ when is_atom(value) -> {:atom, value}
+      _ when is_integer(value) -> :integer
+      _ when is_float(value) -> :float
+    end
+  end
+
+  def is_base_subtype(left_type, right_type) do
+    case {left_type, right_type} do
+      {type, type} -> true
+      {{:atom, _}, :atom} -> true
+      {{:atom, false}, :boolean} -> true
+      {{:atom, true}, :boolean} -> true
+      {:boolean, :atom} -> true
+      {:integer, :number} -> true
+      {:float, :number} -> true
+      _ -> false
+    end
+  end
+
+  def is_consistent_subtype(left_type, right_type) do
+    case {left_type, right_type} do
+      _ when is_base(left_type) and is_base(right_type) ->
+        is_base_subtype(left_type, right_type)
+
+      {:any, _} ->
+        true
+
+      {_, :any} ->
+        true
+
+      {{:elist, []}, {:elist, []}} ->
+        true
+
+      {{:elist, []}, {:list, _}} ->
+        true
+
+      {{:list, left_type}, {:list, right_type}} ->
+        is_consistent_subtype(left_type, right_type)
+
+      {{:tuple, left_type_list}, {:tuple, right_type_list}}
+      when length(left_type_list) == length(right_type_list) ->
+        Enum.zip(left_type_list, right_type_list)
+        |> Enum.all?(fn {type1, type2} -> is_consistent_subtype(type1, type2) end)
+
+      {{:map, left_type_map}, {:map, right_type_map}} ->
+        if Enum.all?(Map.keys(right_type_map), &Enum.member?(Map.keys(left_type_map), &1)) do
+          Enum.all?(right_type_map, fn {k, type} ->
+            is_consistent_subtype(left_type_map[k], type)
+          end)
+        else
+          false
+        end
+
+      {{:fun, left_type_list, left_type}, {:map, right_type_list, right_type}}
+      when length(left_type_list) == length(right_type_list) ->
+        if is_consistent_subtype(left_type, right_type) do
+          Enum.zip(left_type_list, right_type_list)
+          |> Enum.all?(fn {type1, type2} -> is_consistent_subtype(type1, type2) end)
+        else
+          false
+        end
+
+      _ ->
+        false
+    end
+  end
+
   def ground(type) do
     case type do
       _ when is_base(type) ->
         type
 
-      :elist ->
-        :elist
+      {:elist, []} ->
+        {:elist, []}
 
       {:list, _} ->
         {:list, :any}
 
       {:tuple, type_list} ->
-        {:tuple, (0..(length(type_list) - 1)//1) |> Enum.map(fn _ -> :any end)}
+        {:tuple, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end)}
 
       {:map, type_map} ->
         {:map, Enum.into(Enum.map(type_map, fn {k, _} -> {k, :any} end), %{})}
 
       {:fun, type_list, _} ->
-        {:fun, (0..(length(type_list) - 1)//1) |> Enum.map(fn _ -> :any end), :any}
-    end
-  end
-
-  def is_base_type_valid_for_base_value(value, type) do
-    case {value, type} do
-      {atom, {:atom, a}} -> is_atom(value) and atom === a
-      {_, :atom} -> is_atom(value)
-      {_, false} -> is_boolean(value) and value
-      {_, true} -> is_boolean(value) and value
-      {_, :boolean} -> is_boolean(value)
-      {_, :integer} -> is_integer(value)
-      {_, :float} -> is_float(value)
-      {_, :number} -> is_integer(value) or is_float(value)
+        {:fun, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end), :any}
     end
   end
 
@@ -112,42 +169,95 @@ defmodule Cast do
     #    IO.inspect({value, left_type, right_type})
     result =
       case {value, left_type, right_type} do
-        {_, :any, :any} ->
+        {value, :any, :any} ->
           value
 
-        {_, type, :any} ->
-          cast(value, type, ground(type))
-
-        {_, :any, type} ->
-          cast(value, ground(type), type)
-
-        _ when is_base(left_type) and is_base(right_type) ->
-          if not is_base_type_valid_for_base_value(value, left_type) do
-            :bad_argument_error
+        {value, type, :any} ->
+          if is_base(type) do
+            if is_consistent_subtype(type_for_value(value), type), do: value, else: :cast_error
           else
-            if not is_base_type_valid_for_base_value(value, right_type) do
-              :cast_error
-            else
-              value
+            cast(value, type, ground(type))
+          end
+
+        {value, :any, type} ->
+          if is_base(type) do
+            if is_consistent_subtype(type_for_value(value), type), do: value, else: :cast_error
+          else
+            cast(value, ground(type), type)
+          end
+
+        _ when is_base(left_type) ->
+          is_left_type_ok = is_consistent_subtype(type_for_value(value), left_type)
+
+          left_right_ground_types_consistent = is_base(right_type) and is_base_subtype(left_type, right_type)
+
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} -> value
+            {false, _} -> :bad_argument_error
+            {_, false} -> :cast_error
+          end
+
+        {value, {:elist, []}, right_type} ->
+          is_left_type_ok = value == []
+
+          left_right_ground_types_consistent =
+            case right_type do
+              {:elist, []} -> true
+              {:list, _} -> true
+              _ -> false
             end
-          end
-
-        {[], :elist, :elist} ->
-          {:list, []}
-
-        {value, {:list, left_type}, {:list, right_type}} ->
-          if not is_list(value) do
-            :bad_argument_error
-          else
-            {:list, Enum.map(value, fn val -> cast(val, left_type, right_type) end)}
-          end
-
-        {value, {:tuple, left_type_list}, {:tuple, right_type_list}} ->
-          is_left_type_ok = is_tuple(value) and tuple_size(value) == length(left_type_list)
-          left_right_ground_types_consistent = length(left_type_list) == length(right_type_list)
 
           case {is_left_type_ok, left_right_ground_types_consistent} do
             {true, true} ->
+              []
+
+            {false, _} ->
+              :bad_argument_error
+
+            {true, false} ->
+              :cast_error
+          end
+
+        {value, {:list, left_type}, right_type} ->
+          is_left_type_ok = is_list(value)
+
+          left_right_ground_types_consistent =
+            case right_type do
+              {:list, _} -> true
+              _ -> false
+            end
+
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} ->
+              right_type = elem(right_type, 1)
+
+              if value == [] and not is_consistent_subtype(left_type, right_type) do
+                # since this will not be checked downwards
+                :cast_error
+              else
+                Enum.map(value, fn val -> cast(val, left_type, right_type) end)
+              end
+
+            {false, _} ->
+              :bad_argument_error
+
+            {true, false} ->
+              :cast_error
+          end
+
+        {value, {:tuple, left_type_list}, right_type} ->
+          is_left_type_ok = is_tuple(value) and tuple_size(value) == length(left_type_list)
+
+          left_right_ground_types_consistent =
+            case right_type do
+              {:tuple, right_type_list} -> length(left_type_list) == length(right_type_list)
+              _ -> false
+            end
+
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} ->
+              right_type_list = elem(right_type, 1)
+
               Enum.zip([Tuple.to_list(value), left_type_list, right_type_list])
               |> Enum.map(fn {val, left_type, right_type} -> cast(val, left_type, right_type) end)
               |> List.to_tuple()
@@ -159,15 +269,22 @@ defmodule Cast do
               :cast_error
           end
 
-        {value, {:map, left_type_map}, {:map, right_type_map}} ->
-          is_left_type_ok =
-            is_map(value) and Enum.all?(Map.keys(left_type_map), &Enum.member?(Map.keys(value), &1))
+        {value, {:map, left_type_map}, right_type} ->
+          is_left_type_ok = is_map(value) and Enum.all?(Map.keys(left_type_map), &Enum.member?(Map.keys(value), &1))
 
           left_right_ground_types_consistent =
-            Enum.sort(Map.keys(left_type_map)) === Enum.sort(Map.keys(right_type_map))
+            case right_type do
+              {:map, right_type_map} ->
+                Enum.sort(Map.keys(left_type_map)) === Enum.sort(Map.keys(right_type_map))
+
+              _ ->
+                false
+            end
 
           case {is_left_type_ok, left_right_ground_types_consistent} do
             {true, true} ->
+              right_type_map = elem(right_type, 1)
+
               Enum.map(value, fn {k, v} -> {k, v, left_type_map[k], right_type_map[k]} end)
               |> Enum.map(fn {k, v, type1, type2} -> {k, cast(v, type1, type2)} end)
               |> Enum.into(%{})
@@ -179,55 +296,59 @@ defmodule Cast do
               :cast_error
           end
 
-        {f, {:fun, [left_arg_type], left_ret_type}, {:fun, [right_arg_type], right_ret_type}} ->
-          if not is_function(f, 1) do
-            :bad_argument_error
-          else
-            fn val ->
-              cast(f.(cast(val, left_arg_type, right_arg_type)), left_ret_type, right_ret_type)
-            end
-          end
+        {value, {:fun, left_type_list, left_type}, right_type} ->
+          f = value
+          is_left_type_ok = is_function(f, length(left_type_list))
 
-        {f, {:fun, [], [left_arg_type1, left_arg_type2], left_ret_type},
-         {:fun, [right_arg_type1, right_arg_type2], right_ret_type}} ->
-          if not is_function(f, 2) do
-            :bad_argument_error
-          else
-            fn val1, val2 ->
-              cast(
-                f.(
-                  cast(val1, left_arg_type1, right_arg_type1),
-                  cast(val2, left_arg_type2, right_arg_type2)
-                ),
-                left_ret_type,
-                right_ret_type
-              )
+          left_right_ground_types_consistent =
+            case right_type do
+              {:fun, _, _} -> true
+              _ -> false
             end
-          end
 
-        {
-          f,
-          {:fun, [], [[left_arg_type1, left_arg_type2, left_arg_type3], left_ret_type]},
-          {:fun, [], [[right_arg_type1, right_arg_type2, right_arg_type3], right_ret_type]}
-        } ->
-          if not is_function(f, 3) do
-            :bad_argument_error
-          else
-            fn val1, val2, val3 ->
-              cast(
-                f.(
-                  cast(val1, left_arg_type1, right_arg_type1),
-                  cast(val2, left_arg_type2, right_arg_type2),
-                  cast(val3, left_arg_type3, right_arg_type3)
-                ),
-                left_ret_type,
-                right_ret_type
-              )
-            end
-          end
+          case {is_left_type_ok, left_right_ground_types_consistent} do
+            {true, true} ->
+              {:fun, right_type_list, right_type} = right_type
+              left_type_tuple = left_type_list |> List.to_tuple()
+              right_type_tuple = right_type_list |> List.to_tuple()
 
-        _ ->
-          :cast_error
+              case length(left_type_list) do
+                0 ->
+                  fn ->
+                    cast(f.(), left_type, right_type)
+                  end
+
+                1 ->
+                  fn val1 ->
+                    casted_val1 = cast(val1, elem(right_type_tuple, 0), elem(left_type_tuple, 0))
+                    cast(f.(casted_val1), left_type, right_type)
+                  end
+
+                2 ->
+                  fn val1, val2 ->
+                    casted_val1 = cast(val1, elem(right_type_tuple, 0), elem(left_type_tuple, 0))
+                    casted_val2 = cast(val2, elem(right_type_tuple, 1), elem(left_type_tuple, 1))
+                    cast(f.(casted_val1, casted_val2), left_type, right_type)
+                  end
+
+                3 ->
+                  fn val1, val2, val3 ->
+                    casted_val1 = cast(val1, elem(right_type_tuple, 0), elem(left_type_tuple, 0))
+                    casted_val2 = cast(val2, elem(right_type_tuple, 1), elem(left_type_tuple, 1))
+                    casted_val3 = cast(val3, elem(right_type_tuple, 2), elem(left_type_tuple, 2))
+                    cast(f.(casted_val1, casted_val2, casted_val3), left_type, right_type)
+                  end
+
+                  # TODO make this general to support arbitrary function arity
+                  #  probably this is macro-doable by converting function args into tuple first
+              end
+
+            {false, _} ->
+              :bad_argument_error
+
+            {true, false} ->
+              :cast_error
+          end
       end
 
     case result do
@@ -253,7 +374,6 @@ defmodule Cast do
 end
 
 defmodule UseCast do
-
   defmacro __using__(_opts) do
     quote do
       alias Cast
