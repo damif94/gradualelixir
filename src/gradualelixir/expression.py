@@ -131,7 +131,7 @@ class BinaryOpEnum(Enum):
             BinaryOpEnum.lower,
             BinaryOpEnum.lower_or_equal,
             BinaryOpEnum.greater,
-            BinaryOpEnum.greater_or_equal
+            BinaryOpEnum.greater_or_equal,
         ]:
             # TODO if we had term type this could be improved
             #  (gtypes.TermType(), gtypes.TermType(), gtypes.BooleanType())
@@ -222,11 +222,7 @@ class ListExpression(Expression):
 
     def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
         if not any(
-            [
-                isinstance(tail, ListExpression),
-                isinstance(tail, ElistExpression),
-                isinstance(tail, IdentExpression)
-            ]
+            [isinstance(tail, ListExpression), isinstance(tail, ElistExpression), isinstance(tail, IdentExpression)]
         ):
             # this extra import will be avoided once AnnotatedExpression is declared inside this module
             from gradualelixir.cast import AnnotatedExpression
@@ -301,13 +297,7 @@ class IfElseExpression(Expression):
     else_clause: Expression
 
     def __str__(self):
-        return (
-            f"if {self.condition} do\n"
-            f"  {self.if_clause}\n"
-            f"else\n"
-            f"{self.else_clause}\n"
-            f"end"
-        )
+        return f"if {self.condition} do\n" f"  {self.if_clause}\n" f"else\n" f"{self.else_clause}\n" f"end"
 
 
 @dataclass

@@ -196,7 +196,7 @@ defmodule ElixirPortTest do
     assert (1 | integer ~> number) === 1
   end
 
-  #  @tag disabled: true
+  @tag disabled: true
   test "factor_app" do
     untyped_plus1 = (fn x -> x + 1 end | (any -> any) ~> (any -> any))
     integer_plus1_to_untyped = (fn x -> x + 1 end | (integer -> integer) ~> (any -> any))
@@ -251,11 +251,60 @@ defmodule ElixirPortTest do
           assert_raise_error_with_message(ArithmeticError, message, function.(input))
       end
     end
+#
+#    untyped_evaluator = (fn f, x -> f.(x) end | ({(any -> any), any} -> any) ~> ({(any -> any), any} -> any))
+#    assert untyped_evaluator.(untyped_plus1, 1) = 2
   end
 
-  @tag disabled: true
+#  @tag disabled: true
   test "wip" do
-    #    assert_raise_error_with_params(Cast.CastError, 1 | any ~> float)
-    #    assert (:a | any ~> :a) === :a
+    untyped_plus1 = (fn x -> x + 1 end | (any -> any) ~> (any -> any))
+    untyped_duplicator = (fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((any -> any), any -> any))
+    untyped_duplicator_into_integer_integer_untyped = (
+      fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((integer -> integer), any -> any)
+    )
+    untyped_duplicator_into_integer_number_untyped = (
+      fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((integer -> integer), any -> any)
+    )
+    untyped_duplicator_into_number_integer_untyped = (
+      fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((number -> integer), any -> any)
+    )
+    untyped_duplicator_into_number_number_untyped = (
+      fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((number -> number), any -> any)
+    )
+
+
+    for {function, {input1, input2}, result} <- [
+      # input untyped_plus1, 1
+      {untyped_duplicator, {untyped_plus1, 1}, {:ok, 4}},
+      {untyped_duplicator_into_integer_integer_untyped, {untyped_plus1, 1}, {:ok, 4}},
+      {untyped_duplicator_into_integer_number_untyped, {untyped_plus1, 1}, {:ok, 4}},
+      {untyped_duplicator_into_number_integer_untyped, {untyped_plus1, 1}, {:ok, 4}},
+      {untyped_duplicator_into_number_number_untyped, {untyped_plus1, 1}, {:ok, 4}},
+      # input untyped_plus1, 1.0
+      {untyped_duplicator, {untyped_plus1, 1.0}, {:ok, 4.0}},
+      {untyped_duplicator_into_integer_integer_untyped, {untyped_plus1, 1.0}, {:cast_error, "Couldn't cast 1.0 from type :any into :integer"}},
+      {untyped_duplicator_into_integer_number_untyped, {untyped_plus1, 1.0}, {:cast_error, "Couldn't cast 1.0 from type :any into :integer"}},
+      {untyped_duplicator_into_number_integer_untyped, {untyped_plus1, 1.0}, {:cast_error, "Couldn't cast 2.0 from type :integer into :any"}},
+      {untyped_duplicator_into_number_number_untyped, {untyped_plus1, 1.0}, {:ok, 4.0}},
+      # input untyped_plus1, :a
+      {untyped_duplicator, {untyped_plus1, :a}, {:arithmethic_error, "bad argument in arithmetic expression"}},
+      {untyped_duplicator_into_integer_integer_untyped, {untyped_plus1, :a}, {:cast_error, "Couldn't cast :a from type :any into :integer"}},
+      {untyped_duplicator_into_integer_number_untyped, {untyped_plus1, :a}, {:cast_error, "Couldn't cast :a from type :any into :integer"}},
+      {untyped_duplicator_into_number_integer_untyped, {untyped_plus1, :a}, {:cast_error, "Couldn't cast :a from type :any into :number"}},
+      {untyped_duplicator_into_number_number_untyped, {untyped_plus1, :a}, {:cast_error, "Couldn't cast :a from type :any into :number"}}
+    ] do
+      case result do
+        {:ok, output} ->
+          assert function.(input1, input2) == output
+
+        {:cast_error, message} ->
+          assert_raise_error_with_message(Cast.CastError, message, function.(input1, input2))
+
+        {:arithmethic_error, message} ->
+          assert_raise_error_with_message(ArithmeticError, message, function.(input1, input2))
+      end
+    end
+#
   end
 end

@@ -101,7 +101,7 @@ class ListPattern(Pattern):
                 isinstance(tail, ListPattern),
                 isinstance(tail, ElistPattern),
                 isinstance(tail, WildPattern),
-                isinstance(tail, IdentPattern)
+                isinstance(tail, IdentPattern),
             ]
         ):
             raise SyntaxRestrictionError("List pattern's tail is not valid")

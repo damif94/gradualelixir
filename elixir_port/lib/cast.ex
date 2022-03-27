@@ -1,5 +1,10 @@
 defmodule Cast do
   require IEx
+  defmodule Foo do
+    def head([h | _ ]) do
+      h
+    end
+  end
 
   defmodule BadArgumentError do
     defexception message: "Cast function couldn't process this argument tuple",
@@ -166,7 +171,7 @@ defmodule Cast do
   end
 
   def cast(value, left_type, right_type) do
-    #    IO.inspect({value, left_type, right_type})
+#    IO.inspect({value, left_type, right_type})
     result =
       case {value, left_type, right_type} do
         {value, :any, :any} ->

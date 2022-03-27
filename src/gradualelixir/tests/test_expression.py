@@ -37,7 +37,6 @@ from gradualelixir.expression import (
     UnaryOpEnum,
     UnaryOpExpression,
     VarCallExpression,
-    format_expression,
     type_check,
 )
 from gradualelixir.gtypes import (

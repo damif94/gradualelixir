@@ -22,7 +22,11 @@ def format_code(elixir_code: str) -> str:
 
     with open(file=f"{project_path}/swap.ex", mode="r") as swap:
         text = "".join(swap.readlines())
-        return text[:-1]
+        text = text[:-1]
+
+    os.remove(f"{project_path}/swap.ex")
+
+    return text
 
 
 def to_internal_representation(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
@@ -65,8 +69,7 @@ class SyntacticLevel(enum.Enum):
             raise exc
         except Exception as exc:
             raise ElixirParseError(
-                f"Error when trying to parse the following elixir ast as a "
-                f"mini elixir {self.value}:\n {j}"
+                f"Error when trying to parse the following elixir ast as a " f"mini elixir {self.value}:\n {j}"
             ) from exc
 
 

@@ -271,9 +271,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
                 right_type=type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i],
             )
             annotated_arguments.append(annotated_argument)
-        return expression.FunctionCallExpression(
-            function_name=expr.function_name, arguments=annotated_arguments
-        )
+        return expression.FunctionCallExpression(function_name=expr.function_name, arguments=annotated_arguments)
     if isinstance(expr, expression.VarCallExpression):
         annotated_arguments = []
         for i in range(len(expr.arguments)):
