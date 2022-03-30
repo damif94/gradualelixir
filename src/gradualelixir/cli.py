@@ -17,6 +17,17 @@ from pygments.lexers.erlang import ElixirLexer
 dotenv_path = find_dotenv()
 
 
+class ClickWorkingDirAwarePath(click.Path):
+    """a hacky version of click.Path that does the validation logic
+     against the WORKING_DIR environment variable"""
+    def convert(self, *args, **kwargs):
+        original_path = os.getcwd()
+        os.chdir(os.environ["WORKING_DIR"])
+        out = super(ClickWorkingDirAwarePath, self).convert(*args, **kwargs)
+        os.chdir(original_path)
+        return out
+
+
 @click.group()
 def cli():
     """gradualelixir command entrypoint"""
@@ -24,19 +35,18 @@ def cli():
 
 
 @cli.command("configure", short_help="sets the variables needed by the other commands")
-@click.option("--elixir-path", type=click.Path())
-@click.option("--working-dir", type=click.Path())
+@click.option("--elixir-path", type=click.Path(exists=True, file_okay=True))
+@click.option("--working-dir", type=click.Path(exists=True, dir_okay=True))
 def configure_command(elixir_path, working_dir):
     if elixir_path is not None:
         set_key(dotenv_path, "ELIXIR_PATH", elixir_path)
     if working_dir is not None:
-        set_key(dotenv_path, "WORKING_DIR", elixir_path)
+        set_key(dotenv_path, "WORKING_DIR", working_dir)
 
 
 @cli.command("print", short_help="prints a linted version of the mini elixir source file <filename> to standard output")
-@click.argument("filename", metavar="<filename>", type=click.File("rb"))
+@click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
 def print_command(filename):
-
     working_dir = os.environ["WORKING_DIR"]
     with open(f"{working_dir}/{filename}", "r") as f:
         code = "\n".join(f.readlines())
@@ -61,7 +71,7 @@ def print_command(filename):
     type=click.Choice(["types", "casts"]),
     help="Generates an annotated version of <filename> and optionally annotates it with types or casts.",
 )
-@click.argument("filename", metavar="<filename>", type=click.File("rb"))
+@click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
 def type_check_command(static, annotate, filename):
     if static and annotate == "casts":
         raise click.ClickException("--annotate types is a forbidden value option in combination with --static")
@@ -117,7 +127,7 @@ def type_check_command(static, annotate, filename):
 
 
 @cli.command("run", short_help="spawns an elixir shell (iex) loaded with the content of <filename>")
-@click.argument("filename", metavar="<filename>", type=click.File("rb"))
+@click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
 def run_command(arguments):
     import pty
     import shutil
