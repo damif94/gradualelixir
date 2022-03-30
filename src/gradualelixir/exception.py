@@ -8,11 +8,3 @@ class ElixirProcessError(Exception):
 
 class ElixirParseError(Exception):
     pass
-
-
-class CommandError(Exception):
-    pass
-
-
-class SevereCommandError(Exception):
-    pass
