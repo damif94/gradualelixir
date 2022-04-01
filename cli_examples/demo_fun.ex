@@ -1,7 +1,6 @@
-
 defmodule Demo do
-
   @spec list_length([any]) :: integer
+
   def list_length(l) do
     case l do
       [] -> 0
@@ -9,23 +8,55 @@ defmodule Demo do
     end
   end
 
-  @spec function_sum_aux((number -> number), (number -> number), number) :: number
-  def function_sum_aux(f, g, x) do
-    f.(x) + g.(x)
+  @spec filter((any -> boolean), [any]) :: [any]
+
+  def filter(f, l) do
+    case l do
+      [] ->
+        []
+
+      [head | tail] ->
+        filtered_tail = filter(f, tail)
+
+        if f.(head) do
+          [head | filtered_tail]
+        else
+          filtered_tail
+        end
+    end
   end
 
+  @spec is_positive(integer) :: boolean
 
-  @spec function_sum((number -> (atom -> number))) :: (atom -> number)
-  def apply_one(f) do
-    f.(1)
+  def is_positive(x) do
+    x >= 0
   end
 
-  def atom_to_integer_aux(x, i) do
-    aux = [{:one, 1}, {:two, 2}, {:three, 3}]
+  def untyped(value) do
+    value
   end
 
-  @spec main(integer, any):: any
-  def main(x, y) do
+  @spec filter_positive([integer]) :: [integer]
 
+  def filter_positive(l) do
+    filter(&is_positive/1, l)
+  end
+
+  def main(options) do
+    choice =
+      case options do
+        %{:choice => v} -> v
+        _ -> 1
+      end
+
+    l =
+      case choice do
+        1 -> [1 | [2 | [3 | []]]]
+        2 -> untyped([1 | [2.0 | [3 | []]]])
+        3 -> [true | []]
+        4 -> untyped(42)
+      end
+
+    filter_positive(l)
   end
 end
