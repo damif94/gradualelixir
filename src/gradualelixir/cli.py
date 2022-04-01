@@ -1,6 +1,6 @@
 import os
-import click
 
+import click
 from dotenv import find_dotenv, set_key
 from gradualelixir import cast, module
 from gradualelixir.elixir_port import (
@@ -19,7 +19,8 @@ dotenv_path = find_dotenv()
 
 class ClickWorkingDirAwarePath(click.Path):
     """a hacky version of click.Path that does the validation logic
-     against the WORKING_DIR environment variable"""
+    against the WORKING_DIR environment variable"""
+
     def convert(self, *args, **kwargs):
         original_path = os.getcwd()
         os.chdir(os.environ["WORKING_DIR"])

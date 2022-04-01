@@ -1,24 +1,23 @@
 import typing
 
 from gradualelixir import gtypes
-
-
 from gradualelixir.gtypes import (
-    is_subtype,
-    IntegerType,
-    BooleanType,
-    AtomType,
-    AtomLiteralType,
-    FloatType,
-    NumberType,
     AnyType,
-    ListType,
-    MapType,
-    TupleType,
-    MapKey,
-    FunctionType,
+    AtomLiteralType,
+    AtomType,
+    BooleanType,
     ElistType,
+    FloatType,
+    FunctionType,
+    IntegerType,
+    ListType,
+    MapKey,
+    MapType,
+    NumberType,
+    TupleType,
     Type,
+    is_materialization,
+    is_subtype,
 )
 
 from . import TEST_ENV
@@ -28,211 +27,415 @@ def MapUnit(*args) -> MapType:
     return MapType({MapKey(arg): TupleType([]) for arg in args})
 
 
+def assert_subtype(tau: Type, sigma: Type):
+    assert is_subtype(tau, sigma)
+    if TEST_ENV.get("display_results"):
+        print(f"\n{tau} <= {sigma}")
+
+
+def assert_not_subtype(tau: Type, sigma: Type):
+    assert not is_subtype(tau, sigma)
+    if TEST_ENV.get("display_results"):
+        print(f"\n{tau} !<= {sigma}")
+
+
+def assert_materialization(tau: Type, sigma: Type):
+    assert is_materialization(tau, sigma)
+    if TEST_ENV.get("display_results"):
+        print(f"\n{tau} <<< {sigma}")
+
+
+def assert_not_materialization(tau: Type, sigma: Type):
+    assert not is_materialization(tau, sigma)
+    if TEST_ENV.get("display_results"):
+        print(f"\n{tau} !<<< {sigma}")
+
+
+def assert_merge_operator(input: typing.Tuple[Type, Type], output: Type):
+    tau, sigma = input
+    result = gtypes.merge_operator(tau, sigma)
+    assert result == output
+    if TEST_ENV.get("display_results"):
+        print(f"\n{tau} <- {sigma} = {output}")
+
+
 def assert_supremum_ok(input: typing.Tuple[Type, Type], output: Type):
-    sigma, tau = input
+    tau, sigma = input
     result = gtypes.supremum(tau, sigma)
     assert result == output
     if TEST_ENV.get("display_results"):
-        print(f"\n{sigma} \\/ {tau} = {output}")
+        print(f"\n{tau} \\/ {sigma} = {output}")
 
 
 def assert_infimum_ok(input: typing.Tuple[Type, Type], output: Type):
-    sigma, tau = input
+    tau, sigma = input
     result = gtypes.infimum(tau, sigma)
     assert result == output
     if TEST_ENV.get("display_results"):
-        print(f"\n{sigma} /\\ {tau} = {output}")
+        print(f"\n{tau} /\\ {sigma} = {output}")
 
 
-def assert_supremum_error(sigma: Type, tau: Type, sup=True):
+def assert_supremum_error(tau: Type, sigma: Type, sup=True):
     result = gtypes.supremum(tau, sigma)
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
     if TEST_ENV.get("display_results"):
-        print(f"\n{sigma} \\/ {tau} does not exist")
+        print(f"\n{tau} \\/ {sigma} does not exist")
 
 
-def assert_infimum_error(sigma: Type, tau: Type, sup=False):
+def assert_infimum_error(tau: Type, sigma: Type, sup=False):
     result = gtypes.infimum(tau, sigma)
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
     if TEST_ENV.get("display_results"):
-        print(f"\n{sigma} /\\ {tau} does not exist")
+        print(f"\n{tau} /\\ {sigma} does not exist")
 
 
 def test_subtype_base():
-    assert is_subtype(IntegerType(), IntegerType())
-    assert is_subtype(IntegerType(), NumberType())
-    assert is_subtype(FloatType(), FloatType())
-    assert is_subtype(FloatType(), NumberType())
-    assert is_subtype(AtomLiteralType("a"), AtomType())
-    assert is_subtype(AtomLiteralType("true"), BooleanType())
-    assert is_subtype(AtomLiteralType("false"), BooleanType())
-    assert is_subtype(AtomLiteralType("true"), AtomType())
-    assert is_subtype(AtomLiteralType("false"), AtomType())
-    assert is_subtype(BooleanType(), AtomType())
+    assert_subtype(IntegerType(), IntegerType())
+    assert_subtype(IntegerType(), NumberType())
+    assert_subtype(FloatType(), FloatType())
+    assert_subtype(FloatType(), NumberType())
+    assert_subtype(AtomLiteralType("a"), AtomType())
+    assert_subtype(AtomLiteralType("true"), BooleanType())
+    assert_subtype(AtomLiteralType("false"), BooleanType())
+    assert_subtype(AtomLiteralType("true"), AtomType())
+    assert_subtype(AtomLiteralType("false"), AtomType())
+    assert_subtype(BooleanType(), AtomType())
 
-    assert not is_subtype(NumberType(), IntegerType())
-    assert not is_subtype(NumberType(), FloatType())
-    assert not is_subtype(AtomType(), AtomLiteralType("a"))
-    assert not is_subtype(BooleanType(), AtomLiteralType("true"))
-    assert not is_subtype(BooleanType(), AtomLiteralType("false"))
-    assert not is_subtype(AtomType(), AtomLiteralType("true"))
-    assert not is_subtype(AtomType(), AtomLiteralType("false"))
-    assert not is_subtype(AtomType(), BooleanType())
+    assert_not_subtype(NumberType(), IntegerType())
+    assert_not_subtype(NumberType(), FloatType())
+    assert_not_subtype(AtomType(), AtomLiteralType("a"))
+    assert_not_subtype(BooleanType(), AtomLiteralType("true"))
+    assert_not_subtype(BooleanType(), AtomLiteralType("false"))
+    assert_not_subtype(AtomType(), AtomLiteralType("true"))
+    assert_not_subtype(AtomType(), AtomLiteralType("false"))
+    assert_not_subtype(AtomType(), BooleanType())
 
-    assert not is_subtype(AtomType(), IntegerType())
-    assert not is_subtype(IntegerType(), AtomType())
-    assert not is_subtype(AtomType(), FloatType())
-    assert not is_subtype(FloatType(), AtomType())
-    assert not is_subtype(AtomType(), NumberType())
-    assert not is_subtype(NumberType(), AtomType())
-    assert not is_subtype(BooleanType(), IntegerType())
-    assert not is_subtype(IntegerType(), BooleanType())
-    assert not is_subtype(BooleanType(), FloatType())
-    assert not is_subtype(FloatType(), BooleanType())
-    assert not is_subtype(BooleanType(), NumberType())
-    assert not is_subtype(NumberType(), BooleanType())
+    assert_not_subtype(AtomType(), IntegerType())
+    assert_not_subtype(IntegerType(), AtomType())
+    assert_not_subtype(AtomType(), FloatType())
+    assert_not_subtype(FloatType(), AtomType())
+    assert_not_subtype(AtomType(), NumberType())
+    assert_not_subtype(NumberType(), AtomType())
+    assert_not_subtype(BooleanType(), IntegerType())
+    assert_not_subtype(IntegerType(), BooleanType())
+    assert_not_subtype(BooleanType(), FloatType())
+    assert_not_subtype(FloatType(), BooleanType())
+    assert_not_subtype(BooleanType(), NumberType())
+    assert_not_subtype(NumberType(), BooleanType())
 
 
 def test_subtype_list():
-    assert is_subtype(ElistType(), ElistType())
-    assert is_subtype(ElistType(), ListType(AtomLiteralType("true")))
-    assert is_subtype(ElistType(), ListType(IntegerType()))
-    assert is_subtype(ElistType(), ListType(AnyType()))
-    assert is_subtype(ElistType(), ListType(TupleType([AnyType()])))
+    assert_subtype(ElistType(), ElistType())
+    assert_subtype(ElistType(), ListType(AtomLiteralType("true")))
+    assert_subtype(ElistType(), ListType(IntegerType()))
+    assert_subtype(ElistType(), ListType(AnyType()))
+    assert_subtype(ElistType(), ListType(TupleType([AnyType()])))
 
-    assert not is_subtype(ListType(AtomLiteralType("true")), ElistType())
-    assert not is_subtype(TupleType([]), ElistType())
-    assert not is_subtype(ListType(AnyType()), ElistType())
-    assert not is_subtype(ListType(TupleType([AnyType()])), ElistType())
+    assert_not_subtype(ListType(AtomLiteralType("true")), ElistType())
+    assert_not_subtype(TupleType([]), ElistType())
+    assert_not_subtype(ListType(AnyType()), ElistType())
+    assert_not_subtype(ListType(TupleType([AnyType()])), ElistType())
 
-    assert is_subtype(ListType(AtomLiteralType("true")), ListType(BooleanType()))
-    assert is_subtype(ListType(IntegerType()), ListType(IntegerType()))
-    assert is_subtype(ListType(IntegerType()), ListType(NumberType()))
-    assert is_subtype(ListType(IntegerType()), ListType(AnyType()))
-    assert is_subtype(ListType(AnyType()), ListType(IntegerType()))
-    assert is_subtype(
-        ListType(TupleType([IntegerType(), IntegerType()])), ListType(TupleType([NumberType(), AnyType()]))
-    )
+    assert_subtype(ListType(AtomLiteralType("true")), ListType(BooleanType()))
+    assert_subtype(ListType(IntegerType()), ListType(IntegerType()))
+    assert_subtype(ListType(IntegerType()), ListType(NumberType()))
+    assert_subtype(ListType(IntegerType()), ListType(AnyType()))
+    assert_subtype(ListType(AnyType()), ListType(IntegerType()))
+    assert_subtype(ListType(TupleType([IntegerType(), IntegerType()])), ListType(TupleType([NumberType(), AnyType()])))
 
-    assert not is_subtype(ListType(BooleanType()), ListType(AtomLiteralType("true")))
-    assert not is_subtype(ListType(TupleType([BooleanType()])), ListType(BooleanType()))
-    assert not is_subtype(
+    assert_not_subtype(ListType(BooleanType()), ListType(AtomLiteralType("true")))
+    assert_not_subtype(ListType(TupleType([BooleanType()])), ListType(BooleanType()))
+    assert_not_subtype(
         ListType(TupleType([NumberType(), IntegerType()])), ListType(TupleType([IntegerType(), AnyType()]))
     )
-    assert not is_subtype(
+    assert_not_subtype(
         ListType(TupleType([NumberType(), AnyType()])), ListType(TupleType([IntegerType(), IntegerType()]))
     )
 
 
 def test_subtype_tuple():
-    assert is_subtype(TupleType([]), TupleType([]))
-    assert is_subtype(TupleType([IntegerType()]), TupleType([IntegerType()]))
-    assert is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([IntegerType(), FloatType()]))
+    assert_subtype(TupleType([]), TupleType([]))
+    assert_subtype(TupleType([IntegerType()]), TupleType([IntegerType()]))
+    assert_subtype(TupleType([IntegerType(), FloatType()]), TupleType([IntegerType(), FloatType()]))
 
-    assert is_subtype(TupleType([AnyType()]), TupleType([ListType(IntegerType())]))
-    assert is_subtype(TupleType([IntegerType()]), TupleType([NumberType()]))
-    assert is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([NumberType(), FloatType()]))
-    assert is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([AnyType(), FloatType()]))
-    assert is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([NumberType(), AnyType()]))
-    assert is_subtype(TupleType([AnyType(), FloatType()]), TupleType([NumberType(), AnyType()]))
+    assert_subtype(TupleType([AnyType()]), TupleType([ListType(IntegerType())]))
+    assert_subtype(TupleType([IntegerType()]), TupleType([NumberType()]))
+    assert_subtype(TupleType([IntegerType(), FloatType()]), TupleType([NumberType(), FloatType()]))
+    assert_subtype(TupleType([IntegerType(), FloatType()]), TupleType([AnyType(), FloatType()]))
+    assert_subtype(TupleType([IntegerType(), FloatType()]), TupleType([NumberType(), AnyType()]))
+    assert_subtype(TupleType([AnyType(), FloatType()]), TupleType([NumberType(), AnyType()]))
 
-    assert not is_subtype(TupleType([]), TupleType([IntegerType()]))
-    assert not is_subtype(TupleType([IntegerType()]), TupleType([]))
-    assert not is_subtype(TupleType([IntegerType()]), TupleType([IntegerType(), FloatType()]))
-    assert not is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([IntegerType()]))
-    assert not is_subtype(TupleType([]), TupleType([IntegerType(), FloatType()]))
-    assert not is_subtype(TupleType([IntegerType(), FloatType()]), TupleType([]))
+    assert_not_subtype(TupleType([]), TupleType([IntegerType()]))
+    assert_not_subtype(TupleType([IntegerType()]), TupleType([]))
+    assert_not_subtype(TupleType([IntegerType()]), TupleType([IntegerType(), FloatType()]))
+    assert_not_subtype(TupleType([IntegerType(), FloatType()]), TupleType([IntegerType()]))
+    assert_not_subtype(TupleType([]), TupleType([IntegerType(), FloatType()]))
+    assert_not_subtype(TupleType([IntegerType(), FloatType()]), TupleType([]))
 
-    assert not is_subtype(TupleType([IntegerType()]), TupleType([FloatType()]))
-    assert not is_subtype(TupleType([FloatType()]), TupleType([IntegerType()]))
-    assert not is_subtype(TupleType([IntegerType(), AnyType()]), TupleType([FloatType(), AnyType()]))
+    assert_not_subtype(TupleType([IntegerType()]), TupleType([FloatType()]))
+    assert_not_subtype(TupleType([FloatType()]), TupleType([IntegerType()]))
+    assert_not_subtype(TupleType([IntegerType(), AnyType()]), TupleType([FloatType(), AnyType()]))
 
 
 def test_subtype_map():
-    assert is_subtype(MapType({}), MapType({}))
-    assert is_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): IntegerType()}))
-    assert is_subtype(
+    assert_subtype(MapType({}), MapType({}))
+    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): IntegerType()}))
+    assert_subtype(
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
     )
 
-    assert is_subtype(MapType({MapKey(1): IntegerType()}), MapType({}))
-    assert is_subtype(MapType({MapKey(1): AnyType()}), MapType({}))
-    assert is_subtype(MapType({MapKey(1): TupleType([IntegerType(), AnyType()])}), MapType({}))
-    assert is_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): NumberType()}))
-    assert is_subtype(
-        MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}), MapType({})
-    )
-    assert is_subtype(
+    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({}))
+    assert_subtype(MapType({MapKey(1): AnyType()}), MapType({}))
+    assert_subtype(MapType({MapKey(1): TupleType([IntegerType(), AnyType()])}), MapType({}))
+    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): NumberType()}))
+    assert_subtype(MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}), MapType({}))
+    assert_subtype(
         MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}),
         MapType({MapKey(1): NumberType()}),
     )
-    assert is_subtype(
+    assert_subtype(
         MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}),
         MapType({MapKey(2): TupleType([BooleanType(), NumberType()])}),
     )
 
-    assert not is_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): IntegerType()}))
-    assert not is_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): BooleanType()}))
-    assert not is_subtype(
+    assert_not_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): IntegerType()}))
+    assert_not_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): BooleanType()}))
+    assert_not_subtype(
         MapType({MapKey(1): TupleType([NumberType(), AnyType()])}),
         MapType({MapKey(1): TupleType([IntegerType(), AnyType()])}),
     )
 
-    assert not is_subtype(MapType({}), MapType({MapKey(1): IntegerType()}))
-    assert not is_subtype(MapType({}), MapType({MapKey(1): AnyType()}))
-    assert not is_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
-    assert not is_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
-    assert not is_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
-    assert not is_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1): IntegerType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType()}))
+    assert_not_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
+    assert_not_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
 
 
 def test_subtype_function():
-    assert is_subtype(FunctionType([], IntegerType()), FunctionType([], IntegerType()))
-    assert is_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([BooleanType()], IntegerType()))
-    assert is_subtype(
+    assert_subtype(FunctionType([], IntegerType()), FunctionType([], IntegerType()))
+    assert_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([BooleanType()], IntegerType()))
+    assert_subtype(
         FunctionType([BooleanType(), FloatType()], IntegerType()),
         FunctionType([BooleanType(), FloatType()], IntegerType()),
     )
 
-    assert is_subtype(IntegerType(), NumberType())
-    assert is_subtype(FunctionType([], AnyType()), FunctionType([], NumberType()))
-    assert is_subtype(FunctionType([], IntegerType()), FunctionType([], AnyType()))
-    assert is_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
-    assert is_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], IntegerType()))
-    assert is_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
-    assert is_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], AnyType()))
-    assert is_subtype(FunctionType([AnyType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
-    assert is_subtype(FunctionType([AnyType()], IntegerType()), FunctionType([BooleanType()], AnyType()))
-    assert is_subtype(
+    assert_subtype(IntegerType(), NumberType())
+    assert_subtype(FunctionType([], AnyType()), FunctionType([], NumberType()))
+    assert_subtype(FunctionType([], IntegerType()), FunctionType([], AnyType()))
+    assert_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
+    assert_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], IntegerType()))
+    assert_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
+    assert_subtype(FunctionType([AtomType()], IntegerType()), FunctionType([BooleanType()], AnyType()))
+    assert_subtype(FunctionType([AnyType()], IntegerType()), FunctionType([BooleanType()], NumberType()))
+    assert_subtype(FunctionType([AnyType()], IntegerType()), FunctionType([BooleanType()], AnyType()))
+    assert_subtype(
         FunctionType([AnyType(), IntegerType()], ListType(IntegerType())),
         FunctionType([BooleanType(), IntegerType()], ListType(AnyType())),
     )
 
-    assert not is_subtype(IntegerType(), FunctionType([AnyType()], IntegerType()))
-    assert not is_subtype(IntegerType(), FunctionType([BooleanType()], IntegerType()))
-    assert not is_subtype(FunctionType([AnyType()], IntegerType()), IntegerType())
-    assert not is_subtype(FunctionType([BooleanType()], IntegerType()), IntegerType())
-    assert not is_subtype(
+    assert_not_subtype(IntegerType(), FunctionType([AnyType()], IntegerType()))
+    assert_not_subtype(IntegerType(), FunctionType([BooleanType()], IntegerType()))
+    assert_not_subtype(FunctionType([AnyType()], IntegerType()), IntegerType())
+    assert_not_subtype(FunctionType([BooleanType()], IntegerType()), IntegerType())
+    assert_not_subtype(
         FunctionType([AnyType()], IntegerType()), FunctionType([BooleanType(), IntegerType()], IntegerType())
     )
-    assert not is_subtype(
+    assert_not_subtype(
         FunctionType([BooleanType(), IntegerType()], IntegerType()), FunctionType([AnyType()], IntegerType())
     )
-    assert not is_subtype(
+    assert_not_subtype(
         FunctionType([BooleanType(), IntegerType()], IntegerType()), FunctionType([IntegerType()], IntegerType())
     )
 
-    assert not is_subtype(NumberType(), IntegerType())
-    assert not is_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([AtomType()], NumberType()))
-    assert not is_subtype(
+    assert_not_subtype(NumberType(), IntegerType())
+    assert_not_subtype(FunctionType([BooleanType()], IntegerType()), FunctionType([AtomType()], NumberType()))
+    assert_not_subtype(
         FunctionType([BooleanType()], IntegerType()), FunctionType([ListType(BooleanType())], IntegerType())
     )
-    assert not is_subtype(FunctionType([AtomType()], NumberType()), FunctionType([BooleanType()], IntegerType()))
-    assert not is_subtype(
-        FunctionType([AtomType()], NumberType()), FunctionType([BooleanType()], TupleType([AnyType()]))
+    assert_not_subtype(FunctionType([AtomType()], NumberType()), FunctionType([BooleanType()], IntegerType()))
+    assert_not_subtype(FunctionType([AtomType()], NumberType()), FunctionType([BooleanType()], TupleType([AnyType()])))
+
+
+def test_materialization_base():
+    assert_materialization(IntegerType(), IntegerType())
+    assert_materialization(FloatType(), FloatType())
+    assert_materialization(NumberType(), NumberType())
+    assert_materialization(AtomType(), AtomType())
+    assert_materialization(AtomLiteralType("a"), AtomLiteralType("a"))
+    assert_materialization(AnyType(), IntegerType())
+    assert_materialization(AnyType(), FloatType())
+    assert_materialization(AnyType(), NumberType())
+    assert_materialization(AnyType(), AtomType())
+    assert_materialization(AnyType(), AtomLiteralType("a"))
+
+    assert_not_materialization(IntegerType(), NumberType())
+    assert_not_materialization(NumberType(), IntegerType())
+    assert_not_materialization(AtomLiteralType("a"), AtomLiteralType("b"))
+    assert_not_materialization(IntegerType(), AnyType())
+    assert_not_materialization(FloatType(), AnyType())
+    assert_not_materialization(NumberType(), AnyType())
+    assert_not_materialization(AtomType(), AnyType())
+    assert_not_materialization(AtomLiteralType("a"), AnyType())
+
+
+def test_materialization_list():
+    assert_materialization(ElistType(), ElistType())
+    assert_materialization(AnyType(), ElistType())
+
+    assert_not_materialization(ElistType(), AnyType())
+
+    assert_materialization(ListType(IntegerType()), ListType(IntegerType()))
+    assert_materialization(ListType(AnyType()), ListType(IntegerType()))
+    assert_materialization(AnyType(), ListType(IntegerType()))
+    assert_materialization(AnyType(), ListType(AnyType()))
+
+    assert_not_materialization(ListType(IntegerType()), AnyType())
+    assert_not_materialization(ListType(AnyType()), AnyType())
+    assert_not_materialization(ListType(IntegerType()), ListType(AnyType()))
+    assert_not_materialization(ElistType(), ListType(AnyType()))
+
+
+def test_materialization_tuple():
+    assert_materialization(TupleType([IntegerType(), NumberType()]), TupleType([IntegerType(), NumberType()]))
+    assert_materialization(TupleType([IntegerType(), AnyType()]), TupleType([IntegerType(), NumberType()]))
+    assert_materialization(TupleType([AnyType(), AnyType()]), TupleType([IntegerType(), NumberType()]))
+    assert_materialization(AnyType(), TupleType([IntegerType(), NumberType()]))
+    assert_materialization(AnyType(), TupleType([AnyType(), AnyType()]))
+
+    assert_not_materialization(TupleType([IntegerType(), NumberType()]), TupleType([NumberType(), NumberType()]))
+    assert_not_materialization(TupleType([IntegerType(), AnyType()]), TupleType([AnyType(), NumberType()]))
+    assert_not_materialization(TupleType([AnyType(), AnyType()]), IntegerType())
+    assert_not_materialization(TupleType([AnyType(), AnyType()]), AnyType())
+    assert_not_materialization(TupleType([AnyType(), AnyType()]), TupleType([AnyType()]))
+    assert_not_materialization(TupleType([AnyType(), AnyType()]), TupleType([AnyType(), AnyType(), AnyType()]))
+
+
+def test_materialization_map():
+    assert_materialization(
+        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+    )
+    assert_materialization(
+        MapType({MapKey(1): IntegerType(), MapKey(2): AnyType()}),
+        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+    )
+    assert_materialization(
+        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
+        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+    )
+    assert_materialization(AnyType(), MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}))
+    assert_materialization(AnyType(), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
+
+    assert_not_materialization(
+        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1): NumberType(), MapKey(2): NumberType()}),
+    )
+    assert_not_materialization(
+        MapType({MapKey(1): IntegerType(), MapKey(2): AnyType()}),
+        MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}),
+    )
+    assert_not_materialization(
+        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}), MapType({MapKey(1): IntegerType()})
+    )
+    assert_not_materialization(MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}), MapType({MapKey(1): AnyType()}))
+    assert_not_materialization(
+        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
+        MapType({MapKey(1): AnyType(), MapKey(2): AnyType(), MapKey(3): AnyType()}),
+    )
+
+
+def test_materialization_function():
+    assert_materialization(FunctionType([IntegerType()], NumberType()), FunctionType([IntegerType()], NumberType()))
+    assert_materialization(FunctionType([IntegerType()], AnyType()), FunctionType([IntegerType()], NumberType()))
+    assert_materialization(FunctionType([AnyType()], AnyType()), FunctionType([IntegerType()], NumberType()))
+    assert_materialization(AnyType(), FunctionType([IntegerType()], NumberType()))
+    assert_materialization(AnyType(), FunctionType([AnyType()], AnyType()))
+
+    assert_not_materialization(FunctionType([IntegerType()], NumberType()), FunctionType([NumberType()], NumberType()))
+    assert_not_materialization(FunctionType([IntegerType()], AnyType()), FunctionType([AnyType()], NumberType()))
+    assert_not_materialization(FunctionType([AnyType()], AnyType()), IntegerType())
+    assert_not_materialization(FunctionType([AnyType()], AnyType()), AnyType())
+    assert_not_materialization(FunctionType([AnyType()], AnyType()), FunctionType([], AnyType()))
+    assert_not_materialization(FunctionType([AnyType()], AnyType()), FunctionType([AnyType(), AnyType()], AnyType()))
+
+
+def test_merge_operator():
+    assert_merge_operator((AnyType(), AnyType()), AnyType())
+    assert_merge_operator((IntegerType(), IntegerType()), IntegerType())
+    assert_merge_operator((AnyType(), IntegerType()), IntegerType())
+    assert_merge_operator((IntegerType(), AnyType()), AnyType())
+    assert_merge_operator((IntegerType(), NumberType()), IntegerType())
+
+    assert_merge_operator((AnyType(), ListType(IntegerType())), ListType(IntegerType()))
+    assert_merge_operator((ListType(IntegerType()), ListType(AnyType())), ListType(AnyType()))
+    assert_merge_operator((ListType(IntegerType()), ListType(NumberType())), ListType(IntegerType()))
+
+    assert_merge_operator((AnyType(), TupleType([])), TupleType([]))
+    assert_merge_operator((AnyType(), TupleType([IntegerType()])), TupleType([IntegerType()]))
+    assert_merge_operator((TupleType([AnyType()]), TupleType([IntegerType()])), TupleType([IntegerType()]))
+    assert_merge_operator(
+        (TupleType([AnyType(), IntegerType(), IntegerType()]), TupleType([NumberType(), NumberType(), AnyType()])),
+        TupleType([NumberType(), IntegerType(), AnyType()]),
+    )
+
+    assert_merge_operator((AnyType(), MapType({})), MapType({}))
+    assert_merge_operator((AnyType(), MapType({MapKey(1): IntegerType()})), MapType({MapKey(1): IntegerType()}))
+    assert_merge_operator(
+        (
+            MapType({MapKey(1): AnyType(), MapKey(2): IntegerType()}),
+            MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        ),
+        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
+    )
+    assert_merge_operator(
+        (
+            MapType({MapKey(1): AnyType(), MapKey(2): IntegerType(), MapKey(3): AtomType()}),
+            MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        ),
+        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType(), MapKey(3): AtomType()}),
+    )
+
+    assert_merge_operator(
+        (FunctionType([TupleType([])], MapUnit(1)), FunctionType([TupleType([])], MapUnit())),
+        FunctionType([TupleType([])], MapUnit(1)),
+    )
+
+    assert_merge_operator(
+        (FunctionType([MapUnit()], AnyType()), FunctionType([MapUnit(1)], AnyType())),
+        FunctionType([MapUnit()], AnyType()),
+    )
+
+    assert_merge_operator(
+        (
+            FunctionType([AnyType(), NumberType()], TupleType([AnyType(), IntegerType()])),
+            FunctionType([AtomType(), IntegerType()], TupleType([AtomType(), NumberType()])),
+        ),
+        FunctionType([AtomType(), NumberType()], TupleType([AtomType(), IntegerType()])),
+    )
+
+    assert_merge_operator(
+        (
+            MapType(
+                {
+                    MapKey(1): TupleType([IntegerType(), ListType(AnyType())]),
+                    MapKey(2): IntegerType(),
+                    MapKey(3): TupleType([IntegerType(), AnyType()]),
+                }
+            ),
+            MapType({MapKey(1): TupleType([NumberType(), ListType(NumberType())]), MapKey(2): NumberType()}),
+        ),
+        MapType(
+            {
+                MapKey(1): TupleType([IntegerType(), ListType(NumberType())]),
+                MapKey(2): IntegerType(),
+                MapKey(3): TupleType([IntegerType(), AnyType()]),
+            }
+        ),
     )
 
 
@@ -699,6 +902,7 @@ def test_supremum_any():
     assert_supremum_ok((AnyType(), AtomLiteralType("a")), AnyType())
 
     assert_supremum_ok((AnyType(), ElistType()), AnyType())
+    assert_supremum_ok((ListType(AnyType()), ElistType()), ListType(AnyType()))
     assert_supremum_ok((AnyType(), ListType(IntegerType())), ListType(AnyType()))
     assert_supremum_ok((AnyType(), TupleType([])), TupleType([]))
     assert_supremum_ok((AnyType(), TupleType([IntegerType(), FloatType()])), TupleType([AnyType(), AnyType()]))
@@ -749,6 +953,7 @@ def test_infimum_any():
     assert_infimum_ok((AnyType(), AtomLiteralType("a")), AtomLiteralType("a"))
 
     assert_infimum_ok((AnyType(), ElistType()), ElistType())
+    assert_infimum_ok((ListType(AnyType()), ElistType()), ElistType())
     assert_infimum_ok((AnyType(), ListType(NumberType())), AnyType())
     assert_infimum_ok((AnyType(), TupleType([])), TupleType([]))
     assert_infimum_ok((AnyType(), TupleType([IntegerType(), NumberType()])), TupleType([IntegerType(), AnyType()]))

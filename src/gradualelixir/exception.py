@@ -8,4 +8,3 @@ class ElixirProcessError(Exception):
 
 class ElixirParseError(Exception):
     pass
-

@@ -339,6 +339,33 @@ def is_materialization(tau: Type, sigma: Type) -> bool:
         return False
 
 
+# precondition: is_subtype(tau, sigma)
+def merge_operator(tau: Type, sigma: Type) -> Type:
+    if isinstance(tau, AnyType):
+        return sigma
+    if isinstance(sigma, AnyType):
+        return sigma
+    if isinstance(tau, ListType) and isinstance(sigma, ListType):
+        return ListType(merge_operator(tau.type, sigma.type))
+    if isinstance(tau, TupleType) and isinstance(sigma, TupleType):
+        return TupleType([merge_operator(tau.types[i], sigma.types[i]) for i in range(len(tau.types))])
+    if isinstance(tau, MapType) and isinstance(sigma, MapType):
+        if set(sigma.map_type.keys()).issubset(set(tau.map_type.keys())):
+            ret_type = tau.map_type.copy()
+            ret_type.update({k: merge_operator(tau.map_type[k], sigma.map_type[k]) for k in sigma.map_type.keys()})
+            return MapType(ret_type)
+        else:
+            assert set(tau.map_type.keys()).issubset(set(sigma.map_type.keys()))
+            ret_type = {k: merge_operator(tau.map_type[k], sigma.map_type[k]) for k in tau.map_type.keys()}
+            return MapType(ret_type)
+    if isinstance(tau, FunctionType) and isinstance(sigma, FunctionType):
+        return FunctionType(
+            [merge_operator(tau.arg_types[i], sigma.arg_types[i]) for i in range(len(tau.arg_types))],
+            merge_operator(tau.ret_type, sigma.ret_type),
+        )
+    return tau
+
+
 def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Type, TypingError]:
     # TODO make supremum_infimum_aux(types: t.List[Type]) -> t.Union[Type, TypingError]
     #  to support arbitrary arity correctness with respect to gradual lifting

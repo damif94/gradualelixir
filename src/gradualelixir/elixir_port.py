@@ -6,7 +6,7 @@ from collections import OrderedDict
 from typing import Any
 
 from gradualelixir import expression, gtypes, module, pattern
-from gradualelixir.exception import ElixirProcessError, ElixirParseError
+from gradualelixir.exception import ElixirParseError, ElixirProcessError
 
 project_path = os.environ["PROJECT_PATH"]
 
