@@ -160,13 +160,13 @@ defmodule Cast do
         {:list, :any}
 
       {:tuple, type_list} ->
-        {:tuple, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end)}
+        {:tuple, type_list |> Enum.map(fn _ -> :any end)}
 
       {:map, type_map} ->
         {:map, Enum.into(Enum.map(type_map, fn {k, _} -> {k, :any} end), %{})}
 
       {:fun, type_list, _} ->
-        {:fun, 0..(length(type_list) - 1)//1 |> Enum.map(fn _ -> :any end), :any}
+        {:fun, type_list |> Enum.map(fn _ -> :any end), :any}
     end
   end
 
@@ -185,7 +185,7 @@ defmodule Cast do
           end
 
         {value, :any, type} ->
-          if is_base(type) do
+          if is_base_value(value) do
             if is_consistent_subtype(type_for_value(value), type), do: value, else: :cast_error
           else
             cast(value, ground(type), type)

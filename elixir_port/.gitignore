@@ -25,6 +25,5 @@ elixir_port-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-elixir_port
 elixir_port.iml
 README.md

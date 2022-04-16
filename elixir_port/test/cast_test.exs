@@ -140,6 +140,8 @@ defmodule ElixirPortTest do
   test "ground_id" do
     assert (({} | {} ~> any) | any ~> {}) === {}
     assert (({1} | {any} ~> any) | any ~> {any}) === {1}
+    assert ({1, 1.0} | any ~> {any, any}) === {1, 1.0}
+    assert ({1, 1.0} | {any, any} ~> any) == {1, 1.0}
     assert (({1, 1.0} | {any, any} ~> any) | any ~> {any, any}) === {1, 1.0}
     assert (({1, 1.0, true} | {any, any, any} ~> any) | any ~> {any, any, any}) === {1, 1.0, true}
 
@@ -154,25 +156,27 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.BadArgumentError, {} | {any} ~> {any})
   end
 
-  @tag disabled: true
+#  @tag disabled: true
   test "ground_fail" do
-    assert_raise_error(Cast.CastError, 1 | integer ~> float)
-    assert_raise_error(Cast.CastError, :a | :a ~> :b)
-    assert_raise_error(Cast.CastError, :a | atom ~> :b)
+#    assert_raise_error(Cast.CastError, 1 | any ~> float)
+#    assert_raise_error(Cast.CastError, 1 | integer ~> float)
+#    assert_raise_error(Cast.CastError, :a | :a ~> :b)
+#    assert_raise_error(Cast.CastError, :a | atom ~> :b)
+#
+#    assert_raise_error(Cast.BadArgumentError, :a | integer ~> :a)
+#    assert_raise_error(Cast.BadArgumentError, :a | integer ~> :b)
+#
+#    assert_raise_error(Cast.CastError, [] | [integer] ~> [atom])
+#    assert_raise_error(Cast.CastError, [] | [integer] ~> integer)
+#    assert_raise_error(Cast.CastError, [] | [integer] ~> {any})
+#    assert_raise_error(Cast.CastError, [1, 2] | [integer] ~> [float])
+#    assert_raise_error(Cast.CastError, [1, 2] | [integer] ~> [])
+#
+#    assert_raise_error(Cast.BadArgumentError, {} | [] ~> any)
+#    assert_raise_error(Cast.BadArgumentError, [] | {any} ~> [])
+#    assert_raise_error(Cast.BadArgumentError, [1, 2] | [] ~> [])
 
-    assert_raise_error(Cast.BadArgumentError, :a | integer ~> :a)
-    assert_raise_error(Cast.BadArgumentError, :a | integer ~> :b)
-
-    assert_raise_error(Cast.CastError, [] | [integer] ~> [atom])
-    assert_raise_error(Cast.CastError, [] | [integer] ~> integer)
-    assert_raise_error(Cast.CastError, [] | [integer] ~> {any})
-    assert_raise_error(Cast.CastError, [1, 2] | [integer] ~> [float])
-    assert_raise_error(Cast.CastError, [1, 2] | [integer] ~> [])
-
-    assert_raise_error(Cast.BadArgumentError, {} | [] ~> any)
-    assert_raise_error(Cast.BadArgumentError, [] | {any} ~> [])
-    assert_raise_error(Cast.BadArgumentError, [1, 2] | [] ~> [])
-
+    IO.inspect({} | any ~> {any, any})
     assert_raise_error(Cast.CastError, {} | {} ~> {any, any})
     assert_raise_error(Cast.CastError, {1} | {any} ~> {any, any})
     assert_raise_error(Cast.CastError, {1, 2} | {integer, float} ~> {integer})
@@ -256,7 +260,7 @@ defmodule ElixirPortTest do
 #    assert untyped_evaluator.(untyped_plus1, 1) = 2
   end
 
-#  @tag disabled: true
+  @tag disabled: true
   test "wip" do
     untyped_plus1 = (fn x -> x + 1 end | (any -> any) ~> (any -> any))
     untyped_duplicator = (fn f, x -> f.(x) + f.(x) end | ((any -> any), any -> any) ~> ((any -> any), any -> any))
