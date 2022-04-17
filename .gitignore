@@ -152,6 +152,6 @@ cython_debug/
 
 .cache/
 
-
+cli_examples/
 format.ex
 swap.ex

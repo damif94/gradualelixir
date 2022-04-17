@@ -77,9 +77,8 @@ def type_check_command(static, annotate, filename):
     if static and annotate == "casts":
         raise click.ClickException("--annotate types is a forbidden value option in combination with --static")
 
-    annotate = bool(annotate)
     casts = annotate == "casts"
-
+    annotate = bool(annotate)
     base_path = os.path.join(os.environ.get("WORKING_DIR", ""), "")
     base_name, mime = filename.split(".")
 
@@ -115,7 +114,7 @@ def type_check_command(static, annotate, filename):
     annotated_code = str(cast.annotate_module(type_check_result, casts=casts))
     print(
         f"{Bcolors.OKBLUE}An annotated version of {type_check_result.module.name} module was "
-        f"generated in {base_name}_{'types' if static else 'casts'}.{mime}{Bcolors.ENDC}\n"
+        f"generated in {base_name}_{'casts' if casts else 'types'}.{mime}{Bcolors.ENDC}\n"
     )
     formatted_code = format_code(code)
     formatted_annotated_code = format_code(annotated_code)
@@ -123,7 +122,7 @@ def type_check_command(static, annotate, filename):
     with open(f"{base_path}{base_name}.{mime}", "w") as f:
         f.write(formatted_code)
 
-    with open(f"{base_path}{base_name}_{'types' if static else 'casts'}.{mime}", "w") as f:
+    with open(f"{base_path}{base_name}_{'casts' if casts else 'types'}.{mime}", "w") as f:
         f.write(formatted_annotated_code)
 
 
