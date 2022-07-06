@@ -64,9 +64,15 @@ class BinaryOpEnum(Enum):
         ]
 
     @property
+    def mgu(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type]]:
+        pass
+
+    @property
     def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type, gtypes.Type]]:
         # TODO[improvements] adding term would unlock 'untyped' operators like
         #   ==, or !,&,||
+
+        # TODO bug when any is provided - maybe on inverse order
         if self is BinaryOpEnum.conjunction:
             return [
                 (
@@ -196,7 +202,7 @@ class FloatExpression(LiteralExpression):
             return str(self.value) + ".0"
         return str(self.value)
 
-
+# TODO make AAtomLiteralSetExpression
 @dataclass
 class AtomLiteralExpression(LiteralExpression):
     value: str

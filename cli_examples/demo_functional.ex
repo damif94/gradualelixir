@@ -43,6 +43,9 @@ defmodule Demo do
   end
 
   def main(options) do
+    untyped(true) + 1
+    untyped(untyped(false) + 2) and true
+
     choice =
       case options do
         %{:choice => v} -> v

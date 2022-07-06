@@ -40,7 +40,7 @@ class CastAnnotatedExpression(expression.Expression):
     left_type: gtypes.Type
     right_type: gtypes.Type
 
-    def __init__(self, expression: "expression.Expression", right_type: gtypes.Type, left_type: gtypes.Type):
+    def __init__(self, expression: "expression.Expression", left_type: gtypes.Type, right_type: gtypes.Type):
         self.left_type = left_type
         self.right_type = gtypes.merge_operator(left_type, right_type)
         self.expression = expression

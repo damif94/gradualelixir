@@ -128,12 +128,12 @@ def type_check_command(static, annotate, filename):
 
 @cli.command("run", short_help="spawns an elixir shell (iex) loaded with the content of <filename>")
 @click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
-def run_command(arguments):
+def run_command(filename):
     import pty
     import shutil
 
     base_path = os.path.join(os.environ.get("WORKING_DIR", ""), "")
-    filename = os.path.join(base_path, arguments[0])
+    filename = os.path.join(base_path, filename)
     mix_project_path = os.path.join(os.environ.get("PROJECT_PATH", ""), "elixir_port")
     shutil.copy(filename, os.path.join(mix_project_path, ".iex.exs"))
     os.chdir(mix_project_path)
