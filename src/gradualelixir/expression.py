@@ -64,9 +64,15 @@ class BinaryOpEnum(Enum):
         ]
 
     @property
+    def mgu(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type]]:
+        pass
+
+    @property
     def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type, gtypes.Type]]:
         # TODO[improvements] adding term would unlock 'untyped' operators like
         #   ==, or !,&,||
+
+        # TODO bug when any is provided - maybe on inverse order
         if self is BinaryOpEnum.conjunction:
             return [
                 (
@@ -196,7 +202,7 @@ class FloatExpression(LiteralExpression):
             return str(self.value) + ".0"
         return str(self.value)
 
-
+# TODO make AtomLiteralSetExpression
 @dataclass
 class AtomLiteralExpression(LiteralExpression):
     value: str
@@ -225,9 +231,9 @@ class ListExpression(Expression):
             [isinstance(tail, ListExpression), isinstance(tail, ElistExpression), isinstance(tail, IdentExpression)]
         ):
             # this extra import will be avoided once AnnotatedExpression is declared inside this module
-            from gradualelixir.cast import AnnotatedExpression
+            from gradualelixir.cast import AnnotatedExpression, CastAnnotatedExpression
 
-            if not isinstance(tail, AnnotatedExpression):
+            if not isinstance(tail, AnnotatedExpression) and not isinstance(tail, CastAnnotatedExpression):
                 raise SyntaxRestrictionError(
                     "List pattern's tail should be either a List Expression or an Elist Expression"
                 )
@@ -615,10 +621,10 @@ ExpressionTypeCheckResult = t.Union[ExpressionTypeCheckSuccess, ExpressionTypeCh
 
 
 def type_check(expr: Expression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv) -> ExpressionTypeCheckResult:
-    if isinstance(expr, LiteralExpression):
-        return type_check_literal(expr, env, specs_env)
     if isinstance(expr, IdentExpression):
         return type_check_ident(expr, env, specs_env)
+    if isinstance(expr, LiteralExpression):
+        return type_check_literal(expr, env, specs_env)
     if isinstance(expr, ElistExpression):
         return type_check_elist(expr, env, specs_env)
     if isinstance(expr, ListExpression):
@@ -650,14 +656,6 @@ def type_check(expr: Expression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
         return type_check_call(expr, env, specs_env)
 
 
-def type_check_literal(
-    expr: LiteralExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
-) -> ExpressionTypeCheckResult:
-    return ExpressionTypeCheckSuccess(
-        expression=expr, env=env, specs_env=specs_env, type=expr.type, exported_env=env, children={}
-    )
-
-
 def type_check_ident(
     expr: IdentExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
 ) -> ExpressionTypeCheckResult:
@@ -671,6 +669,14 @@ def type_check_ident(
             kind=ExpressionErrorEnum.identifier_not_found_in_environment,
             args={"identifier": expr.identifier},
         )
+
+
+def type_check_literal(
+    expr: LiteralExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
+) -> ExpressionTypeCheckResult:
+    return ExpressionTypeCheckSuccess(
+        expression=expr, env=env, specs_env=specs_env, type=expr.type, exported_env=env, children={}
+    )
 
 
 def type_check_elist(

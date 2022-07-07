@@ -40,9 +40,9 @@ class CastAnnotatedExpression(expression.Expression):
     left_type: gtypes.Type
     right_type: gtypes.Type
 
-    def __init__(self, expression: "expression.Expression", right_type: gtypes.Type, left_type: gtypes.Type):
+    def __init__(self, expression: "expression.Expression", left_type: gtypes.Type, right_type: gtypes.Type):
         self.left_type = left_type
-        self.right_type = gtypes.merge_operator(left_type, right_type)
+        self.right_type = right_type
         self.expression = expression
 
     def __str__(self):
@@ -198,8 +198,8 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             annotated_argument = annotate_expression(argument_type_derivation)
             annotated_arguments.append(annotated_argument)
 
-        signature = type_derivation.env[expr.ident]
-        assert isinstance(signature, gtypes.FunctionType)
+        ident_type = type_derivation.env[expr.ident]
+        assert isinstance(ident_type, gtypes.FunctionType) or isinstance(ident_type, gtypes.AnyType)
         return AnnotatedExpression(
             expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
             type=type_derivation.type,
@@ -211,15 +211,23 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
 def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess) -> expression.Expression:
     expr = type_derivation.expression
     if isinstance(expr, expression.IdentExpression):
-        return CastAnnotatedExpression(expr, type_derivation.env[expr.identifier], type_derivation.type)
+        return expr
     if isinstance(expr, expression.LiteralExpression):
         return expr
     if isinstance(expr, expression.ElistExpression):
         return expr
     if isinstance(expr, expression.ListExpression):
         return expression.ListExpression(
-            head=CastAnnotatedExpression(expr.head, type_derivation.children["head"].type, type_derivation.type),
-            tail=CastAnnotatedExpression(expr.tail, type_derivation.children["tail"].type, type_derivation.type),
+            head=CastAnnotatedExpression(
+                expression=expr.head,
+                left_type=type_derivation.children["head"].type,
+                right_type=gtypes.merge_operator(type_derivation.children["head"].type, type_derivation.type)
+            ),
+            tail=CastAnnotatedExpression(
+                expression=expr.tail,
+                left_type=type_derivation.children["tail"].type,
+                right_type=gtypes.merge_operator(type_derivation.children["tail"].type, type_derivation.type)
+            )
         )
     if isinstance(expr, expression.TupleExpression):
         return expression.TupleExpression(
@@ -237,10 +245,23 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
         annotated_right = cast_annotate_expression(type_derivation.children["right"])
         return expression.BinaryOpExpression(
             op=expr.op,
-            left=CastAnnotatedExpression(annotated_left, type_derivation.children["left"].type, type_derivation.type),
-            right=CastAnnotatedExpression(
-                annotated_right, type_derivation.children["right"].type, type_derivation.type
+            left=CastAnnotatedExpression(
+                expression=annotated_left,
+                left_type=type_derivation.children["left"].type,
+                right_type=gtypes.merge_operator(type_derivation.children["left"].type, type_derivation.type)
             ),
+            right=CastAnnotatedExpression(
+                expression=annotated_right,
+                left_type=type_derivation.children["right"].type,
+                right_type=gtypes.merge_operator(type_derivation.children["right"].type, type_derivation.type)
+            ),
+        )
+    if isinstance(expr, expression.PatternMatchExpression):
+        annotated_expression = cast_annotate_expression(type_derivation.children["expression"])
+        return CastAnnotatedExpression(
+            expression=expression.PatternMatchExpression(expr.pattern, annotated_expression),
+            left_type=type_derivation.children["expression"].type,
+            right_type=gtypes.merge_operator(type_derivation.type, type_derivation.children["expression"].type)
         )
     if isinstance(expr, expression.IfElseExpression):
         annotated_condition = cast_annotate_expression(type_derivation.children["condition"])
@@ -259,11 +280,24 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
         annotated_cond_clauses: t.List[t.Tuple[expression.Expression, expression.Expression]] = []
         for cond_type_derivation, do_type_derivation in type_derivation.children["clauses"]:
             annotated_cond = cast_annotate_expression(cond_type_derivation)
-            annotated_do = cast_annotate_expression(do_type_derivation)
-            annotated_cond_clauses.append(
-                (annotated_cond, CastAnnotatedExpression(annotated_do, do_type_derivation.type, type_derivation.type))
+            annotated_do = CastAnnotatedExpression(
+                expression=cast_annotate_expression(do_type_derivation),
+                left_type=do_type_derivation.type,
+                right_type=gtypes.merge_operator(do_type_derivation.type, type_derivation.type)
             )
+            annotated_cond_clauses.append((annotated_cond, annotated_do))
         return expression.CondExpression(annotated_cond_clauses)
+    if isinstance(expr, expression.CaseExpression):
+        annotated_test = cast_annotate_expression(type_derivation.children["test"])
+        annotated_case_clauses: t.List[t.Tuple[pattern.Pattern, expression.Expression]] = []
+        for pattern_match_type_derivation, do_type_derivation in type_derivation.children["clauses"]:
+            annotated_do = CastAnnotatedExpression(
+                expression=cast_annotate_expression(do_type_derivation),
+                left_type=do_type_derivation.type,
+                right_type=gtypes.merge_operator(do_type_derivation.type, type_derivation.type)
+            )
+            annotated_case_clauses.append((pattern_match_type_derivation.pattern, annotated_do))
+        return expression.CaseExpression(annotated_test, annotated_case_clauses)
     if isinstance(expr, expression.AnonymizedFunctionExpression):
         return expr
     if isinstance(expr, expression.FunctionCallExpression):
@@ -273,24 +307,27 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             annotated_argument = CastAnnotatedExpression(
                 expression=cast_annotate_expression(argument_type_derivation),
                 left_type=argument_type_derivation.type,
-                right_type=type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i],
+                right_type=gtypes.merge_operator(
+                    argument_type_derivation.type,
+                    type_derivation.specs_env[(expr.function_name, len(expr.arguments))][0][i]
+                )
             )
             annotated_arguments.append(annotated_argument)
         return expression.FunctionCallExpression(function_name=expr.function_name, arguments=annotated_arguments)
     if isinstance(expr, expression.VarCallExpression):
+        ident_right_type = type_derivation.env[expr.ident]
+        if isinstance(any := ident_right_type, gtypes.AnyType):
+            ident_right_type = gtypes.FunctionType(arg_types=[any for _ in expr.arguments], ret_type=any)
+
         annotated_arguments = []
         for i in range(len(expr.arguments)):
             argument_type_derivation = type_derivation.children["arguments"][i]
             annotated_argument = CastAnnotatedExpression(
                 expression=cast_annotate_expression(argument_type_derivation),
                 left_type=argument_type_derivation.type,
-                right_type=type_derivation.specs_env[(expr.ident, len(expr.arguments))][0][i],
+                right_type=gtypes.merge_operator(argument_type_derivation.type, ident_right_type.arg_types[i])
             )
             annotated_arguments.append(annotated_argument)
-
-        ident_right_type = type_derivation.env[expr.ident]
-        if isinstance(any := type_derivation.env[expr.ident], gtypes.AnyType):
-            ident_right_type = gtypes.FunctionType(arg_types=[any for _ in expr.arguments], ret_type=any)
 
         return AnnotatedExpression(
             expression=CastAnnotatedVarCallExpression(
