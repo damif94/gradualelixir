@@ -656,6 +656,11 @@ def test_unary_op():
         {"x": BooleanType()},
         BooleanType(),
     )
+    assert_type_check_expression_ok(
+        UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
+        {"x": AnyType()},
+        AnyType(),
+    )
 
     # VARIABLE EXPORT behavior
     assert_type_check_expression_ok(
@@ -835,6 +840,26 @@ def test_binary_op():
         BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
         {"x": NumberType(), "y": FloatType()},
         NumberType(),
+    )
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
+        {"x": IntegerType(), "y": AnyType()},
+        AnyType(),
+    )
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
+        {"x": NumberType(), "y": AnyType()},
+        AnyType(),
+    )
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
+        {"x": AnyType(), "y": NumberType()},
+        AnyType(),
+    )
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
+        {"x": AnyType(), "y": AnyType()},
+        AnyType(),
     )
 
     # VARIABLE EXPORT behavior
@@ -1610,12 +1635,4 @@ def test_anon():
         AnonymizedFunctionExpression("foo", 1),
         specs_env={("foo", 0): ([], AnyType()), ("foo", 2): ([AtomType(), FloatType()], AnyType())},
         expected_context=ExpressionErrorEnum.function_not_declared,
-    )
-
-
-def test_cast():
-    type_check(
-        IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
-        TypeEnv({"x": IntegerType(), "y": FloatType(), "b": BooleanType()}),
-        SpecsEnv(),
     )

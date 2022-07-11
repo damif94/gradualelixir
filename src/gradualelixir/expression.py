@@ -33,6 +33,25 @@ class UnaryOpEnum(Enum):
                 (gtypes.BooleanType(), gtypes.BooleanType()),
             ]
 
+    @property
+    def maximal_argument_type(self) -> gtypes.Type:
+        acc: gtypes.Type = None  # type: ignore
+        for arg_type, _ in self.types:
+            new_acc = gtypes.supremum(acc, arg_type) if acc is not None else arg_type
+            assert not isinstance(new_acc, gtypes.TypingError)
+            acc = new_acc
+        return acc
+
+    def get_return_type(self, type: gtypes.Type) -> t.Optional[gtypes.Type]:
+        valid_result_types = [
+            ret_type
+            for arg_type, ret_type in self.types
+            if gtypes.is_subtype(type, arg_type)
+        ]
+        if len(valid_result_types) > 0:
+            return valid_result_types[0]
+        return None
+
 
 class BinaryOpEnum(Enum):
     conjunction = "and"
@@ -62,10 +81,6 @@ class BinaryOpEnum(Enum):
             BinaryOpEnum.maximum,
             BinaryOpEnum.minimum,
         ]
-
-    @property
-    def mgu(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type]]:
-        pass
 
     @property
     def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type, gtypes.Type]]:
@@ -132,28 +147,54 @@ class BinaryOpEnum(Enum):
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType()),
             ]
         elif self in [
-            BinaryOpEnum.equality,
-            BinaryOpEnum.inequality,
+            BinaryOpEnum.identity,
+            BinaryOpEnum.inidentity,
             BinaryOpEnum.lower,
             BinaryOpEnum.lower_or_equal,
             BinaryOpEnum.greater,
             BinaryOpEnum.greater_or_equal,
         ]:
-            # TODO if we had term type this could be improved
-            #  (gtypes.TermType(), gtypes.TermType(), gtypes.BooleanType())
             return [
                 (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
             ]
         else:
-            assert self is BinaryOpEnum.identity
+            assert self in [
+                BinaryOpEnum.equality,
+                BinaryOpEnum.inequality
+            ]
             # TODO[improvements] improve so that if x!= y
             #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=y)) raises error
             return [
                 (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
-                (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.BooleanType()),
-                (gtypes.FloatType(), gtypes.FloatType(), gtypes.BooleanType()),
             ]
+
+    @property
+    def get_maximal_argument_types(self) -> t.Tuple[gtypes.Type, gtypes.Type]:
+        acc: t.Tuple[gtypes.Type, gtypes.Type] = None  # type: ignore
+        for left_arg_type, right_arg_type, _ in self.types:
+            if acc:
+                new_acc = (gtypes.supremum(acc[0], left_arg_type), gtypes.supremum(acc[1], right_arg_type))
+            else:
+                new_acc = (left_arg_type, right_arg_type)
+            new_acc_0, new_acc_1 = new_acc
+            assert isinstance(new_acc_0, gtypes.Type)
+            assert isinstance(new_acc_1, gtypes.Type)
+            acc = new_acc  # type: ignore
+        return acc
+
+    def get_return_type(self, left_type: gtypes.Type, right_type: gtypes.Type) -> t.Optional[gtypes.Type]:
+        valid_result_types = [
+            ret_type
+            for left_arg_type, right_arg_type, ret_type in self.types
+            if (
+                gtypes.is_subtype(left_type, left_arg_type)
+                and gtypes.is_subtype(right_type, right_arg_type)
+            )
+        ]
+        if len(valid_result_types) > 0:
+            return valid_result_types[0]
+        return None
 
 
 class Expression:
@@ -355,7 +396,7 @@ class FunctionCallExpression(Expression):
     arguments: t.List[Expression]
 
     def __str__(self):
-        arguments_str = ",".join([str(arg) for arg in self.arguments])
+        arguments_str = ", ".join([str(arg) for arg in self.arguments])
         return f"{self.function_name}({arguments_str})"
 
 
@@ -365,13 +406,13 @@ class VarCallExpression(Expression):
     arguments: t.List[Expression]
 
     def __str__(self):
-        arguments_str = ",".join([str(arg) for arg in self.arguments])
+        arguments_str = ", ".join([str(arg) for arg in self.arguments])
         return f"{self.ident}.({arguments_str})"
 
 
 def format_expression(expression: Expression, padding="") -> str:
     needs_formatting = False
-    if len(str(expression).split("\n")) > 1 or len(str(expression)) > 20:  # is multiline or expression is too long
+    if len(str(expression).split("\n")) > 1 or len(str(expression)) > 120:  # is multiline or expression is too long
         needs_formatting = True
 
     if needs_formatting:  # is multiline
@@ -789,14 +830,19 @@ def type_check_unary_op(
             expression=expr,
             bullets=[ContextExpressionTypeCheckError(UnaryOpContext(), env, argument_type_check_result)],
         )
-    if valid_result_types := [
-        ret_type for arg_type, ret_type in expr.op.types if gtypes.is_subtype(argument_type_check_result.type, arg_type)
-    ]:
+
+    result_type: t.Optional[gtypes.Type] = None
+    if isinstance(argument_type_check_result.type, gtypes.AnyType):
+        result_type = gtypes.AnyType()
+    else:
+        result_type = expr.op.get_return_type(argument_type_check_result.type)
+
+    if result_type is not None:
         return ExpressionTypeCheckSuccess(
             env=env,
             expression=expr,
             specs_env=specs_env,
-            type=valid_result_types[0],
+            type=result_type,
             exported_env=argument_type_check_result.exported_env,
             children={"argument": argument_type_check_result},
         )
@@ -840,19 +886,23 @@ def type_check_binary_op(
             expression=expr,
             bullets=[ContextExpressionTypeCheckError(BinaryOpContext(is_left=False), env, right_type_check_result)],
         )
-    if valid_result_types := [
-        ret_type
-        for left_arg_type, right_arg_type, ret_type in expr.op.types
-        if (
-            gtypes.is_subtype(left_type_check_result.type, left_arg_type)
-            and gtypes.is_subtype(right_type_check_result.type, right_arg_type)
-        )
-    ]:
+
+    result_type: t.Optional[gtypes.Type] = None
+    if (
+        isinstance(left_type_check_result.type, gtypes.AnyType)
+        or
+        isinstance(right_type_check_result.type, gtypes.AnyType)
+    ):
+        result_type = gtypes.AnyType()
+    else:
+        result_type = expr.op.get_return_type(left_type_check_result.type, right_type_check_result.type)
+
+    if result_type is not None:
         return ExpressionTypeCheckSuccess(
             expression=expr,
             env=env,
             specs_env=specs_env,
-            type=valid_result_types[0],
+            type=result_type,
             exported_env=gtypes.TypeEnv.merge(
                 left_type_check_result.exported_env, right_type_check_result.exported_env
             ),
