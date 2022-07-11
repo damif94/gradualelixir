@@ -208,6 +208,13 @@ class TypeCheckSuccess:
         )
 
 
+def format_module(module: Module, padding="") -> str:
+    from .elixir_port import format_code
+
+    msg = format_code(str(module))
+    return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])
+
+
 def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, gtypes.SpecsEnv]:
     specs_by_definitions_dict: t.Dict[Definition, t.List[Spec]] = {definition: [] for definition in module.definitions}
     definitions_by_spec_dict: t.Dict[Spec, t.List[Definition]] = {spec: [] for spec in module.specs}
