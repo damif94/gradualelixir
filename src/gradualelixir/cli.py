@@ -1,4 +1,5 @@
 import os
+import sys
 
 import click
 from dotenv import find_dotenv, set_key

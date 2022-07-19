@@ -23,15 +23,6 @@ def parse_key(x):
     return gtypes.MapKey(x)
 
 
-def unparse_key(x: gtypes.MapKey):
-    if isinstance(x.type, gtypes.AtomLiteralType):
-        if x.value in ["true", "false"]:
-            return x.value == "true"
-        else:
-            return x.value
-    return x.value
-
-
 def parse_type(x):
     if isinstance(x, bool):
         return gtypes.AtomLiteralType(atom="true" if x else "false")
@@ -64,36 +55,6 @@ def parse_type(x):
         return gtypes.ListType(parse_type(x[0]))
 
 
-def unparse_type(x):
-    if isinstance(x, gtypes.BooleanType):
-        return "boolean"
-    if isinstance(x, gtypes.AtomLiteralType):
-        if x.atom in ["true", "false"]:
-            return x.atom == "true"
-        return str(x)
-    if isinstance(x, gtypes.AtomType):
-        return "atom"
-    if isinstance(x, gtypes.IntegerType):
-        return "integer"
-    if isinstance(x, gtypes.FloatType):
-        return "float"
-    if isinstance(x, gtypes.NumberType):
-        return "number"
-    if isinstance(x, gtypes.AnyType):
-        return "any"
-    if isinstance(x, gtypes.ElistType):
-        return []
-    elif isinstance(x, gtypes.ListType):
-        return [unparse_type(x.type)]
-    if isinstance(x, gtypes.TupleType):
-        return tuple([unparse_type(y) for y in x.types])
-    if isinstance(x, gtypes.FunctionType):
-        return tuple([unparse_type(y) for y in x.arg_types] + ["->"] + [unparse_type(x.ret_type)])
-    else:
-        assert isinstance(x, gtypes.MapType)
-        return {unparse_key(k): unparse_type(x.map_type[k]) for k in x.map_type}
-
-
 def ordinal(n: int):
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
@@ -107,4 +68,4 @@ def enumerate_list(items: t.List[str]) -> str:
         return ",".join([str(item) for item in items[:-1]]) + " and " + str(items[-1])
 
 
-long_line = "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
+long_line = "".join(["-" for _ in range(200)])

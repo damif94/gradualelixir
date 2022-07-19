@@ -21,7 +21,6 @@ defmodule ElixirPortTest do
 
   def sum(x, y), do: x + y
 
-  # @tag disabled: true
   test "build_type_from_ast" do
     assert Cast.build_type_from_ast(Code.string_to_quoted!("true")) == {:atom, true}
     assert Cast.build_type_from_ast(Code.string_to_quoted!(":one")) == {:atom, :one}
@@ -46,7 +45,6 @@ defmodule ElixirPortTest do
     assert Cast.build_type_from_ast(Code.string_to_quoted!("( -> {float, [%{1 => integer}]})")) == {:fun, [], {:tuple, [:float, {:list, {:map, [{1, :integer}]}}]}}
   end
 
-  # @tag disabled: true
   test "is_base" do
     assert Cast.is_base(:integer)
     assert Cast.is_base(:float)
@@ -67,7 +65,6 @@ defmodule ElixirPortTest do
     assert not Cast.is_base({:fun, [true, true], true})
   end
 
-  # @tag disabled: true
   test "ground_type_for_value" do
     assert Cast.ground_type_for_value(1) == :integer
     assert Cast.ground_type_for_value(-122) == :integer
@@ -98,7 +95,6 @@ defmodule ElixirPortTest do
     assert Cast.ground_type_for_value((fn _, 1 -> :one end | (:integer, :atom -> :atom) ~> (:integer, :atom -> :boolean))) == {:fun, [:any, :any], :any}
   end
 
-  # @tag disabled: true
   test "ground_type_for_type" do
     assert Cast.ground_type_for_type(:integer) == :integer
     assert Cast.ground_type_for_type(:float) == :float
@@ -122,7 +118,6 @@ defmodule ElixirPortTest do
     assert Cast.ground_type_for_type({:fun, [:integer, :number], :any}) == {:fun, [:any, :any], :any}
   end
 
-  # @tag disabled: true
   test "is_subtype" do
     assert Cast.is_subtype(:integer, :number)
     assert not Cast.is_subtype(:integer, :float)
@@ -174,7 +169,6 @@ defmodule ElixirPortTest do
     assert not Cast.is_subtype({:fun, [:number, :atom], :number}, {:fun, [:integer, {:atom, :one}], :integer})
   end
 
-  # @tag disabled: true
   test "d_lit_cast" do
     assert (1 | integer ~> integer) === 1
     assert (1 | number ~> number) === 1
@@ -196,7 +190,6 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.BadArgumentError, 1 | float ~> any)
   end
 
-  # @tag disabled: true
   test "d_elist_cast" do
     assert ([]| [] ~> []) == []
     assert ([]| [{integer, any}] ~> [{integer, any}]) == []
@@ -214,7 +207,6 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.BadArgumentError, [] | [{integer, any}] ~> integer)
   end
 
-  # @tag disabled: true
   test "d_list_cast" do
     assert ([1] | [integer] ~> [integer]) == [1]
     assert ([1] | [number] ~> [number]) == [1]
@@ -388,5 +380,14 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.BadArgumentError, (((sum | (any -> any) ~> any))))
     assert_raise_error(Cast.BadArgumentError, (((sum | (any -> any) ~> (any -> any)))))
     assert_raise_error(Cast.BadArgumentError, (((sum | ((any, any) -> any) ~> (any -> any)))))
+  end
+
+  test "miscellanea" do
+    assert (1.0 + 1 | any ~> float) == 2.0
+    assert_raise_error(Cast.CastError,
+       cond do
+         1 | any ~> boolean -> true
+       end
+     )
   end
 end

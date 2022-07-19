@@ -1052,7 +1052,7 @@ def test_pattern_match():
 def test_if_else():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
-        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), None),
+        IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"),  IdentExpression("x")),
         {"x": IntegerType()},
         IntegerType(),
     )

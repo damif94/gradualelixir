@@ -276,7 +276,7 @@ def test_operations():
     assert parse_expression("not x") == UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
     assert parse_expression("not []") == UnaryOpExpression(UnaryOpEnum.negation, ElistExpression())
     assert parse_expression("1 + 2.0") == BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), FloatExpression(2))
-    assert parse_expression("3 - 1 === 2.0") == (
+    assert parse_expression("3 - 1 == 2.0") == (
         BinaryOpExpression(
             BinaryOpEnum.equality,
             BinaryOpExpression(BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)),
@@ -286,7 +286,7 @@ def test_operations():
     assert parse_expression("max(1, 2)") == BinaryOpExpression(
         BinaryOpEnum.maximum, IntegerExpression(1), IntegerExpression(2)
     )
-    assert parse_expression("3 - 1 === 2.1") == (
+    assert parse_expression("3 - 1 == 2.1") == (
         BinaryOpExpression(
             BinaryOpEnum.equality,
             BinaryOpExpression(BinaryOpEnum.subtraction, IntegerExpression(3), IntegerExpression(1)),
@@ -295,7 +295,7 @@ def test_operations():
     )
     assert parse_expression("3 - abs(-1) === 2.0") == (
         BinaryOpExpression(
-            BinaryOpEnum.equality,
+            BinaryOpEnum.identity,
             BinaryOpExpression(
                 BinaryOpEnum.subtraction,
                 IntegerExpression(3),
@@ -310,13 +310,6 @@ def test_operations():
 
 
 def test_control_flow_expressions():
-    assert parse_expression("if true do\n" "  1\n" "end\n") == (
-        IfElseExpression(
-            condition=AtomLiteralExpression("true"),
-            if_clause=IntegerExpression(1),
-            else_clause=None,
-        )
-    )
     assert parse_expression("if true do\n" "  {1, 1}\n" "else\n" "  {2, 2}\n" "end\n") == (
         IfElseExpression(
             condition=AtomLiteralExpression("true"),
@@ -324,7 +317,7 @@ def test_control_flow_expressions():
             else_clause=TupleExpression([IntegerExpression(2), IntegerExpression(2)]),
         )
     )
-    assert parse_expression("cond do\n" "  1 === x -> 2\n" "end\n") == (
+    assert parse_expression("cond do\n" "  1 == x -> 2\n" "end\n") == (
         CondExpression(
             clauses=[
                 (
@@ -343,7 +336,7 @@ def test_control_flow_expressions():
             clauses=[
                 (
                     BinaryOpExpression(
-                        BinaryOpEnum.equality,
+                        BinaryOpEnum.identity,
                         IntegerExpression(1),
                         IdentExpression("x"),
                     ),
@@ -404,7 +397,7 @@ def test_control_flow_expressions():
             ),
         ),
         IfElseExpression(
-            BinaryOpExpression(BinaryOpEnum.equality, IdentExpression("h"), IntegerExpression(1)),
+            BinaryOpExpression(BinaryOpEnum.identity, IdentExpression("h"), IntegerExpression(1)),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("true")),
             PatternMatchExpression(IdentPattern("res"), AtomLiteralExpression("false")),
         ),

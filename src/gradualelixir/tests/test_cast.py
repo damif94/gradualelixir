@@ -1,5 +1,12 @@
 from collections import OrderedDict
 
+from gradualelixir.cast import (
+    AnnotatedModule,
+    CastAnnotatedExpression,
+    CastAnnotatedVarCallExpression,
+    annotate_module,
+    cast_annotate_expression,
+)
 from gradualelixir.expression import (
     AnonymizedFunctionExpression,
     AtomLiteralExpression,
@@ -23,10 +30,9 @@ from gradualelixir.expression import (
     UnaryOpEnum,
     UnaryOpExpression,
     VarCallExpression,
-    type_check, format_expression,
+    format_expression,
+    type_check,
 )
-from gradualelixir.module import Module, Definition, type_check as type_check_module, format_module, Spec, \
-    TypeCheckSuccess
 from gradualelixir.gtypes import (
     AnyType,
     AtomLiteralType,
@@ -41,17 +47,16 @@ from gradualelixir.gtypes import (
     TupleType,
     TypeEnv,
 )
-from gradualelixir.pattern import (
-    IdentPattern,
-    WildPattern,
+from gradualelixir.module import (
+    Definition,
+    Module,
+    Spec,
+    TypeCheckSuccess,
+    format_module,
 )
-from gradualelixir.cast import (
-    cast_annotate_expression,
-    annotate_module,
-    CastAnnotatedExpression,
-    CastAnnotatedVarCallExpression, AnnotatedModule
-)
-from gradualelixir.utils import Bcolors
+from gradualelixir.module import type_check as type_check_module
+from gradualelixir.pattern import IdentPattern, WildPattern
+from gradualelixir.utils import Bcolors, long_line
 
 from . import TEST_ENV
 
@@ -71,14 +76,15 @@ def assert_cast_annotate_expression_ok(expr, env=None, expected_casted_expr=None
     ret = cast_annotate_expression(type_derivation)
     assert ret == expected_casted_expr
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
-        print("\n")
         print(f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {env}\n")
+        if specs_env is not None:
+            print(f"{Bcolors.OKBLUE}Function Variables:{Bcolors.ENDC} {specs_env}\n")
         print(f"{Bcolors.OKBLUE}Original Expression:{Bcolors.ENDC} {format_expression(type_derivation.expression)}\n")
         print(f"{Bcolors.OKBLUE}Derived Type:{Bcolors.ENDC} {type_derivation.type}\n")
         print(f"{Bcolors.OKBLUE}Result Expression:{Bcolors.ENDC} {format_expression(ret)}\n")
         if comment:
-            print(f"{Bcolors.OKBLUE}Comment:{Bcolors.ENDC} {comment}")
-        print("\n\n")
+            print(f"{Bcolors.OKBLUE}Comment:{Bcolors.ENDC} {comment}\n")
+        print(f"\n{long_line}\n")
 
 
 def assert_cast_annotate_module_ok(module: Module, expected_casted_module: AnnotatedModule, comment: str = None):
@@ -95,8 +101,8 @@ def assert_cast_annotate_module_ok(module: Module, expected_casted_module: Annot
         print(f"{Bcolors.OKBLUE}Original Module:{Bcolors.ENDC} {format_module(module)}\n")
         print(f"{Bcolors.OKBLUE}Result Module:{Bcolors.ENDC} {format_module(ret)}\n")  # type: ignore
         if comment:
-            print(f"{Bcolors.OKBLUE}Comment:{Bcolors.ENDC} {comment}")
-        print("\n\n")
+            print(f"{Bcolors.OKBLUE}Comment:{Bcolors.ENDC} {comment}\n")
+        print(f"\n{long_line}\n\n")
 
 
 def test_list():
@@ -226,9 +232,16 @@ def test_unary_op():
     assert_cast_annotate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
         {"x": AnyType()},
-        UnaryOpExpression(UnaryOpEnum.negative, CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType())),
+        CastAnnotatedExpression(
+            expression=UnaryOpExpression(
+                UnaryOpEnum.negative, CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType())
+            ),
+            left_type=NumberType(),
+            right_type=AnyType()
+        ),
         comment=(
-            "A cast is added to protect the operator from a type error, by coercing it into the maximal argument type"
+            "A cast is added to protect the operator from a type error, by coercing it into the maximal argument type."
+            "\nThe result is then casted from the result type for this maximal argument type into any"
         )
     )
     assert_cast_annotate_expression_ok(
@@ -244,7 +257,13 @@ def test_unary_op():
     assert_cast_annotate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": AnyType()},
-        UnaryOpExpression(UnaryOpEnum.negation, CastAnnotatedExpression(IdentExpression("x"), AnyType(), BooleanType()))
+        CastAnnotatedExpression(
+            expression=UnaryOpExpression(
+                UnaryOpEnum.negation, CastAnnotatedExpression(IdentExpression("x"), AnyType(), BooleanType())
+            ),
+            left_type=BooleanType(),
+            right_type=AnyType()
+        )
     )
 
 
@@ -257,10 +276,14 @@ def test_binary_op():
     assert_cast_annotate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": AnyType()},
-        BinaryOpExpression(
-            BinaryOpEnum.sum,
-            IdentExpression("x"),
-            CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+        CastAnnotatedExpression(
+            expression=BinaryOpExpression(
+                BinaryOpEnum.sum,
+                IdentExpression("x"),
+                CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+            ),
+            left_type=NumberType(),
+            right_type=AnyType()
         ),
         comment=(
             "Casts are added to protect the operator from a type error, by coercing it into the maximal argument types "
@@ -270,19 +293,27 @@ def test_binary_op():
     assert_cast_annotate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": IntegerType()},
-        BinaryOpExpression(
-            BinaryOpEnum.sum,
-            CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
-            IdentExpression("y")
-        )
+        CastAnnotatedExpression(
+            expression=BinaryOpExpression(
+                BinaryOpEnum.sum,
+                CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
+                IdentExpression("y")
+            ),
+            left_type=NumberType(),
+            right_type=AnyType()
+        ),
     )
     assert_cast_annotate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": AnyType()},
-        BinaryOpExpression(
-            BinaryOpEnum.sum,
-            CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
-            CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+        CastAnnotatedExpression(
+            BinaryOpExpression(
+                BinaryOpEnum.sum,
+                CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
+                CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+            ),
+            left_type=NumberType(),
+            right_type=AnyType()
         )
     )
 
@@ -630,10 +661,14 @@ def test_cast_annotate_module__untyped_sum():
                 Definition(
                     name="untyped_sum",
                     parameters=[IdentPattern("x"), IdentPattern("y")],
-                    body=BinaryOpExpression(
-                        BinaryOpEnum.sum,
-                        CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
-                        CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+                    body=CastAnnotatedExpression(
+                        BinaryOpExpression(
+                            BinaryOpEnum.sum,
+                            CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
+                            CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+                        ),
+                        NumberType(),
+                        AnyType()
                     )
                 )
             ),
@@ -695,10 +730,14 @@ def test_cast_annotate_module__untyped_sum_untyped():
                 Definition(
                     name="untyped_sum",
                     parameters=[IdentPattern("x"), IdentPattern("y")],
-                    body=BinaryOpExpression(
-                        BinaryOpEnum.sum,
-                        CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
-                        CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+                    body=CastAnnotatedExpression(
+                        BinaryOpExpression(
+                            BinaryOpEnum.sum,
+                            CastAnnotatedExpression(IdentExpression("x"), AnyType(), NumberType()),
+                            CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+                        ),
+                        NumberType(),
+                        AnyType()
                     )
                 )
             ),

@@ -279,7 +279,7 @@ defmodule Cast do
             |> Enum.into(%{})
         end
 
-        {value, left_type, right_type} when is_function(value) ->
+      {value, left_type, right_type} when is_function(value) ->
           cond do
             not Kernel.match?({:fun, _, _}, left_type) ->
               {:bad_argument_error, :type_error}
