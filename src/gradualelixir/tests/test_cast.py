@@ -78,6 +78,7 @@ def assert_cast_annotate_expression_ok(expr, env=None, expected_casted_expr=None
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
         print(f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {env}\n")
         if specs_env is not None:
+            print()
             print(f"{Bcolors.OKBLUE}Function Variables:{Bcolors.ENDC} {specs_env}\n")
         print(f"{Bcolors.OKBLUE}Original Expression:{Bcolors.ENDC} {format_expression(type_derivation.expression)}\n")
         print(f"{Bcolors.OKBLUE}Derived Type:{Bcolors.ENDC} {type_derivation.type}\n")

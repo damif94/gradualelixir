@@ -21,6 +21,7 @@ from gradualelixir.gtypes import (
 )
 
 from . import TEST_ENV
+from ..utils import long_line, Bcolors
 
 
 def MapUnit(*args) -> MapType:
@@ -30,25 +31,37 @@ def MapUnit(*args) -> MapType:
 def assert_subtype(tau: Type, sigma: Type):
     assert is_subtype(tau, sigma)
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} <= {sigma}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Relation:{Bcolors.ENDC} {tau} <={sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: True\n")
 
 
 def assert_not_subtype(tau: Type, sigma: Type):
     assert not is_subtype(tau, sigma)
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} !<= {sigma}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Relation:{Bcolors.ENDC} {tau} <= {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: False\n")
 
 
 def assert_materialization(tau: Type, sigma: Type):
     assert is_materialization(tau, sigma)
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} <<< {sigma}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Relation:{Bcolors.ENDC} {tau} <<< {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: True\n")
 
 
 def assert_not_materialization(tau: Type, sigma: Type):
     assert not is_materialization(tau, sigma)
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} !<<< {sigma}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Relation:{Bcolors.ENDC} {tau} <<< {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: False\n")
 
 
 def assert_merge_operator(input: typing.Tuple[Type, Type], output: Type):
@@ -56,7 +69,10 @@ def assert_merge_operator(input: typing.Tuple[Type, Type], output: Type):
     result = gtypes.merge_operator(tau, sigma)
     assert result == output
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} <- {sigma} = {output}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Operation:{Bcolors.ENDC} {tau} <- {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: {output}\n")
 
 
 def assert_supremum_ok(input: typing.Tuple[Type, Type], output: Type):
@@ -64,7 +80,10 @@ def assert_supremum_ok(input: typing.Tuple[Type, Type], output: Type):
     result = gtypes.supremum(tau, sigma)
     assert result == output
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} \\/ {sigma} = {output}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Operation:{Bcolors.ENDC} {tau} \\/ {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: {output}\n")
 
 
 def assert_infimum_ok(input: typing.Tuple[Type, Type], output: Type):
@@ -72,7 +91,10 @@ def assert_infimum_ok(input: typing.Tuple[Type, Type], output: Type):
     result = gtypes.infimum(tau, sigma)
     assert result == output
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} /\\ {sigma} = {output}")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Operation:{Bcolors.ENDC}: {tau} /\\ {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: {output}\n")
 
 
 def assert_supremum_error(tau: Type, sigma: Type, sup=True):
@@ -80,7 +102,10 @@ def assert_supremum_error(tau: Type, sigma: Type, sup=True):
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} \\/ {sigma} does not exist")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Operation:{Bcolors.ENDC}: {tau} \\/ {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: Not defined\n")
 
 
 def assert_infimum_error(tau: Type, sigma: Type, sup=False):
@@ -88,7 +113,10 @@ def assert_infimum_error(tau: Type, sigma: Type, sup=False):
     assert isinstance(result, gtypes.SupremumError)
     assert result.args[0] == "supremum" if sup else "infimum"
     if TEST_ENV.get("display_results"):
-        print(f"\n{tau} /\\ {sigma} does not exist")
+        print(long_line)
+        print()
+        print(f"{Bcolors.OKBLUE}Operation:{Bcolors.ENDC}: {tau} /\\ {sigma}")
+        print(f"{Bcolors.OKBLUE}Result:{Bcolors.ENDC}: Not defined\n")
 
 
 def test_subtype_base():

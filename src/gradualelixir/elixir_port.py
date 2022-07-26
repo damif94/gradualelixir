@@ -7,15 +7,20 @@ from typing import Any
 
 from gradualelixir import expression, gtypes, module, pattern
 from gradualelixir.exception import ElixirParseError, ElixirProcessError
+from dotenv import get_key, find_dotenv
 
-project_path = os.environ["PROJECT_PATH"]
+dotenv_path = find_dotenv()
+
+project_path = get_key(dotenv_path, "PROJECT_PATH")
+elixir_path = get_key(dotenv_path, "ELIXIR_PATH")
 
 
 def format_code(elixir_code: str) -> str:
     with open(file=f"{project_path}/swap.ex", mode="w") as swap:
         swap.write(elixir_code)
 
-    formatter_output = subprocess.run(["mix", "format", f"{project_path}/swap.ex"], capture_output=True)
+    mix_command = [elixir_path, "-S", "mix"]
+    formatter_output = subprocess.run(mix_command + ["format", f"{project_path}/swap.ex"], capture_output=True)
 
     if error := formatter_output.stderr:
         raise Exception(f"Mix formatter failed for code {elixir_code}\n" + error.decode("ascii"))

@@ -1,8 +1,9 @@
+import logging
 import os
 import sys
 
 import click
-from dotenv import find_dotenv, set_key
+from dotenv import find_dotenv, set_key, get_key
 from gradualelixir import cast, module
 from gradualelixir.elixir_port import (
     SyntacticLevel,
@@ -14,8 +15,12 @@ from gradualelixir.utils import Bcolors
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.erlang import ElixirLexer
+import pytest
 
 dotenv_path = find_dotenv()
+
+logger = logging.getLogger("dotenv.main")
+logger.disabled = True
 
 
 class ClickWorkingDirAwarePath(click.Path):
@@ -24,7 +29,9 @@ class ClickWorkingDirAwarePath(click.Path):
 
     def convert(self, *args, **kwargs):
         original_path = os.getcwd()
-        os.chdir(os.environ["WORKING_DIR"])
+        if not bool(working_dir := get_key(dotenv_path, "WORKING_DIR")):
+            self.fail("The WORKING_DIR variable is not configured. Please configure!")
+        os.chdir(working_dir)
         out = super(ClickWorkingDirAwarePath, self).convert(*args, **kwargs)
         os.chdir(original_path)
         return out
@@ -40,6 +47,8 @@ def cli():
 @click.option("--elixir-path", type=click.Path(exists=True, file_okay=True))
 @click.option("--working-dir", type=click.Path(exists=True, dir_okay=True))
 def configure_command(elixir_path, working_dir):
+    if bool(get_key(dotenv_path, "DOCKER")):
+        raise click.ClickException("This command is not available when running through docker\n")
     if elixir_path is not None:
         set_key(dotenv_path, "ELIXIR_PATH", elixir_path)
     if working_dir is not None:
@@ -49,7 +58,7 @@ def configure_command(elixir_path, working_dir):
 @cli.command("print", short_help="prints a linted version of the mini elixir source file <filename> to standard output")
 @click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
 def print_command(filename):
-    working_dir = os.environ["WORKING_DIR"]
+    working_dir = get_key(dotenv_path, "WORKING_DIR")
     with open(f"{working_dir}/{filename}", "r") as f:
         code = "\n".join(f.readlines())
         code = format_code(code)
@@ -80,7 +89,7 @@ def type_check_command(static, annotate, filename):
 
     casts = annotate == "casts"
     annotate = bool(annotate)
-    base_path = os.path.join(os.environ.get("WORKING_DIR", ""), "")
+    base_path = os.path.join(get_key(dotenv_path, "WORKING_DIR"), "")
     base_name, mime = filename.split(".")
 
     with open(f"{base_path}{base_name}.{mime}", "r") as f:
@@ -133,13 +142,21 @@ def run_command(filename):
     import pty
     import shutil
 
-    base_path = os.path.join(os.environ.get("WORKING_DIR", ""), "")
+    base_path = os.path.join(get_key(dotenv_path, "WORKING_DIR"), "")
     filename = os.path.join(base_path, filename)
-    mix_project_path = os.path.join(os.environ.get("PROJECT_PATH", ""), "elixir_port")
+    mix_project_path = os.path.join(get_key(dotenv_path, "PROJECT_PATH"), "elixir_port")
     shutil.copy(filename, os.path.join(mix_project_path, ".iex.exs"))
     os.chdir(mix_project_path)
     pty.spawn(["iex", "--erl", "-kernel shell_history enabled", "-S", "mix"])
     os.remove(".iex.exs")
+
+
+@cli.command("test", short_help="run the tests for the included modules and display the results")
+@click.option("--include", multiple=True, type=click.Choice(['gtypes', 'pattern', 'expression', 'cast']))
+def test_command(include):
+    for item in include:
+        test_path = os.path.join(os.path.join(os.path.dirname(__file__), "tests"), f"test_{item}.py")
+        pytest.main(["--display-results", "-s", "-v", test_path])
 
 
 if __name__ == "__main__":

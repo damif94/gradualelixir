@@ -51,8 +51,11 @@ from gradualelixir.pattern import (
     TuplePattern,
     WildPattern,
 )
+from dotenv import find_dotenv, get_key
 
-project_path = os.environ["PROJECT_PATH"]
+dotenv_path = find_dotenv()
+
+project_path = get_key("PROJECT_PATH", dotenv_path)
 
 
 def parse_expression(code):
