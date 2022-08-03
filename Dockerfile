@@ -2,7 +2,6 @@ FROM elixir:1.12
 WORKDIR /gradualelixir
 COPY requirements.txt /gradualelixir/
 COPY src /gradualelixir/src
-COPY .env /gradualelixir/
 
 RUN mix do local.hex --force
 COPY ./elixir_port /gradualelixir/elixir_port/
@@ -32,5 +31,6 @@ WORKDIR /
 RUN touch /bin/gradualelixir
 RUN echo '#!/bin/bash' >> /bin/gradualelixir
 RUN echo 'python3 /gradualelixir/src/gradualelixir/cli.py "$@"' >> /bin/gradualelixir
-RUN chmod 777 '/bin/gradualelixir'
-CMD ["bash"]
+RUN chmod +x '/bin/gradualelixir'
+
+ENTRYPOINT ["gradualelixir"]

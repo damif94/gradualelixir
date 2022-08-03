@@ -429,7 +429,7 @@ def test_case():
                 (IdentPattern("b"), IdentExpression("y")),
             ]
         ),
-        {"x": TupleType([NumberType(),  AnyType()]), "y": TupleType([AnyType(), NumberType()]), "test": AnyType()},
+        {"x": TupleType([NumberType(), AnyType()]), "y": TupleType([AnyType(), NumberType()]), "test": AnyType()},
         expected_casted_expr=(
             CaseExpression(
                 test=IdentExpression("test"),
@@ -471,7 +471,7 @@ def test_cond():
         {
             "a": AtomLiteralType("true"),
             "b": AnyType(),
-            "x": TupleType([NumberType(),  AnyType()]),
+            "x": TupleType([NumberType(), AnyType()]),
             "y": TupleType([AnyType(), NumberType()])
         },
         expected_casted_expr=(

@@ -72,11 +72,6 @@ defmodule ElixirPort do
 
   def main(args) do
     [code] = args
-
-    if String.at(code, 0) == "\"" do
-      IO.print("yes")
-    end
-
     parse_as_json(code)
   end
 end

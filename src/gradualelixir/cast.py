@@ -23,18 +23,6 @@ class AnnotatedExpression(expression.Expression):
 
 
 @dataclass
-class CastAnnotatedPattern(pattern.Pattern):
-    pattern: expression.Expression
-    left_type: gtypes.Type
-    right_type: gtypes.Type
-
-    def __str__(self):
-        if self.left_type == self.right_type:
-            return str(self.pattern)
-        return f"({self.pattern} | {self.left_type} ~> {self.right_type})"
-
-
-@dataclass
 class CastAnnotatedExpression(expression.Expression):
     expression: expression.Expression
     left_type: gtypes.Type
@@ -79,10 +67,6 @@ class AnnotatedModule:
             msg += f"{definition[0]}\n{definition[1]}\n\n"
         msg += "end"
         return msg
-
-
-def make_annotated_expression(type_check_result: expression.ExpressionTypeCheckSuccess) -> AnnotatedExpression:
-    return AnnotatedExpression(type_check_result.expression, type_check_result.type)
 
 
 def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, **kwargs) -> expression.Expression:
@@ -195,7 +179,8 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             ),
             type=type_derivation.type,
         )
-    if isinstance(expr, expression.VarCallExpression):
+    else:
+        assert isinstance(expr, expression.VarCallExpression)
         annotated_arguments = []
         for argument_type_derivation in type_derivation.children["arguments"]:
             annotated_argument = annotate_expression(argument_type_derivation)
@@ -207,8 +192,6 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
             type=type_derivation.type,
         )
-    else:
-        return expr
 
 
 def cast(expression: expression.Expression, left_type: gtypes.Type, right_type: gtypes.Type) -> expression.Expression:
@@ -260,7 +243,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             )
             return cast(
                 expression=expression.UnaryOpExpression(op=expr.op, argument=annotated_argument),
-                left_type=expr.op.get_return_type(expr.op.maximal_argument_type), # type: ignore
+                left_type=expr.op.get_return_type(expr.op.maximal_argument_type),  # type: ignore
                 right_type=gtypes.AnyType()
             )
         return expression.UnaryOpExpression(op=expr.op, argument=annotated_argument)
@@ -287,7 +270,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
                         right_type=maximal_argument_types_for_op[1]
                     )
                 ),
-                left_type=expr.op.get_return_type(*maximal_argument_types_for_op), # type: ignore
+                left_type=expr.op.get_return_type(*maximal_argument_types_for_op),  # type: ignore
                 right_type=gtypes.AnyType()
             )
         else:
@@ -366,7 +349,6 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
         if isinstance(any := ident_right_type, gtypes.AnyType):
             ident_right_type = gtypes.FunctionType(arg_types=[any for _ in expr.arguments], ret_type=any)
         assert isinstance(ident_right_type, gtypes.FunctionType)
-
         annotated_arguments = []
         for i in range(len(expr.arguments)):
             argument_type_derivation = type_derivation.children["arguments"][i]
@@ -376,7 +358,6 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
                 right_type=ident_right_type.arg_types[i]
             )
             annotated_arguments.append(annotated_argument)
-
         return CastAnnotatedVarCallExpression(
             expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
             ident_left_type=type_derivation.env[expr.ident],
