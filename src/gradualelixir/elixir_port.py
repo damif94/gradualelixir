@@ -12,7 +12,7 @@ from dotenv import get_key, find_dotenv
 dotenv_path = find_dotenv()
 
 project_path = get_key(dotenv_path, "PROJECT_PATH")
-elixir_path = get_key(dotenv_path, "ELIXIR_PATH")
+elixir_path: str = get_key(dotenv_path, "ELIXIR_PATH") # type: ignore
 
 
 def format_code(elixir_code: str) -> str:

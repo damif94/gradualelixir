@@ -1,4 +1,3 @@
-import os
 from collections import OrderedDict
 
 from gradualelixir import elixir_port

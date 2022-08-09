@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 
 import click
 from dotenv import find_dotenv, set_key, get_key
@@ -39,7 +38,6 @@ class ClickWorkingDirAwarePath(click.Path):
 
 @click.group()
 def cli():
-    """gradualelixir command entrypoint"""
     pass
 
 

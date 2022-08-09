@@ -243,6 +243,7 @@ class FloatExpression(LiteralExpression):
             return str(self.value) + ".0"
         return str(self.value)
 
+
 # TODO make AtomLiteralSetExpression
 @dataclass
 class AtomLiteralExpression(LiteralExpression):
