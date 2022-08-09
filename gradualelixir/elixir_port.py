@@ -5,8 +5,8 @@ import subprocess
 from collections import OrderedDict
 from typing import Any
 
-from gradualelixir import expression, gtypes, module, pattern
-from gradualelixir.exception import ElixirParseError, ElixirProcessError
+from . import expression, gtypes, module, pattern
+from .exception import ElixirParseError, ElixirProcessError
 from dotenv import get_key, find_dotenv
 
 dotenv_path = find_dotenv()

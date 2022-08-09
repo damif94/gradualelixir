@@ -3,9 +3,9 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 
-from gradualelixir import gtypes, pattern
-from gradualelixir.exception import SyntaxRestrictionError
-from gradualelixir.utils import Bcolors, enumerate_list, ordinal
+from . import gtypes, pattern
+from .exception import SyntaxRestrictionError
+from .utils import Bcolors, enumerate_list, ordinal
 
 
 class UnaryOpEnum(Enum):
@@ -188,8 +188,8 @@ class BinaryOpEnum(Enum):
             ret_type
             for left_arg_type, right_arg_type, ret_type in self.types
             if (
-                gtypes.is_subtype(left_type, left_arg_type)
-                and gtypes.is_subtype(right_type, right_arg_type)
+                    gtypes.is_subtype(left_type, left_arg_type)
+                    and gtypes.is_subtype(right_type, right_arg_type)
             )
         ]
         if len(valid_result_types) > 0:
@@ -273,7 +273,7 @@ class ListExpression(Expression):
             [isinstance(tail, ListExpression), isinstance(tail, ElistExpression), isinstance(tail, IdentExpression)]
         ):
             # this extra import will be avoided once AnnotatedExpression is declared inside this module
-            from gradualelixir.cast import AnnotatedExpression, CastAnnotatedExpression
+            from .cast import AnnotatedExpression, CastAnnotatedExpression
 
             if not isinstance(tail, AnnotatedExpression) and not isinstance(tail, CastAnnotatedExpression):
                 raise SyntaxRestrictionError(

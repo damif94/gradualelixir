@@ -2,10 +2,10 @@ import enum
 import typing as t
 from dataclasses import dataclass
 
-from gradualelixir import gtypes
-from gradualelixir.exception import SyntaxRestrictionError
-from gradualelixir.gtypes import LiteralType
-from gradualelixir.utils import Bcolors, ordinal
+from . import gtypes
+from .exception import SyntaxRestrictionError
+from .gtypes import LiteralType
+from .utils import Bcolors, ordinal
 
 
 class Pattern:
@@ -130,7 +130,7 @@ def format_pattern_match(pattern: Pattern, type: gtypes.Type, padding="") -> str
         needs_formatting = True
 
     if needs_formatting:  # is multiline
-        from gradualelixir.elixir_port import format_code
+        from .elixir_port import format_code
 
         msg = format_code(code)
         return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])

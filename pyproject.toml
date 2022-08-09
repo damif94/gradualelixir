@@ -1,10 +1,9 @@
-
 [tool.black]
 line-length = 120
-include = "src/gradualelixir"
+include = "gradualelixir"
 
 [tool.mypy]
-files = "src/gradualelixir/"
+files = "gradualelixir/"
 disallow_any_unimported = true
 ignore_missing_imports = true
 

@@ -3,14 +3,14 @@ import os
 
 import click
 from dotenv import find_dotenv, set_key, get_key
-from gradualelixir import cast, module
-from gradualelixir.elixir_port import (
+from . import cast, module
+from .elixir_port import (
     SyntacticLevel,
     format_code,
     to_internal_representation,
 )
-from gradualelixir.exception import ElixirProcessError
-from gradualelixir.utils import Bcolors
+from .exception import ElixirProcessError
+from .utils import Bcolors
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.erlang import ElixirLexer
@@ -153,7 +153,7 @@ def run_command(filename):
 @click.option("--include", multiple=True, type=click.Choice(['gtypes', 'pattern', 'expression', 'cast']))
 def test_command(include):
     for item in include:
-        test_path = os.path.join(os.path.join(os.path.dirname(__file__), "tests"), f"test_{item}.py")
+        test_path = os.path.join(os.path.join(os.path.dirname(__file__), "../tests"), f"test_{item}.py")
         pytest.main(["--display-results", "-s", "-v", test_path])
 
 

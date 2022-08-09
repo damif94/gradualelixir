@@ -21,7 +21,7 @@ from gradualelixir.gtypes import (
 )
 
 from . import TEST_ENV
-from ..utils import long_line, Bcolors
+from gradualelixir.utils import long_line, Bcolors
 
 
 def MapUnit(*args) -> MapType:

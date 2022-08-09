@@ -2,7 +2,7 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
-from gradualelixir.exception import SyntaxRestrictionError
+from .exception import SyntaxRestrictionError
 
 
 class Type:
