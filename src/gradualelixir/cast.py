@@ -63,8 +63,13 @@ class AnnotatedModule:
     def __str__(self):
         msg = f"defmodule {self.name} do\n"
         msg += "  use UseCast\n\n"
+        processed_definitions: t.Set[t.Tuple[str, int]] = set()
         for definition in self.annotated_definitions:
-            msg += f"{definition[0]}\n{definition[1]}\n\n"
+            if (definition[1].name, definition[1].arity) in processed_definitions:
+                msg += f"{definition[1]}\n\n"
+            else:
+                msg += f"{definition[0]}\n{definition[1]}\n\n"
+            processed_definitions.add((definition[1].name, definition[1].arity))
         msg += "end"
         return msg
 
@@ -368,12 +373,12 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
 def annotate_module(type_derivation: module.TypeCheckSuccess, casts: bool) -> AnnotatedModule:
     annotated_definitions = []
     for definition in type_derivation.module.definitions:
-        specs_env = type_derivation.specs_refinement_success.refined_specs_env
+        collect_success = type_derivation.collect_success
         body_derivation = type_derivation.definitions_success[definition]
         spec = module.Spec(
             name=definition.name,
-            parameter_types=specs_env[(definition.name, definition.arity)][0],
-            return_type=specs_env[(definition.name, definition.arity)][1],
+            parameter_types=collect_success.specs_env[(definition.name, definition.arity)][0],
+            return_type=collect_success.specs_env[(definition.name, definition.arity)][1],
         )
         if not casts:
             annotated_body = annotate_expression(body_derivation)

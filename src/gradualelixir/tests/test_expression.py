@@ -789,6 +789,11 @@ def test_binary_op():
         BooleanType(),
     )
     assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.disjunction, IdentExpression("x"), IdentExpression("y")),
+        {"x": BooleanType(), "y": AnyType()},
+        AnyType(),
+    )
+    assert_type_check_expression_ok(
         BinaryOpExpression(BinaryOpEnum.conjunction, IdentExpression("x"), IdentExpression("y")),
         {"x": BooleanType(), "y": BooleanType()},
         BooleanType(),

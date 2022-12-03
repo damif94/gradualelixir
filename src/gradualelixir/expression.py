@@ -155,7 +155,6 @@ class BinaryOpEnum(Enum):
             BinaryOpEnum.greater_or_equal,
         ]:
             return [
-                (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
             ]
         else:

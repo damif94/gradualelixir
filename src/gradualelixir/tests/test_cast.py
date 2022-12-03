@@ -784,3 +784,47 @@ def test_cast_annotate_module__untyped_sum_untyped():
         ]
     )
     assert_cast_annotate_module_ok(module, cast_annotated_module)
+
+
+def test_cast_annotate_module__equal_x_differ_y():
+    module = Module(
+        name="Demo",
+        specs=[
+            Spec("sum_x_x", [IntegerType(), NumberType()], IntegerType()),
+            Spec("sum_x_y", [IntegerType(), NumberType()], NumberType())
+        ],
+        definitions=[
+            Definition(
+                name="sum_x_x",
+                parameters=[IdentPattern("x"), IdentPattern("x")],
+                body=BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("x"))
+            ),
+            Definition(
+                name="sum_x_y",
+                parameters=[IdentPattern("x"), IdentPattern("y")],
+                body=BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y"))
+            ),
+        ]
+    )
+    cast_annotated_module = AnnotatedModule(
+        name="Demo",
+        annotated_definitions=[
+            (
+                Spec("sum_x_x", [IntegerType(), NumberType()], IntegerType()),
+                Definition(
+                    name="sum_x_x",
+                    parameters=[IdentPattern("x"), IdentPattern("x")],
+                    body=BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("x"))
+                ),
+            ),
+            (
+                Spec("sum_x_y", [IntegerType(), NumberType()], NumberType()),
+                Definition(
+                    name="sum_x_y",
+                    parameters=[IdentPattern("x"), IdentPattern("y")],
+                    body=BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y"))
+                ),
+            ),
+        ]
+    )
+    assert_cast_annotate_module_ok(module, cast_annotated_module)
