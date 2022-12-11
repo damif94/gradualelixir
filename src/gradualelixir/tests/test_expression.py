@@ -78,7 +78,7 @@ def assert_type_check_expression_ok(expr, env=None, expected_type=None, expected
         return
 
     env = TypeEnv(env)
-    expected_env = TypeEnv(expected_env or env.env)
+    expected_env = TypeEnv(expected_env)
     specs_env = SpecsEnv(specs_env)
     assert expected_type is not None
 
@@ -342,6 +342,30 @@ def test_tuple():
             [
                 PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
                 PatternMatchExpression(IdentPattern("x"), FloatExpression(2.0)),
+                PatternMatchExpression(IdentPattern("y"), AtomLiteralExpression("true")),
+            ]
+        ),
+        expected_type=TupleType([IntegerType(), FloatType(), AtomLiteralType("true")]),
+        expected_env={"x": FloatType(), "y": AtomLiteralType("true")},
+    )
+    assert_type_check_expression_ok(
+        env={"x": IntegerType()},
+        expr=TupleExpression(
+            [
+                PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
+                IdentExpression("x"),
+                PatternMatchExpression(IdentPattern("y"), AtomLiteralExpression("true")),
+            ]
+        ),
+        expected_type=TupleType([FloatType(), IntegerType(), AtomLiteralType("true")]),
+        expected_env={"x": FloatType(), "y": AtomLiteralType("true")},
+    )
+    assert_type_check_expression_ok(
+        env={"x": IntegerType()},
+        expr=TupleExpression(
+            [
+                IdentExpression("x"),
+                PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                 PatternMatchExpression(IdentPattern("y"), AtomLiteralExpression("true")),
             ]
         ),
@@ -633,13 +657,11 @@ def test_unary_op():
             UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
             {"x": t},
             t,
-            {"x": t},
         )
         assert_type_check_expression_ok(
             UnaryOpExpression(UnaryOpEnum.absolute_value, IdentExpression("x")),
             {"x": t},
             t,
-            {"x": t},
         )
     assert_type_check_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
@@ -1013,7 +1035,6 @@ def test_pattern_match():
             ]
         ),
         expected_env={
-            "y": MapType({MapKey(2): NumberType()}),
             "x": MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
         },
     )
@@ -1180,7 +1201,7 @@ def test_seq():
         SeqExpression(PatternMatchExpression(IdentPattern("x"), IdentExpression("y")), IntegerExpression(1)),
         {"y": AtomLiteralType("a")},
         IntegerType(),
-        {"x": AtomLiteralType("a"), "y": AtomLiteralType("a")},
+        {"x": AtomLiteralType("a")},
     )
     assert_type_check_expression_ok(
         SeqExpression(
@@ -1189,7 +1210,7 @@ def test_seq():
         ),
         {"y": AtomLiteralType("a")},
         AtomType(),
-        {"x": AtomLiteralType("a"), "y": AtomLiteralType("a")},
+        {"x": AtomLiteralType("a")},
     )
     assert_type_check_expression_ok(
         SeqExpression(
@@ -1201,7 +1222,7 @@ def test_seq():
         ),
         {"u": NumberType()},
         AtomLiteralType("true"),
-        {"u": NumberType(), "x": NumberType(), "y": AtomLiteralType("true")},
+        {"x": NumberType(), "y": AtomLiteralType("true")},
     )
     assert_type_check_expression_ok(
         SeqExpression(

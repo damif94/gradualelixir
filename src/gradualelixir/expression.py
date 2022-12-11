@@ -702,7 +702,7 @@ def type_check_ident(
 ) -> ExpressionTypeCheckResult:
     if (ret_type := env.get(expr.identifier)) is not None:
         return ExpressionTypeCheckSuccess(
-            expression=expr, env=env, specs_env=specs_env, type=ret_type, exported_env=env, children={}
+            expression=expr, env=env, specs_env=specs_env, type=ret_type, exported_env=gtypes.TypeEnv(), children={}
         )
     else:
         return BaseExpressionTypeCheckError(
@@ -716,7 +716,7 @@ def type_check_literal(
     expr: LiteralExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
 ) -> ExpressionTypeCheckResult:
     return ExpressionTypeCheckSuccess(
-        expression=expr, env=env, specs_env=specs_env, type=expr.type, exported_env=env, children={}
+        expression=expr, env=env, specs_env=specs_env, type=expr.type, exported_env=gtypes.TypeEnv(), children={}
     )
 
 
@@ -724,7 +724,7 @@ def type_check_elist(
     expr: ElistExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
 ) -> ExpressionTypeCheckResult:
     return ExpressionTypeCheckSuccess(
-        expression=expr, env=env, specs_env=specs_env, type=gtypes.ElistType(), exported_env=env, children={}
+        expression=expr, env=env, specs_env=specs_env, type=gtypes.ElistType(), exported_env=gtypes.TypeEnv(), children={}
     )
 
 
@@ -864,16 +864,8 @@ def type_check_binary_op(
         return NestedExpressionTypeCheckError(
             expression=expr,
             bullets=[
-                ContextExpressionTypeCheckError(
-                    BinaryOpContext(is_left=True),
-                    env,
-                    left_type_check_result,
-                ),
-                ContextExpressionTypeCheckError(
-                    BinaryOpContext(is_left=False),
-                    env,
-                    right_type_check_result,
-                ),
+                ContextExpressionTypeCheckError(BinaryOpContext(is_left=True), env, left_type_check_result),
+                ContextExpressionTypeCheckError(BinaryOpContext(is_left=False), env, right_type_check_result),
             ],
         )
     if isinstance(left_type_check_result, ExpressionTypeCheckError):
@@ -995,24 +987,23 @@ def type_check_if_else(
             ],
         )
     errors: t.List[ContextExpressionTypeCheckError] = []
-    if_clause_type_check_result = type_check(expr.if_clause, condition_type_check_result.exported_env, specs_env)
+    new_env = gtypes.TypeEnv.merge(env, condition_type_check_result.exported_env)
+    if_clause_type_check_result = type_check(expr.if_clause, new_env, specs_env)
     if isinstance(if_clause_type_check_result, ExpressionTypeCheckError):
         errors.append(
             ContextExpressionTypeCheckError(
                 IfElseExpressionContext(branch=True),
-                condition_type_check_result.exported_env,
+                new_env,
                 if_clause_type_check_result,
             )
         )
     if expr.else_clause is not None:
-        else_clause_type_check_result = type_check(
-            expr.else_clause, condition_type_check_result.exported_env, specs_env
-        )
+        else_clause_type_check_result = type_check(expr.else_clause, new_env, specs_env)
         if isinstance(else_clause_type_check_result, ExpressionTypeCheckError):
             errors.append(
                 ContextExpressionTypeCheckError(
                     IfElseExpressionContext(branch=False),
-                    condition_type_check_result.exported_env,
+                    new_env,
                     else_clause_type_check_result,
                 )
             )
@@ -1058,15 +1049,14 @@ def type_check_seq(expr: SeqExpression, env: gtypes.TypeEnv, specs_env: gtypes.S
             bullets=[ContextExpressionTypeCheckError(SeqExpressionContext(is_left=True), env, left_type_check_result)],
         )
     else:
-        right_type_check_result = type_check(expr.right, left_type_check_result.exported_env, specs_env)
+        new_env = gtypes.TypeEnv.merge(env, left_type_check_result.exported_env)
+        right_type_check_result = type_check(expr.right, new_env, specs_env)
         if isinstance(right_type_check_result, ExpressionTypeCheckError):
             return NestedExpressionTypeCheckError(
                 expression=expr,
                 bullets=[
                     ContextExpressionTypeCheckError(
-                        SeqExpressionContext(is_left=False),
-                        left_type_check_result.exported_env,
-                        right_type_check_result,
+                        SeqExpressionContext(is_left=False), new_env, right_type_check_result
                     )
                 ],
             )
@@ -1110,13 +1100,12 @@ def type_check_cond(expr: CondExpression, env: gtypes.TypeEnv, specs_env: gtypes
             )
             continue
 
-        do_type_check_result = type_check(expr.clauses[i][1], cond_type_check_result.exported_env, specs_env)
+        new_env = gtypes.TypeEnv.merge(env, cond_type_check_result.exported_env)
+        do_type_check_result = type_check(expr.clauses[i][1], new_env, specs_env)
         if isinstance(do_type_check_result, ExpressionTypeCheckError):
             errors.append(
                 ContextExpressionTypeCheckError(
-                    CondExpressionContext(branch=i, cond=False),
-                    cond_type_check_result.exported_env,
-                    do_type_check_result,
+                    CondExpressionContext(branch=i, cond=False), new_env, do_type_check_result,
                 )
             )
             continue
@@ -1138,7 +1127,7 @@ def type_check_cond(expr: CondExpression, env: gtypes.TypeEnv, specs_env: gtypes
         specs_env=specs_env,
         expression=expr,
         type=ret_type,
-        exported_env=env,
+        exported_env=gtypes.TypeEnv(),
         children={"clauses": clauses_type_check_results},
     )
 
@@ -1159,14 +1148,15 @@ def type_check_case(expr: CaseExpression, env: gtypes.TypeEnv, specs_env: gtypes
     errors: t.List[ContextExpressionTypeCheckError] = []
     clauses_type_check_results = []
     for i in range(len(expr.clauses)):
+        new_env = gtypes.TypeEnv.merge(env, test_type_check_result.exported_env)
         pattern_match_result = pattern.pattern_match(
-            expr.clauses[i][0], test_type_check_result.type, gtypes.TypeEnv(), env
+            expr.clauses[i][0], test_type_check_result.type, gtypes.TypeEnv(), new_env
         )
         if isinstance(pattern_match_result, pattern.PatternMatchError):
             errors.append(
                 ContextExpressionTypeCheckError(
                     CaseExpressionContext(branch=i, pattern=True),
-                    test_type_check_result.exported_env,
+                    new_env,
                     BaseExpressionTypeCheckError(
                         expression=PatternMatchExpression(expr.clauses[i][0], expr.test),
                         kind=ExpressionErrorEnum.pattern_match,
@@ -1181,14 +1171,12 @@ def type_check_case(expr: CaseExpression, env: gtypes.TypeEnv, specs_env: gtypes
             continue
 
         assert isinstance(pattern_match_result, pattern.PatternMatchSuccess)
-        new_env = gtypes.TypeEnv.merge(env, pattern_match_result.exported_env)
+        new_env = gtypes.TypeEnv.merge(new_env, pattern_match_result.exported_env)
         do_type_check_result = type_check(expr.clauses[i][1], new_env, specs_env)
         if isinstance(do_type_check_result, ExpressionTypeCheckError):
             errors.append(
                 ContextExpressionTypeCheckError(
-                    CaseExpressionContext(branch=i, pattern=False),
-                    new_env,
-                    do_type_check_result,
+                    CaseExpressionContext(branch=i, pattern=False), new_env, do_type_check_result
                 )
             )
             continue
