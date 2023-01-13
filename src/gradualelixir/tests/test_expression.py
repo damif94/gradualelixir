@@ -876,12 +876,12 @@ def test_binary_op():
     assert_type_check_expression_ok(
         BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
         {"x": NumberType(), "y": AnyType()},
-        AnyType(),
+        NumberType(),
     )
     assert_type_check_expression_ok(
         BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": NumberType()},
-        AnyType(),
+        NumberType(),
     )
     assert_type_check_expression_ok(
         BinaryOpExpression(BinaryOpEnum.maximum, IdentExpression("x"), IdentExpression("y")),

@@ -151,10 +151,14 @@ def run_command(filename):
 
 @cli.command("test", short_help="run the tests for the included modules and display the results")
 @click.option("--include", multiple=True, type=click.Choice(['gtypes', 'pattern', 'expression', 'cast']))
-def test_command(include):
+@click.option("--display-results", is_flag=True, default=False, help="Displays the results visually.")
+def test_command(include, display_results):
     for item in include:
         test_path = os.path.join(os.path.join(os.path.dirname(__file__), "tests"), f"test_{item}.py")
-        pytest.main(["--display-results", "-s", "-v", test_path])
+        if display_results:
+            pytest.main(["--display-results", "-s", "-v", test_path])
+        else:
+            pytest.main(["-s", "-v", test_path])
 
 
 if __name__ == "__main__":

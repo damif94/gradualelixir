@@ -24,6 +24,7 @@ class UnaryOpEnum(Enum):
                 (gtypes.IntegerType(), gtypes.IntegerType()),
                 (gtypes.FloatType(), gtypes.FloatType()),
                 (gtypes.NumberType(), gtypes.NumberType()),
+                (gtypes.AnyType(), gtypes.AnyType()),
             ]
         else:
             assert self is UnaryOpEnum.negation
@@ -31,25 +32,25 @@ class UnaryOpEnum(Enum):
                 (gtypes.AtomLiteralType("true"), gtypes.AtomLiteralType("false")),
                 (gtypes.AtomLiteralType("false"), gtypes.AtomLiteralType("true")),
                 (gtypes.BooleanType(), gtypes.BooleanType()),
+                (gtypes.AnyType(), gtypes.AnyType()),
             ]
 
     @property
     def maximal_argument_type(self) -> gtypes.Type:
         acc: gtypes.Type = None  # type: ignore
         for arg_type, _ in self.types:
+            if isinstance(arg_type, gtypes.AnyType):
+                # this computation is at the static signatures
+                continue
             new_acc = gtypes.supremum(acc, arg_type) if acc is not None else arg_type
             assert not isinstance(new_acc, gtypes.TypingError)
             acc = new_acc
         return acc
 
     def get_return_type(self, type: gtypes.Type) -> t.Optional[gtypes.Type]:
-        valid_result_types = [
-            ret_type
-            for arg_type, ret_type in self.types
-            if gtypes.is_subtype(type, arg_type)
-        ]
-        if len(valid_result_types) > 0:
-            return valid_result_types[0]
+        for arg_type, ret_type in self.types:
+            if gtypes.is_subtype(type, arg_type, consistent=False):
+                return ret_type
         return None
 
 
@@ -106,6 +107,31 @@ class BinaryOpEnum(Enum):
                     gtypes.AtomLiteralType("false"),
                 ),
                 (gtypes.BooleanType(), gtypes.BooleanType(), gtypes.BooleanType()),
+                (
+                    gtypes.AnyType(),
+                    gtypes.AtomLiteralType("false"),
+                    gtypes.AtomLiteralType("false"),
+                ),
+                (
+                    gtypes.AtomLiteralType("false"),
+                    gtypes.AnyType(),
+                    gtypes.AtomLiteralType("false"),
+                ),
+                (
+                    gtypes.BooleanType(),
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                ),
+                (
+                    gtypes.AnyType(),
+                    gtypes.BooleanType(),
+                    gtypes.AnyType(),
+                ),
+                (
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                ),
             ]
         if self is BinaryOpEnum.disjunction:
             return [
@@ -125,6 +151,31 @@ class BinaryOpEnum(Enum):
                     gtypes.AtomLiteralType("true"),
                 ),
                 (gtypes.BooleanType(), gtypes.BooleanType(), gtypes.BooleanType()),
+                (
+                    gtypes.AnyType(),
+                    gtypes.AtomLiteralType("true"),
+                    gtypes.AtomLiteralType("true"),
+                ),
+                (
+                    gtypes.AtomLiteralType("true"),
+                    gtypes.AnyType(),
+                    gtypes.AtomLiteralType("true"),
+                ),
+                (
+                    gtypes.BooleanType(),
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                ),
+                (
+                    gtypes.AnyType(),
+                    gtypes.BooleanType(),
+                    gtypes.AnyType(),
+                ),
+                (
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                    gtypes.AnyType(),
+                ),
             ]
         elif self in [BinaryOpEnum.sum, BinaryOpEnum.product, BinaryOpEnum.subtraction]:
             return [
@@ -135,16 +186,38 @@ class BinaryOpEnum(Enum):
                 (gtypes.FloatType(), gtypes.NumberType(), gtypes.FloatType()),
                 (gtypes.NumberType(), gtypes.FloatType(), gtypes.FloatType()),
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType()),
+                (gtypes.AnyType(), gtypes.FloatType(), gtypes.FloatType()),
+                (gtypes.FloatType(), gtypes.AnyType(), gtypes.FloatType()),
+                (gtypes.AnyType(), gtypes.NumberType(), gtypes.AnyType()),
+                (gtypes.NumberType(), gtypes.AnyType(), gtypes.AnyType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.AnyType()),
             ]
         elif self is BinaryOpEnum.division:
-            return [(gtypes.NumberType(), gtypes.NumberType(), gtypes.FloatType())]
+            return [
+                (gtypes.NumberType(), gtypes.NumberType(), gtypes.FloatType()),
+                (gtypes.AnyType(), gtypes.NumberType(), gtypes.FloatType()),
+                (gtypes.NumberType(), gtypes.AnyType(), gtypes.FloatType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.FloatType()),
+            ]
         elif self in [BinaryOpEnum.integer_reminder, BinaryOpEnum.integer_division]:
-            return [(gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType())]
+            return [
+                (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType()),
+                (gtypes.AnyType(), gtypes.IntegerType(), gtypes.IntegerType()),
+                (gtypes.IntegerType(), gtypes.AnyType(), gtypes.IntegerType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.IntegerType()),
+            ]
         elif self in [BinaryOpEnum.maximum, BinaryOpEnum.minimum]:
             return [
                 (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType()),
                 (gtypes.FloatType(), gtypes.FloatType(), gtypes.FloatType()),
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.NumberType()),
+                (gtypes.IntegerType(), gtypes.AnyType(), gtypes.AnyType()),
+                (gtypes.AnyType(), gtypes.IntegerType(), gtypes.AnyType()),
+                (gtypes.FloatType(), gtypes.AnyType(), gtypes.AnyType()),
+                (gtypes.AnyType(), gtypes.FloatType(), gtypes.AnyType()),
+                (gtypes.NumberType(), gtypes.AnyType(), gtypes.NumberType()),
+                (gtypes.AnyType(), gtypes.NumberType(), gtypes.NumberType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.AnyType()),
             ]
         elif self in [
             BinaryOpEnum.identity,
@@ -166,12 +239,18 @@ class BinaryOpEnum(Enum):
             #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=y)) raises error
             return [
                 (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
+                (gtypes.AtomType(), gtypes.AnyType(), gtypes.BooleanType()),
+                (gtypes.AnyType(), gtypes.AtomType(), gtypes.BooleanType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.BooleanType()),
             ]
 
     @property
     def get_maximal_argument_types(self) -> t.Tuple[gtypes.Type, gtypes.Type]:
         acc: t.Tuple[gtypes.Type, gtypes.Type] = None  # type: ignore
         for left_arg_type, right_arg_type, _ in self.types:
+            if isinstance(left_arg_type, gtypes.AnyType) or isinstance(right_arg_type, gtypes.AnyType):
+                # this computation is at the static signatures
+                continue
             if acc:
                 new_acc = (gtypes.supremum(acc[0], left_arg_type), gtypes.supremum(acc[1], right_arg_type))
             else:
@@ -183,16 +262,12 @@ class BinaryOpEnum(Enum):
         return acc
 
     def get_return_type(self, left_type: gtypes.Type, right_type: gtypes.Type) -> t.Optional[gtypes.Type]:
-        valid_result_types = [
-            ret_type
-            for left_arg_type, right_arg_type, ret_type in self.types
+        for left_arg_type, right_arg_type, ret_type in self.types:
             if (
-                gtypes.is_subtype(left_type, left_arg_type)
-                and gtypes.is_subtype(right_type, right_arg_type)
-            )
-        ]
-        if len(valid_result_types) > 0:
-            return valid_result_types[0]
+                gtypes.is_subtype(left_type, left_arg_type, consistent=False)
+                and gtypes.is_subtype(right_type, right_arg_type, consistent=False)
+            ):
+                return ret_type
         return None
 
 
@@ -831,11 +906,7 @@ def type_check_unary_op(
             bullets=[ContextExpressionTypeCheckError(UnaryOpContext(), env, argument_type_check_result)],
         )
 
-    result_type: t.Optional[gtypes.Type] = None
-    if isinstance(argument_type_check_result.type, gtypes.AnyType):
-        result_type = gtypes.AnyType()
-    else:
-        result_type = expr.op.get_return_type(argument_type_check_result.type)
+    result_type = expr.op.get_return_type(argument_type_check_result.type)
 
     if result_type is not None:
         return ExpressionTypeCheckSuccess(
@@ -879,15 +950,7 @@ def type_check_binary_op(
             bullets=[ContextExpressionTypeCheckError(BinaryOpContext(is_left=False), env, right_type_check_result)],
         )
 
-    result_type: t.Optional[gtypes.Type] = None
-    if (
-        isinstance(left_type_check_result.type, gtypes.AnyType)
-        or
-        isinstance(right_type_check_result.type, gtypes.AnyType)
-    ):
-        result_type = gtypes.AnyType()
-    else:
-        result_type = expr.op.get_return_type(left_type_check_result.type, right_type_check_result.type)
+    result_type = expr.op.get_return_type(left_type_check_result.type, right_type_check_result.type)
 
     if result_type is not None:
         return ExpressionTypeCheckSuccess(

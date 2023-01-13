@@ -277,10 +277,12 @@ def is_higher_order(tau: Type) -> bool:
         return False
 
 
-def is_subtype(tau: Type, sigma: Type) -> bool:
+def is_subtype(tau: Type, sigma: Type, consistent=True) -> bool:
     if isinstance(tau, BaseType) and isinstance(sigma, BaseType):
         return is_base_subtype(tau, sigma)
-    elif isinstance(tau, AnyType) or isinstance(sigma, AnyType):
+    elif (isinstance(tau, AnyType) or isinstance(sigma, AnyType)) and consistent:
+        return True
+    elif (isinstance(tau, AnyType) and isinstance(sigma, AnyType)) and not consistent:
         return True
     elif isinstance(tau, ElistType) and isinstance(sigma, ElistType):
         return True
