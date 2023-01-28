@@ -40,22 +40,6 @@ class CastAnnotatedExpression(expression.Expression):
 
 
 @dataclass
-class CastAnnotatedVarCallExpression(expression.Expression):
-    expression: expression.VarCallExpression
-    ident_left_type: gtypes.Type
-    ident_right_type: gtypes.Type
-
-    def __new__(cls, expression: "expression.Expression", ident_left_type: gtypes.Type, ident_right_type: gtypes.Type):
-        if ident_left_type == ident_right_type:
-            return expression
-        return super(CastAnnotatedVarCallExpression, cls).__new__(cls)
-
-    def __str__(self):
-        arguments_str = ", ".join([str(arg) for arg in self.expression.arguments])
-        return f"({self.expression.ident} | {self.ident_left_type} ~> {self.ident_right_type}).({arguments_str})"
-
-
-@dataclass
 class AnnotatedModule:
     name: str
     annotated_definitions: t.List[t.Tuple[module.Spec, module.Definition]]
@@ -185,16 +169,18 @@ def annotate_expression(type_derivation: expression.ExpressionTypeCheckSuccess, 
             type=type_derivation.type,
         )
     else:
-        assert isinstance(expr, expression.VarCallExpression)
+        assert isinstance(expr, expression.AnonCallExpression)
         annotated_arguments = []
         for argument_type_derivation in type_derivation.children["arguments"]:
             annotated_argument = annotate_expression(argument_type_derivation)
             annotated_arguments.append(annotated_argument)
 
-        ident_type = type_derivation.env[expr.ident]
-        assert isinstance(ident_type, gtypes.FunctionType) or isinstance(ident_type, gtypes.AnyType)
+        function_type = type_derivation.children["function"].type
+        assert isinstance(function_type, gtypes.FunctionType) or isinstance(function_type, gtypes.AnyType)
         return AnnotatedExpression(
-            expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
+            expression=expression.AnonCallExpression(
+                function=annotate_expression(type_derivation.children["function"]), arguments=annotated_arguments,
+            ),
             type=type_derivation.type,
         )
 
@@ -288,6 +274,7 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             pattern=expr.pattern, expression=annotated_expression
         )
     if isinstance(expr, expression.IfElseExpression):
+        print(type_derivation.type)
         return expression.IfElseExpression(
             condition=cast(
                 expression=cast_annotate_expression(type_derivation.children["condition"]),
@@ -349,24 +336,28 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             annotated_arguments.append(annotated_argument)
         return expression.FunctionCallExpression(function_name=expr.function_name, arguments=annotated_arguments)
     else:
-        assert isinstance(expr, expression.VarCallExpression)
-        ident_right_type = type_derivation.env[expr.ident]
-        if isinstance(any := ident_right_type, gtypes.AnyType):
-            ident_right_type = gtypes.FunctionType(arg_types=[any for _ in expr.arguments], ret_type=any)
-        assert isinstance(ident_right_type, gtypes.FunctionType)
+        assert isinstance(expr, expression.AnonCallExpression)
+        left_type = type_derivation.children["function"].type
+        right_type = type_derivation.children["function"].type
+        if isinstance(any := right_type, gtypes.AnyType):
+            right_type = gtypes.FunctionType(arg_types=[any for _ in expr.arguments], ret_type=any)
+        assert isinstance(right_type, gtypes.FunctionType)
         annotated_arguments = []
         for i in range(len(expr.arguments)):
             argument_type_derivation = type_derivation.children["arguments"][i]
             annotated_argument = cast(
                 expression=cast_annotate_expression(argument_type_derivation),
                 left_type=argument_type_derivation.type,
-                right_type=ident_right_type.arg_types[i]
+                right_type=right_type.arg_types[i]
             )
             annotated_arguments.append(annotated_argument)
-        return CastAnnotatedVarCallExpression(
-            expression=expression.VarCallExpression(ident=expr.ident, arguments=annotated_arguments),
-            ident_left_type=type_derivation.env[expr.ident],
-            ident_right_type=ident_right_type,
+        return expression.AnonCallExpression(
+            function=cast(
+                expression=cast_annotate_expression(type_derivation.children["function"]),
+                left_type=left_type,
+                right_type=right_type
+            ),
+            arguments=annotated_arguments,
         )
 
 

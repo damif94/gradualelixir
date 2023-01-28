@@ -3,7 +3,6 @@ from collections import OrderedDict
 from gradualelixir.cast import (
     AnnotatedModule,
     CastAnnotatedExpression,
-    CastAnnotatedVarCallExpression,
     annotate_module,
     cast_annotate_expression,
 )
@@ -29,7 +28,7 @@ from gradualelixir.expression import (
     TupleExpression,
     UnaryOpEnum,
     UnaryOpExpression,
-    VarCallExpression,
+    AnonCallExpression,
     format_expression,
     type_check,
 )
@@ -527,9 +526,9 @@ def test_function_call():
     )
 
 
-def test_var_call():
+def test_anonymous_call():
     assert_cast_annotate_expression_ok(
-        VarCallExpression("foo", [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
+        AnonCallExpression(IdentExpression("foo"), [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
         env={
             "foo": FunctionType([IntegerType(), AnyType(), NumberType()], IntegerType()),
             "x": IntegerType(),
@@ -537,8 +536,8 @@ def test_var_call():
             "z": AnyType()
         },
         expected_casted_expr=(
-            VarCallExpression(
-                "foo",
+            AnonCallExpression(
+                IdentExpression("foo"),
                 [
                     IdentExpression("x"),
                     CastAnnotatedExpression(IdentExpression("y"), IntegerType(), AnyType()),
@@ -552,28 +551,55 @@ def test_var_call():
         )
     )
     assert_cast_annotate_expression_ok(
-        VarCallExpression("foo", [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
+        AnonCallExpression(IdentExpression("foo"), [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
         env={
             "foo": AnyType(), "x": IntegerType(), "y": IntegerType(), "z": AnyType()
         },
-        expected_casted_expr=(
-            CastAnnotatedVarCallExpression(
-                VarCallExpression(
-                    "foo",
-                    [
-                        CastAnnotatedExpression(IdentExpression("x"), IntegerType(), AnyType()),
-                        CastAnnotatedExpression(IdentExpression("y"), IntegerType(), AnyType()),
-                        IdentExpression("z")
-                    ]
-                ),
-                ident_left_type=AnyType(),
-                ident_right_type=FunctionType([AnyType(), AnyType(), AnyType()], AnyType())
-            )
+        expected_casted_expr=AnonCallExpression(
+            CastAnnotatedExpression(
+                expression=IdentExpression("foo"),
+                left_type=AnyType(),
+                right_type=FunctionType([AnyType(), AnyType(), AnyType()], AnyType())
+            ),
+            [
+                CastAnnotatedExpression(IdentExpression("x"), IntegerType(), AnyType()),
+                CastAnnotatedExpression(IdentExpression("y"), IntegerType(), AnyType()),
+                IdentExpression("z")
+            ]
         ),
         comment=(
-            "The called variable has type any, so it will be casted to the "
+            "The called expression has type any, so it will be casted to the "
             "Each argument gets casted from its derived type into the respective parameter type for the function's\n"
             "spec in question"
+        )
+    )
+    assert_cast_annotate_expression_ok(
+        AnonCallExpression(
+            function=IfElseExpression(
+                condition=AtomLiteralExpression("true"),
+                if_clause=AnonymizedFunctionExpression("foo", 2),
+                else_clause=AnonymizedFunctionExpression("baz", 2)
+            ),
+            arguments=[IdentExpression("x"), IdentExpression("y")]
+        ),
+        env={"x": IntegerType(), "y": AnyType()},
+        specs_env={
+            ("foo", 2): ([IntegerType(), IntegerType()], NumberType()),
+            ("baz", 2): ([NumberType(), NumberType()], AnyType()),
+        },
+        expected_casted_expr=AnonCallExpression(
+            function=IfElseExpression(
+                condition=AtomLiteralExpression("true"),
+                if_clause=AnonymizedFunctionExpression("foo", 2),
+                else_clause=CastAnnotatedExpression(
+                    AnonymizedFunctionExpression("baz", 2),
+                    FunctionType([NumberType(), NumberType()], AnyType()),
+                    FunctionType([NumberType(), NumberType()], NumberType()),
+                )
+            ),
+            arguments=[
+                IdentExpression("x"), CastAnnotatedExpression(IdentExpression("y"), AnyType(), IntegerType()),
+            ],
         )
     )
 
@@ -649,7 +675,7 @@ def test_cast_annotate_module__untyped_sum():
                 parameters=[],
                 body=SeqExpression(
                     left=PatternMatchExpression(IdentPattern("x"), AnonymizedFunctionExpression("untyped_sum", 2)),
-                    right=VarCallExpression("x", [IntegerExpression(1), AtomLiteralExpression("a")])
+                    right=AnonCallExpression(IdentExpression("x"), [IntegerExpression(1), AtomLiteralExpression("a")])
                 )
             )
         ]
@@ -680,8 +706,8 @@ def test_cast_annotate_module__untyped_sum():
                     parameters=[],
                     body=SeqExpression(
                         left=PatternMatchExpression(IdentPattern("x"), AnonymizedFunctionExpression("untyped_sum", 2)),
-                        right=VarCallExpression(
-                            "x",
+                        right=AnonCallExpression(
+                            IdentExpression("x"),
                             [
                                 CastAnnotatedExpression(IntegerExpression(1), IntegerType(), AnyType()),
                                 CastAnnotatedExpression(AtomLiteralExpression("a"), AtomLiteralType("a"), AnyType()),
@@ -718,7 +744,7 @@ def test_cast_annotate_module__untyped_sum_untyped():
                         left=PatternMatchExpression(IdentPattern("x"), AnonymizedFunctionExpression("untyped_sum", 2)),
                         right=PatternMatchExpression(IdentPattern("x"), FunctionCallExpression("untyped", [IdentExpression("x")]))
                     ),
-                    right=VarCallExpression("x", [IntegerExpression(1)])
+                    right=AnonCallExpression(IdentExpression("x"), [IntegerExpression(1)])
                 )
             )
         ]
@@ -770,13 +796,13 @@ def test_cast_annotate_module__untyped_sum_untyped():
                                 )
                             )
                         ),
-                        right=CastAnnotatedVarCallExpression(
-                            VarCallExpression(
-                                "x",
-                                [CastAnnotatedExpression(IntegerExpression(1), IntegerType(), AnyType())]
+                        right=AnonCallExpression(
+                            CastAnnotatedExpression(
+                                expression=IdentExpression("x"),
+                                left_type=AnyType(),
+                                right_type=FunctionType([AnyType()], AnyType())
                             ),
-                            ident_left_type=AnyType(),
-                            ident_right_type=FunctionType([AnyType()], AnyType())
+                            [CastAnnotatedExpression(IntegerExpression(1), IntegerType(), AnyType())]
                         )
                     )
                 )

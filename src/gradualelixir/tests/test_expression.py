@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from gradualelixir.expression import (
     AnonymizedFunctionExpression,
+    AnonCallExpressionContext,
     AtomLiteralExpression,
     BaseExpressionTypeCheckError,
     BinaryOpContext,
@@ -36,7 +37,7 @@ from gradualelixir.expression import (
     UnaryOpContext,
     UnaryOpEnum,
     UnaryOpExpression,
-    VarCallExpression,
+    AnonCallExpression,
     type_check,
 )
 from gradualelixir.gtypes import (
@@ -1596,18 +1597,23 @@ def test_call():
         expected_type=NumberType(),
     )
     assert_type_check_expression_ok(
-        VarCallExpression("z", [FunctionCallExpression("foo", [IntegerExpression(1)]), IdentExpression("x")]),
+        AnonCallExpression(IdentExpression("z"), [FunctionCallExpression("foo", [IntegerExpression(1)]), IdentExpression("x")]),
         env={"x": AtomLiteralType("a"), "z": FunctionType([FloatType(), AtomType()], NumberType())},
         specs_env={("foo", 1): ([IntegerType()], FloatType())},
         expected_type=NumberType(),
     )
     assert_type_check_expression_ok(
-        VarCallExpression("x", [IntegerExpression(1)]), env={"x": AnyType()}, expected_type=AnyType()
+        AnonCallExpression(FunctionCallExpression("foo", []), [IntegerExpression(1)]),
+        specs_env={("foo", 0): ([], FunctionType([IntegerType()], FloatType()))},
+        expected_type=FloatType(),
+    )
+    assert_type_check_expression_ok(
+        AnonCallExpression(IdentExpression("x"), [IntegerExpression(1)]), env={"x": AnyType()}, expected_type=AnyType()
     )
 
     # ERRORS behavior
     assert_type_check_expression_error(
-        VarCallExpression("x", [IntegerExpression(1)]),
+        AnonCallExpression(IdentExpression("x"), [IntegerExpression(1)]),
         ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
         env={"x": FunctionType([], IntegerType())},
     )
@@ -1640,8 +1646,15 @@ def test_call():
         specs_env={("foo", 2): ([AtomType(), FloatType()], IntegerType())},
     )
     assert_type_check_expression_error(
-        VarCallExpression("x", [IntegerExpression(1)]),
+        AnonCallExpression(IdentExpression("x"), [IntegerExpression(1)]),
         ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
+        env={"x": FunctionType([], IntegerType())},
+    )
+    assert_type_check_expression_error(
+        AnonCallExpression(
+            BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IntegerExpression(2)), [IntegerExpression(1)]
+        ),
+        [(AnonCallExpressionContext(None), ExpressionErrorEnum.incompatible_types_for_binary_operator)],
         env={"x": FunctionType([], IntegerType())},
     )
 

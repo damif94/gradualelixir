@@ -22,7 +22,7 @@ from gradualelixir.expression import (
     TupleExpression,
     UnaryOpEnum,
     UnaryOpExpression,
-    VarCallExpression,
+    AnonCallExpression,
 )
 from gradualelixir.gtypes import (
     AtomLiteralType,
@@ -408,7 +408,7 @@ def test_control_flow_expressions():
 
 def test_function():
     assert parse_expression("f(2,{})") == FunctionCallExpression("f", [IntegerExpression(2), TupleExpression([])])
-    assert parse_expression("f.(2,{})") == VarCallExpression("f", [IntegerExpression(2), TupleExpression([])])
+    assert parse_expression("f.(2,{})") == AnonCallExpression(IdentExpression("f"), [IntegerExpression(2), TupleExpression([])])
     assert parse_expression("&(foo/0)") == AnonymizedFunctionExpression("foo", 0)
     assert parse_expression("&(foo/1)") == AnonymizedFunctionExpression("foo", 1)
     assert parse_expression("&(foo/2)") == AnonymizedFunctionExpression("foo", 2)

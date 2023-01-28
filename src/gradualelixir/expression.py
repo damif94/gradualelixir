@@ -462,7 +462,7 @@ class AnonymizedFunctionExpression(Expression):
     arity: int
 
     def __str__(self):
-        return f"&({self.function_name}/{self.arity})"
+        return f"(&{self.function_name}/{self.arity})"
 
 
 @dataclass
@@ -476,13 +476,13 @@ class FunctionCallExpression(Expression):
 
 
 @dataclass
-class VarCallExpression(Expression):
-    ident: str
+class AnonCallExpression(Expression):
+    function: Expression
     arguments: t.List[Expression]
 
     def __str__(self):
         arguments_str = ", ".join([str(arg) for arg in self.arguments])
-        return f"{self.ident}.({arguments_str})"
+        return f"({self.function}).({arguments_str})"
 
 
 def format_expression(expression: Expression, padding="") -> str:
@@ -631,11 +631,13 @@ class FunctionCallExpressionContext(ExpressionContext):
 
 
 @dataclass
-class VarCallExpressionContext(ExpressionContext):
-    argument: int
+class AnonCallExpressionContext(ExpressionContext):
+    argument: t.Optional[int]
 
     def __str__(self):
-        return f"In the {ordinal(self.argument + 1)} argument"
+        if self.argument is not None:
+            return f"In the {ordinal(self.argument + 1)} argument"
+        return "In the called expression"
 
 
 class ExpressionTypeCheckError:
@@ -766,10 +768,10 @@ def type_check(expr: Expression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
     if isinstance(expr, AnonymizedFunctionExpression):
         return type_check_anon(expr, env, specs_env)
     if isinstance(expr, FunctionCallExpression):
-        return type_check_call(expr, env, specs_env)
+        return type_check_function_call(expr, env, specs_env)
     else:
-        assert isinstance(expr, VarCallExpression)
-        return type_check_call(expr, env, specs_env)
+        assert isinstance(expr, AnonCallExpression)
+        return type_check_anonymous_call(expr, env, specs_env)
 
 
 def type_check_ident(
@@ -1286,43 +1288,19 @@ def type_check_anon(
         )
 
 
-def type_check_call(
-    expr: t.Union[FunctionCallExpression, VarCallExpression], env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
+def type_check_function_call(
+    expr: FunctionCallExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
 ) -> ExpressionTypeCheckResult:
-    context_class: t.Type[
-        t.Union[FunctionCallExpressionContext, VarCallExpressionContext]
-    ] = FunctionCallExpressionContext
+    context_class: t.Type[FunctionCallExpressionContext] = FunctionCallExpressionContext
     function_type: gtypes.FunctionType
-    if isinstance(expr, FunctionCallExpression):
-        if not (value := specs_env.get((expr.function_name, len(expr.arguments)))):
-            return BaseExpressionTypeCheckError(
-                expression=expr,
-                kind=ExpressionErrorEnum.function_not_declared,
-                args={"name": expr.function_name, "arity": len(expr.arguments)},
-            )
-        else:
-            function_type = gtypes.FunctionType(value[0], value[1])
-    else:
-        context_class = VarCallExpressionContext
-        if not (aux := env.get(expr.ident)):
-            return BaseExpressionTypeCheckError(
-                expression=expr,
-                kind=ExpressionErrorEnum.identifier_not_found_in_environment,
-                args={"identifier": expr.ident},
-            )
-        else:
-            if isinstance(aux, gtypes.AnyType):
-                # if env[x] = any, we will refine x: (any,...,any)n -> any for the
-                # sake of typing x.(e1,..en)
-                aux = gtypes.FunctionType([gtypes.AnyType() for _ in expr.arguments], gtypes.AnyType())
+    if not (value := specs_env.get((expr.function_name, len(expr.arguments)))):
+        return BaseExpressionTypeCheckError(
+            expression=expr,
+            kind=ExpressionErrorEnum.function_not_declared,
+            args={"name": expr.function_name, "arity": len(expr.arguments)},
+        )
 
-            if not isinstance(aux, gtypes.FunctionType) or len(aux.arg_types) != len(expr.arguments):
-                return BaseExpressionTypeCheckError(
-                    expression=expr,
-                    kind=ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
-                    args={"identifier": expr.ident, "type": aux, "arity": len(expr.arguments)},
-                )
-            function_type = aux
+    function_type = gtypes.FunctionType(value[0], value[1])
 
     errors: t.List[ContextExpressionTypeCheckError] = []
     arguments_type_check_results = []
@@ -1364,4 +1342,73 @@ def type_check_call(
         type=function_type.ret_type,
         exported_env=exported_env,
         children={"arguments": arguments_type_check_results},
+    )
+
+
+def type_check_anonymous_call(
+    expr: AnonCallExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
+) -> ExpressionTypeCheckResult:
+    context_class: t.Type[AnonCallExpressionContext] = AnonCallExpressionContext
+    function_type_check_result = type_check(expr.function, env, specs_env)
+    if isinstance(function_type_check_result, ExpressionTypeCheckError):
+        return NestedExpressionTypeCheckError(
+            expression=expr,
+            bullets=[
+                ContextExpressionTypeCheckError(AnonCallExpressionContext(None), env, function_type_check_result)],
+        )
+    function_type = function_type_check_result.type
+    if isinstance(function_type, gtypes.AnyType):
+        # if env[x] = any, we will refine x: (any,...,any)n -> any for the
+        # sake of typing x.(e1,..en)
+        function_type = gtypes.FunctionType([gtypes.AnyType() for _ in expr.arguments], gtypes.AnyType())
+
+    elif not isinstance(function_type, gtypes.FunctionType) or len(function_type.arg_types) != len(expr.arguments):
+        return BaseExpressionTypeCheckError(
+            expression=expr,
+            kind=ExpressionErrorEnum.identifier_type_is_not_arrow_of_expected_arity,
+            args={"identifier": expr.function, "type": function_type, "arity": len(expr.arguments)},
+        )
+
+    assert isinstance(function_type, gtypes.FunctionType)
+
+    errors: t.List[ContextExpressionTypeCheckError] = []
+    arguments_type_check_results = []
+    for i in range(len(expr.arguments)):
+        argument_type_check_result = type_check(expr.arguments[i], env, specs_env)
+        if isinstance(argument_type_check_result, ExpressionTypeCheckError):
+            errors.append(
+                ContextExpressionTypeCheckError(
+                    context_class(argument=i),
+                    env,
+                    argument_type_check_result,
+                )
+            )
+            continue
+        if not gtypes.is_subtype(argument_type_check_result.type, function_type.arg_types[i]):
+            errors.append(
+                ContextExpressionTypeCheckError(
+                    context_class(argument=i),
+                    env,
+                    BaseExpressionTypeCheckError(
+                        expression=expr.arguments[i],
+                        kind=ExpressionErrorEnum.inferred_type_is_not_as_expected,
+                        args={"type1": argument_type_check_result.type, "type2": function_type.arg_types[i]},
+                    ),
+                )
+            )
+            continue
+        arguments_type_check_results.append(argument_type_check_result)
+    if errors:
+        return NestedExpressionTypeCheckError(expression=expr, bullets=errors)
+
+    exported_env = function_type_check_result.exported_env
+    for item in arguments_type_check_results:
+        exported_env = gtypes.TypeEnv.merge(exported_env, item.exported_env)
+    return ExpressionTypeCheckSuccess(
+        env=env,
+        specs_env=specs_env,
+        expression=expr,
+        type=function_type.ret_type,
+        exported_env=exported_env,
+        children={"function": function_type_check_result, "arguments": arguments_type_check_results},
     )

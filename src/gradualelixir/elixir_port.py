@@ -274,12 +274,12 @@ def parse_expression(j) -> expression.Expression:
                     right_expression = SyntacticLevel.expression.parse(children_nodes[1])
                     return expression.BinaryOpExpression(symbol, left_expression, right_expression)  # type: ignore
             elif isinstance(op, list) and len(op) == 3 and op[0][0] == ".":
-                function_name = op[2][0][0]
+                function_name = SyntacticLevel.expression.parse(op[2][0])
                 args = []
                 for node in children_nodes:
                     arg_expression = SyntacticLevel.expression.parse(node)
                     args.append(arg_expression)
-                return expression.VarCallExpression(function_name, args)
+                return expression.AnonCallExpression(function_name, args)
             elif children_nodes is not None and isinstance(meta, dict) and "line" in meta:
                 # isinstance(meta, dict) and 'line' in meta -> patch to "escape" three
                 # element lists from entering this clause.
