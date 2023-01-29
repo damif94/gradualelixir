@@ -228,46 +228,47 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
         )
     if isinstance(expr, expression.UnaryOpExpression):
         annotated_argument = cast_annotate_expression(type_derivation.children["argument"])
+        maximal_argument_for_type = expr.op.maximal_argument_type
+        right_type = gtypes.merge_operator(type_derivation.children["argument"].type, maximal_argument_for_type)
         if isinstance(any := type_derivation.children["argument"].type, gtypes.AnyType):
             annotated_argument = cast(
-                annotated_argument, left_type=any, right_type=expr.op.maximal_argument_type
+                annotated_argument, left_type=any, right_type=right_type
             )
             return cast(
                 expression=expression.UnaryOpExpression(op=expr.op, argument=annotated_argument),
-                left_type=expr.op.get_return_type(expr.op.maximal_argument_type),  # type: ignore
-                right_type=gtypes.AnyType()
+                left_type=expr.op.get_return_type(right_type),
+                right_type=expr.op.get_return_type(type_derivation.children["argument"].type)
             )
         return expression.UnaryOpExpression(op=expr.op, argument=annotated_argument)
     if isinstance(expr, expression.BinaryOpExpression):
         annotated_left = cast_annotate_expression(type_derivation.children["left"])
         annotated_right = cast_annotate_expression(type_derivation.children["right"])
-        if (
-            isinstance(type_derivation.children["left"].type, gtypes.AnyType)
-            or
-            isinstance(type_derivation.children["right"].type, gtypes.AnyType)
-        ):
-            maximal_argument_types_for_op = expr.op.get_maximal_argument_types
-            return cast(
-                expression=expression.BinaryOpExpression(
-                    op=expr.op,
-                    left=cast(
-                        expression=annotated_left,
-                        left_type=type_derivation.children["left"].type,
-                        right_type=maximal_argument_types_for_op[0]
-                    ),
-                    right=cast(
-                        expression=annotated_right,
-                        left_type=type_derivation.children["right"].type,
-                        right_type=maximal_argument_types_for_op[1]
-                    )
+        maximal_argument_types_for_op = expr.op.get_maximal_argument_types
+        left_right_type = gtypes.merge_operator(
+            type_derivation.children["left"].type, maximal_argument_types_for_op[0]
+        )
+        right_right_type = gtypes.merge_operator(
+            type_derivation.children["right"].type, maximal_argument_types_for_op[1]
+        )
+        return cast(
+            expression=expression.BinaryOpExpression(
+                op=expr.op,
+                left=cast(
+                    expression=annotated_left,
+                    left_type=type_derivation.children["left"].type,
+                    right_type=left_right_type
                 ),
-                left_type=expr.op.get_return_type(*maximal_argument_types_for_op),  # type: ignore
-                right_type=gtypes.AnyType()
-            )
-        else:
-            return expression.BinaryOpExpression(
-                op=expr.op, left=annotated_left, right=annotated_right
-            )
+                right=cast(
+                    expression=annotated_right,
+                    left_type=type_derivation.children["right"].type,
+                    right_type=right_right_type
+                )
+            ),
+            left_type=expr.op.get_return_type(left_right_type, right_right_type),
+            right_type=expr.op.get_return_type(
+                type_derivation.children["left"].type, type_derivation.children["right"].type
+            ),
+        )
     if isinstance(expr, expression.PatternMatchExpression):
         annotated_expression = cast_annotate_expression(type_derivation.children["expression"])
         return expression.PatternMatchExpression(

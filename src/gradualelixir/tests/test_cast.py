@@ -292,6 +292,15 @@ def test_binary_op():
     )
     assert_cast_annotate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
+        {"x": FloatType(), "y": AnyType()},
+        BinaryOpExpression(
+            BinaryOpEnum.sum,
+            IdentExpression("x"),
+            CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
+        ),
+    )
+    assert_cast_annotate_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": IntegerType()},
         CastAnnotatedExpression(
             expression=BinaryOpExpression(
