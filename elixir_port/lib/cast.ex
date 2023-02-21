@@ -6,7 +6,7 @@ defmodule Cast do
     end
   end
 
-  defmodule BadArgumentError do
+  defmodule BadCastError do
     defexception message: "Cast function couldn't process this argument tuple",
                  value: nil,
                  left_type: nil,
@@ -25,7 +25,7 @@ defmodule Cast do
       message =
         "Cast is forbidden: #{message}"
 
-      struct(BadArgumentError, Map.put(params, :message, message))
+      struct(BadCastError, Map.put(params, :message, message))
     end
   end
 
@@ -329,7 +329,7 @@ defmodule Cast do
 
     case result do
       {:bad_argument_error, error_type} ->
-        raise BadArgumentError.new(%{
+        raise BadCastError.new(%{
           reason: error_type,
           value: value,
           left_type: left_type,

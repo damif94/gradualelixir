@@ -182,12 +182,12 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.CastError, 1 | any ~> float)
     assert_raise_error(Cast.CastError, 1.0 | any ~> integer)
 
-    assert_raise_error(Cast.BadArgumentError, 1 | integer ~> number)
-    assert_raise_error(Cast.BadArgumentError, 1 | number ~> integer)
-    assert_raise_error(Cast.BadArgumentError, 1 | integer ~> float)
-    assert_raise_error(Cast.BadArgumentError, 1 | number ~> float)
-    assert_raise_error(Cast.BadArgumentError, 1 | float ~> float)
-    assert_raise_error(Cast.BadArgumentError, 1 | float ~> any)
+    assert_raise_error(Cast.BadCastError, 1 | integer ~> number)
+    assert_raise_error(Cast.BadCastError, 1 | number ~> integer)
+    assert_raise_error(Cast.BadCastError, 1 | integer ~> float)
+    assert_raise_error(Cast.BadCastError, 1 | number ~> float)
+    assert_raise_error(Cast.BadCastError, 1 | float ~> float)
+    assert_raise_error(Cast.BadCastError, 1 | float ~> any)
   end
 
   test "d_elist_cast" do
@@ -201,10 +201,10 @@ defmodule ElixirPortTest do
 
     assert_raise_error(Cast.CastError, [] | any ~> integer)
 
-    assert_raise_error(Cast.BadArgumentError, [] | integer ~> [])
-    assert_raise_error(Cast.BadArgumentError, [] | [] ~> integer)
-    assert_raise_error(Cast.BadArgumentError, [] | integer ~> [{integer, any}])
-    assert_raise_error(Cast.BadArgumentError, [] | [{integer, any}] ~> integer)
+    assert_raise_error(Cast.BadCastError, [] | integer ~> [])
+    assert_raise_error(Cast.BadCastError, [] | [] ~> integer)
+    assert_raise_error(Cast.BadCastError, [] | integer ~> [{integer, any}])
+    assert_raise_error(Cast.BadCastError, [] | [{integer, any}] ~> integer)
   end
 
   test "d_list_cast" do
@@ -227,15 +227,15 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.CastError, [1, 2.0] | [any] ~> [integer])
     assert_raise_error(Cast.CastError, [1, 2.0] | [any] ~> [float])
 
-    assert_raise_error(Cast.BadArgumentError, [1] | [float] ~> [float])
-    assert_raise_error(Cast.BadArgumentError, [1] | [float] ~> [integer])
-    assert_raise_error(Cast.BadArgumentError, [1] | [float] ~> [any])
-    assert_raise_error(Cast.BadArgumentError, [1] | [integer] ~> [float])
-    assert_raise_error(Cast.BadArgumentError, [1] | [integer] ~> [number])
-    assert_raise_error(Cast.BadArgumentError, [1] | [number] ~> [integer])
-    assert_raise_error(Cast.BadArgumentError, [2.0] | [integer] ~> [integer])
-    assert_raise_error(Cast.BadArgumentError, [1, 2.0] | [integer] ~> [integer])
-    assert_raise_error(Cast.BadArgumentError, [1, 2.0] | [float] ~> [float])
+    assert_raise_error(Cast.BadCastError, [1] | [float] ~> [float])
+    assert_raise_error(Cast.BadCastError, [1] | [float] ~> [integer])
+    assert_raise_error(Cast.BadCastError, [1] | [float] ~> [any])
+    assert_raise_error(Cast.BadCastError, [1] | [integer] ~> [float])
+    assert_raise_error(Cast.BadCastError, [1] | [integer] ~> [number])
+    assert_raise_error(Cast.BadCastError, [1] | [number] ~> [integer])
+    assert_raise_error(Cast.BadCastError, [2.0] | [integer] ~> [integer])
+    assert_raise_error(Cast.BadCastError, [1, 2.0] | [integer] ~> [integer])
+    assert_raise_error(Cast.BadCastError, [1, 2.0] | [float] ~> [float])
   end
 
   # @tag disabled: true
@@ -267,15 +267,15 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.CastError, {1, 2.0} | {any, any} ~> {number, integer})
     assert_raise_error(Cast.CastError, {1, 2.0} | {number, any} ~> {number, integer})
 
-    assert_raise_error(Cast.BadArgumentError, {} | {any} ~> {})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, integer} ~> any)
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {float, float} ~> any)
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, integer} ~> {integer, integer})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {float, float} ~> {float, float})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, float} ~> {number, float})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, float} ~> {integer, number})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, float} ~> {integer, float, any})
-    assert_raise_error(Cast.BadArgumentError, {1, 2.0} | {integer, float, any} ~> {integer, float, any})
+    assert_raise_error(Cast.BadCastError, {} | {any} ~> {})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, integer} ~> any)
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {float, float} ~> any)
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, integer} ~> {integer, integer})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {float, float} ~> {float, float})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, float} ~> {number, float})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, float} ~> {integer, number})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, float} ~> {integer, float, any})
+    assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, float, any} ~> {integer, float, any})
   end
 
   # @tag disabled: true
@@ -301,13 +301,13 @@ defmodule ElixirPortTest do
     assert_raise_error(Cast.CastError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:b => integer})
     assert_raise_error(Cast.CastError, %{:a => 1, :b => 2.0} | any ~> %{:c => any})
 
-    assert_raise_error(Cast.BadArgumentError, %{} | %{:a => any} ~> %{:a => any})
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1} | %{:b => any} ~> %{:b => any})
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1} | %{:b => any} ~> any)
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1, :b => 2.0} | %{:a => integer} ~> %{:b => number})
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1, :b => 2.0} | %{:a => any} ~> %{:b => any})
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:a => any})
-    assert_raise_error(Cast.BadArgumentError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:a => any, :b => any})
+    assert_raise_error(Cast.BadCastError, %{} | %{:a => any} ~> %{:a => any})
+    assert_raise_error(Cast.BadCastError, %{:a => 1} | %{:b => any} ~> %{:b => any})
+    assert_raise_error(Cast.BadCastError, %{:a => 1} | %{:b => any} ~> any)
+    assert_raise_error(Cast.BadCastError, %{:a => 1, :b => 2.0} | %{:a => integer} ~> %{:b => number})
+    assert_raise_error(Cast.BadCastError, %{:a => 1, :b => 2.0} | %{:a => any} ~> %{:b => any})
+    assert_raise_error(Cast.BadCastError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:a => any})
+    assert_raise_error(Cast.BadCastError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:a => any, :b => any})
   end
 
 
@@ -362,7 +362,7 @@ defmodule ElixirPortTest do
           assert_raise_error_with_message(Cast.CastError, message, function.(input))
 
         {:bad_argument_error, message} ->
-          assert_raise_error_with_message(Cast.BadArgumentError, message, function.(input))
+          assert_raise_error_with_message(Cast.BadCastError, message, function.(input))
 
         {:arithmethic_error, message} ->
           assert_raise_error_with_message(ArithmeticError, message, function.(input))
@@ -377,9 +377,9 @@ defmodule ElixirPortTest do
     assert (((sum | ((integer, integer) -> integer) ~> any) | any ~> (any, any -> any))).(1, 2) === 3
     assert_raise_error(Cast.CastError, (((sum | ((integer, integer) -> integer) ~> any) | any ~> (any -> any))))
 
-    assert_raise_error(Cast.BadArgumentError, (((sum | (any -> any) ~> any))))
-    assert_raise_error(Cast.BadArgumentError, (((sum | (any -> any) ~> (any -> any)))))
-    assert_raise_error(Cast.BadArgumentError, (((sum | ((any, any) -> any) ~> (any -> any)))))
+    assert_raise_error(Cast.BadCastError, (((sum | (any -> any) ~> any))))
+    assert_raise_error(Cast.BadCastError, (((sum | (any -> any) ~> (any -> any)))))
+    assert_raise_error(Cast.BadCastError, (((sum | ((any, any) -> any) ~> (any -> any)))))
   end
 
   test "miscellanea" do

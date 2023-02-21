@@ -1,6 +1,5 @@
-defmodule Demo do
-  @spec list_length([any]) :: integer
-
+defmodule Program do
+  @spec list_length([number]) :: integer
   def list_length(l) do
     case l do
       [] -> 0
@@ -8,8 +7,7 @@ defmodule Demo do
     end
   end
 
-  @spec filter((any -> boolean), [any]) :: [any]
-
+  @spec filter((number -> boolean), [number]) :: [number]
   def filter(f, l) do
     case l do
       [] ->
@@ -26,22 +24,17 @@ defmodule Demo do
     end
   end
 
-  @spec is_positive(integer) :: boolean
-
+  @spec is_positive(number) :: boolean
   def is_positive(x) do
     x >= 0
   end
 
-  def untyped(value) do
-    value
-  end
-
-  @spec filter_positive([integer]) :: [integer]
-
+  @spec filter_positive([number]) :: [number]
   def filter_positive(l) do
     filter(&is_positive/1, l)
   end
 
+  @spec main(%{:choice => integer}) :: [number]
   def main(options) do
     choice =
       case options do
@@ -52,9 +45,7 @@ defmodule Demo do
     l =
       case choice do
         1 -> [1 | [2 | [3 | []]]]
-        2 -> untyped([1 | [2.0 | [3 | []]]])
-        3 -> [true | []]
-        4 -> untyped(42)
+        2 -> [2.0 | []]
       end
 
     filter_positive(l)
