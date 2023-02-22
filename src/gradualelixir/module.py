@@ -48,15 +48,14 @@ class Module:
     def __str__(self):
         msg = f"defmodule {self.name} do\n"
         msg += "  use UseCast\n\n"
-        processed_definitions: t.Set[t.Tuple[str, int]] = set()
+        unused_specs_by_key = dict([((spec.name, spec.arity), spec) for spec in self.specs])
         for definition in self.definitions:
-            if (definition.name, definition.arity) in processed_definitions:
-                msg += f"{definition}\n\n"
+            if (definition.name, definition.arity) in unused_specs_by_key.keys():
+                spec = unused_specs_by_key[(definition.name, definition.arity)]
+                msg += f"{spec}\n{definition}\n\n"
+                del unused_specs_by_key[(definition.name, definition.arity)]
             else:
-                for spec in self.specs:
-                    if (spec.name, spec.arity) == (definition.name, definition.arity):
-                        msg += f"{spec}\n{definition}\n\n"
-            processed_definitions.add((definition.name, definition.arity))
+                msg += f"{definition}\n\n"
         msg += "end"
         return msg
 
@@ -149,19 +148,6 @@ class DefinitionSpecsRefinementErrors:
                 f"with the corresponding type:{Bcolors.ENDC}\n"
             )
             msg += error.message(padding=padding + "    ")
-        return msg
-
-
-@dataclass
-class SpecsRefinementErrors:
-    module: Module
-    errors: t.Dict[Definition, DefinitionSpecsRefinementErrors]
-
-    def __str__(self):
-        msg = f"{Bcolors.OKBLUE}Errors refining specs{Bcolors.ENDC}:\n\n"
-        for definition, errors in self.errors.items():
-            msg += f"    {Bcolors.OKBLUE}On {definition.name}/{definition.arity}{Bcolors.ENDC}: "
-            msg += f"\n{errors.message(padding='    ')}\n\n"
         return msg
 
 
@@ -275,7 +261,7 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, 
 
 def type_check(
     module: Module, static: bool
-) -> t.Union[CollectResultErrors, SpecsRefinementErrors, TypeCheckErrors, TypeCheckSuccess]:
+) -> t.Union[CollectResultErrors, TypeCheckErrors, TypeCheckSuccess]:
     collect_result = collect_specs(module, static)
     if isinstance(collect_result, CollectResultErrors):
         return collect_result

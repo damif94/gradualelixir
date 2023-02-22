@@ -4,24 +4,19 @@ defmodule Program do
   end
 
   @spec sum(integer, integer) :: integer
-
-  def untyped_apply(f, x) do
-    f.(x)
+  def sum(x, y) do
+    x + y
   end
 
-  def main(options) do
-    choice =
-      case options do
-        %{:choice => v} -> v
-        _ -> 1
-      end
-
+  def main do
+    choice = 1
     untyped_sum = untyped(&sum/2)
 
     case choice do
       1 -> untyped_sum.(1, 2)
       2 -> untyped_sum.(1)
-      3 -> untyped_sum.(1.0)
+      3 -> untyped_sum.(1, 2.0)
+      4 -> untyped_sum.(true, 1)
     end
   end
 end

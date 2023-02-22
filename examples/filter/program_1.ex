@@ -1,12 +1,4 @@
 defmodule Program do
-  @spec list_length([number]) :: integer
-  def list_length(l) do
-    case l do
-      [] -> 0
-      [_ | tail] -> 1 + list_length(tail)
-    end
-  end
-
   @spec filter((number -> boolean), [number]) :: [number]
   def filter(f, l) do
     case l do
@@ -34,18 +26,14 @@ defmodule Program do
     filter(&is_positive/1, l)
   end
 
-  @spec main(%{:choice => integer}) :: [number]
-  def main(options) do
-    choice =
-      case options do
-        %{:choice => v} -> v
-        _ -> 1
-      end
+  @spec main() :: [number]
+  def main do
+    choice = 1
 
     l =
       case choice do
-        1 -> [1 | [2 | [3 | []]]]
-        2 -> [2.0 | []]
+        1 -> [1 | [-2 | [3 | []]]]
+        2 -> [1 | [2.0 | [3 | []]]]
       end
 
     filter_positive(l)

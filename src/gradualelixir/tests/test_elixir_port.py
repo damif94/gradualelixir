@@ -62,21 +62,21 @@ def parse_expression(code):
         code = "\n".join(list(code))
     if isinstance(code, list):
         code = "\n".join(code)
-    res = elixir_port.to_internal_representation(code, elixir_port.SyntacticLevel.expression)
+    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
     assert isinstance(res, Expression)
     return res
 
 
 def parse_pattern(code: str):
     code = code + " = {}"
-    res = elixir_port.to_internal_representation(code, elixir_port.SyntacticLevel.expression)
+    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
     assert isinstance(res, PatternMatchExpression)
     return res.pattern
 
 
 def parse_type(code: str):
     code = f"@spec foo()::{code}"
-    res = elixir_port.to_internal_representation(code, elixir_port.SyntacticLevel.spec)
+    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.spec)
     assert isinstance(res, Spec)
     return res.return_type
 

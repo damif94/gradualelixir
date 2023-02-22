@@ -1,4 +1,4 @@
-defmodule ElixirPort do
+defmodule AstTransformer do
   alias Macro
   alias JSON
   require IEx
@@ -75,3 +75,6 @@ defmodule ElixirPort do
     parse_as_json(code)
   end
 end
+
+args = System.argv
+IO.puts AstTransformer.main(args)

@@ -24,4 +24,9 @@ defmodule Program do
      end).(x | any ~> integer, y | any ~> integer)
     | number ~> any
   end
+
+  @spec main() :: any
+  def main() do
+    sum_x_x(1, 2) | number ~> any
+  end
 end

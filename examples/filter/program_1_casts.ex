@@ -1,5 +1,7 @@
 defmodule Program do
-  @spec filter((any -> boolean), [any]) :: [any]
+  use UseCast
+
+  @spec filter((number -> boolean), [number]) :: [number]
   def filter(f, l) do
     case l do
       [] ->
@@ -23,23 +25,17 @@ defmodule Program do
 
   @spec filter_positive([number]) :: [number]
   def filter_positive(l) do
-    f = filter(&is_positive/1, l)
-    f
+    filter(&is_positive/1, l)
   end
 
-  def untyped(value) do
-    value
-  end
-
-  def main do
-    choice = 4
+  @spec main() :: [number]
+  def main() do
+    choice = 1
 
     l =
       case choice do
         1 -> [1 | [-2 | [3 | []]]]
-        2 -> untyped([1 | [2.0 | [3 | []]]])
-        3 -> [true | []]
-        4 -> untyped(42)
+        2 -> [1 | [2.0 | [3 | []]]]
       end
 
     filter_positive(l)

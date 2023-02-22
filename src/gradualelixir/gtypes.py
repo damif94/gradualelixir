@@ -421,8 +421,6 @@ def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Ty
         try:
             assert isinstance(sigma, FunctionType)
         except AssertionError as e:
-            print(sigma)
-            print(tau)
             raise e
         return supremum_infimum_aux_function(sigma, tau, is_supremum)
 

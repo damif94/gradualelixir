@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Tuple
 
 from gradualelixir import expression, gtypes, module, pattern
 from gradualelixir.exception import ElixirParseError, ElixirProcessError
@@ -34,15 +34,33 @@ def format_code(elixir_code: str) -> str:
     return text
 
 
-def to_internal_representation(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
+def ast_transform(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
     elixir_ast_converter_output = subprocess.run(
-        [f"{project_path}/elixir_port/elixir_port", elixir_code], capture_output=True
+        ["mix", "run", f"lib/ast_transformer.exs", elixir_code], capture_output=True, cwd=project_path + "/elixir_port"
     )
 
     if error := elixir_ast_converter_output.stderr:
-        raise ElixirProcessError(f"Elixir ast converter failed for code {elixir_code}\n" + error.decode("ascii"))
+        raise ElixirProcessError(f"Elixir ast transformer failed for code {elixir_code}\n" + error.decode("ascii"))
 
-    return syntactic_level.parse(json.loads(elixir_ast_converter_output.stdout))
+    out = str(elixir_ast_converter_output.stdout)[2:-5]
+    return syntactic_level.parse(json.loads(out))
+
+
+def run(elixir_code: str) -> Tuple[str, bool]:
+    elixir_runner_output = subprocess.run(
+        ["mix", "run", f"lib/runner.exs", elixir_code], capture_output=True, cwd=project_path + "/elixir_port"
+    )
+
+    if error := elixir_runner_output.stderr:
+        if "function Program.main/0 is undefined or private" in str(error):
+            return "", False
+        elif "** (" in str(error):
+            return str(elixir_runner_output.stderr)[2:-3].replace("\\n", "\n").split("**")[1], True
+        elif len(elixir_runner_output.stdout) > 0:
+            return str(elixir_runner_output.stdout)[2:-3].replace("\\n", "\n"), True
+        else:
+            raise ElixirProcessError(f"Elixir runner failed to run module\n" + error.decode("ascii"))
+    return str(elixir_runner_output.stdout)[2:-3], True
 
 
 class SyntacticLevel(enum.Enum):

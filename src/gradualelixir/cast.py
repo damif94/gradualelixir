@@ -275,7 +275,6 @@ def cast_annotate_expression(type_derivation: expression.ExpressionTypeCheckSucc
             pattern=expr.pattern, expression=annotated_expression
         )
     if isinstance(expr, expression.IfElseExpression):
-        print(type_derivation.type)
         return expression.IfElseExpression(
             condition=cast(
                 expression=cast_annotate_expression(type_derivation.children["condition"]),

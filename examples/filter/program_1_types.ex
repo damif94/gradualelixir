@@ -1,15 +1,6 @@
 defmodule Program do
   use UseCast
 
-  @spec list_length([number]) :: integer
-  def list_length(l) do
-    case l | [number] do
-      [] -> 0
-      [_ | tail] -> 1 + (list_length(tail | [number]) | integer) | integer
-    end
-    | integer
-  end
-
   @spec filter((number -> boolean), [number]) :: [number]
   def filter(f, l) do
     case l | [number] do
@@ -39,24 +30,12 @@ defmodule Program do
     filter((&is_positive/1) | (number -> boolean), l | [number]) | [number]
   end
 
-  @spec main(%{:choice => integer}) :: [number]
-  def main(options) do
-    choice =
-      (case options | %{:choice => integer} do
-         %{:choice => v} -> v | integer
-         _ -> 1
-       end
-       | integer)
-    | integer
-
-    l =
-      (case choice | integer do
-         1 -> [1 | [2 | [3 | []] | [integer]] | [integer]] | [integer]
-         2 -> [2.0 | []] | [float]
-       end
-       | [number])
+  @spec main() :: any
+  def main() do
+    filter_positive(
+      [1 | [(-(2 | integer) | integer) | [3 | []] | [integer]] | [integer]]
+      | [integer]
+    )
     | [number]
-
-    (filter_positive(l | [number]) | [number]) | [number]
   end
 end

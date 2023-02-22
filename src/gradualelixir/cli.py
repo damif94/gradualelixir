@@ -7,7 +7,8 @@ from gradualelixir import cast, module
 from gradualelixir.elixir_port import (
     SyntacticLevel,
     format_code,
-    to_internal_representation,
+    ast_transform,
+    run,
 )
 from gradualelixir.exception import ElixirProcessError
 from gradualelixir.utils import Bcolors
@@ -15,6 +16,7 @@ from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.erlang import ElixirLexer
 import pytest
+import subprocess
 
 dotenv_path = find_dotenv()
 
@@ -94,17 +96,12 @@ def type_check_command(static, annotate, filename):
         code = "".join(f.readlines())
 
     try:
-        mod = to_internal_representation(code, syntactic_level=SyntacticLevel.module)
+        mod = ast_transform(code, syntactic_level=SyntacticLevel.module)
     except ElixirProcessError as e:
         raise click.ClickException(e.args[0])
 
     type_check_result = module.type_check(mod, static=static)
     if isinstance(type_check_result, module.CollectResultErrors):
-        print(f"{Bcolors.OKBLUE}Definitions collection errors for module {mod.name}{Bcolors.ENDC}\n")
-        print(type_check_result)
-        return
-
-    if isinstance(type_check_result, module.SpecsRefinementErrors):
         print(f"{Bcolors.OKBLUE}Definitions collection errors for module {mod.name}{Bcolors.ENDC}\n")
         print(type_check_result)
         return
@@ -134,9 +131,41 @@ def type_check_command(static, annotate, filename):
         f.write(formatted_annotated_code)
 
 
-@cli.command("run", short_help="spawns an elixir shell (iex) loaded with the content of <filename>")
+@cli.command("run", short_help="runs a module's main/0 declaration")
+@click.option("--gradual", is_flag=True, default=False, help="Used to toggle the gradual evaluation semantics.")
 @click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
-def run_command(filename):
+def run_command(filename, gradual):
+    base_path = os.path.join(get_key(dotenv_path, "WORKING_DIR"), "")
+    base_name, mime = filename.split(".")
+    with open(f"{base_path}{base_name}.{mime}", "r") as f:
+        code = "".join(f.readlines())
+
+    try:
+        mod = ast_transform(code, syntactic_level=SyntacticLevel.module)
+    except ElixirProcessError as e:
+        raise click.ClickException(e.args[0])
+
+    if gradual:
+        type_check_result = module.type_check(mod, static=False)
+        if not isinstance(type_check_result, module.TypeCheckSuccess):
+            print(f"{Bcolors.OKBLUE}Failed to run with gradual semantics because {mod.name} has type errors{Bcolors.ENDC}\n")
+            return
+        mod = cast.annotate_module(type_check_result, casts=True)
+
+    try:
+        runner_output, ok = run(str(mod))
+        if not ok:
+            print(f"{Bcolors.FAIL}Failed to run because {mod.name} no main/0 is declared{Bcolors.ENDC}\n")
+            return
+
+        print(f"{Bcolors.OKBLUE}{runner_output}{Bcolors.ENDC}")
+    except ElixirProcessError as e:
+        print(f"{Bcolors.FAIL}Failed to run: {str(e)}{Bcolors.ENDC}\n")
+
+
+@cli.command("iex", short_help="spawns an elixir shell (iex) loaded with the content of <filename>")
+@click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
+def iex_command(filename):
     import pty
     import shutil
 

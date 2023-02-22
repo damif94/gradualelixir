@@ -20,4 +20,8 @@ defmodule Program do
        &sum_x_y/2
      end).(x, y)
   end
+
+  def main do
+    sum_x_x(1, 2)
+  end
 end
