@@ -343,16 +343,6 @@ class ListExpression(Expression):
     tail: t.Union["ListExpression", Expression]
 
     def __init__(self, head: Expression, tail: t.Union["ListExpression", Expression]):
-        if not any(
-            [isinstance(tail, ListExpression), isinstance(tail, ElistExpression), isinstance(tail, IdentExpression)]
-        ):
-            # this extra import will be avoided once AnnotatedExpression is declared inside this module
-            from gradualelixir.cast import AnnotatedExpression, CastAnnotatedExpression
-
-            if not isinstance(tail, AnnotatedExpression) and not isinstance(tail, CastAnnotatedExpression):
-                raise SyntaxRestrictionError(
-                    "List pattern's tail should be either a List Expression or an Elist Expression"
-                )
         self.head = head
         self.tail = tail
 
@@ -506,6 +496,9 @@ class ExpressionErrorEnum(Enum):
         "The arguments, of types {type1} and {type2}, are not together valid arguments for builtin {op}/2"
     )
     pattern_match = "Pattern match type errors\n\n" f"{Bcolors.ENDC}" "{pattern_match_error}"
+    bad_type_for_list_tail = (
+        "The type for the tail is {type} is not a list"
+    )
     incompatible_types_for_list = (
         "The type for the head, {type1}, and the type for the tail, {type2} don't have supremum"
     )
@@ -838,11 +831,18 @@ def type_check_list(expr: ListExpression, env: gtypes.TypeEnv, specs_env: gtypes
             exported_env=gtypes.TypeEnv.merge(head_type_check_result.exported_env, tail_type_check_result.exported_env),
             children={"head": head_type_check_result, "tail": tail_type_check_result},
         )
+    elif not isinstance(tail_type_check_result.type, gtypes.ListType):
+        return BaseExpressionTypeCheckError(
+            expression=expr,
+            kind=ExpressionErrorEnum.bad_type_for_list_tail,
+            args={"type": tail_type_check_result.type},
+        )
     else:
+        assert isinstance(tail_type_check_result.type, gtypes.ListType)
         return BaseExpressionTypeCheckError(
             expression=expr,
             kind=ExpressionErrorEnum.incompatible_types_for_list,
-            args={"type1": head_type_check_result.type, "type2": tail_type_check_result.type.type},  # type: ignore
+            args={"type1": head_type_check_result.type, "type2": tail_type_check_result.type.type}
         )
 
 

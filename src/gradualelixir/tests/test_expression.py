@@ -261,6 +261,10 @@ def test_list():
         ),
         ExpressionErrorEnum.incompatible_types_for_list,
     )
+    assert_type_check_expression_error(
+        ListExpression(IntegerExpression(1), AtomLiteralExpression("true")),
+        ExpressionErrorEnum.bad_type_for_list_tail,
+    )
 
     # NESTED ERRORS behavior
     assert_type_check_expression_error(

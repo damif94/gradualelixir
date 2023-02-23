@@ -43,13 +43,17 @@ class CastAnnotatedExpression(expression.Expression):
 class AnnotatedModule:
     name: str
     annotated_definitions: t.List[t.Tuple[module.Spec, module.Definition]]
+    specs: t.List[module.Spec]
 
     def __str__(self):
         msg = f"defmodule {self.name} do\n"
         msg += "  use UseCast\n\n"
+        specs_set = set()
+        for spec in self.specs:
+            specs_set.add((spec.name, spec.arity))
         processed_definitions: t.Set[t.Tuple[str, int]] = set()
         for definition in self.annotated_definitions:
-            if (definition[1].name, definition[1].arity) in processed_definitions:
+            if (d := (definition[1].name, definition[1].arity)) in processed_definitions or d not in specs_set:
                 msg += f"{definition[1]}\n\n"
             else:
                 msg += f"{definition[0]}\n{definition[1]}\n\n"
@@ -396,4 +400,8 @@ def annotate_module(type_derivation: module.TypeCheckSuccess, casts: bool) -> An
                 ),
             )
         annotated_definitions.append((spec, annotated_definition))
-    return AnnotatedModule(name=type_derivation.module.name, annotated_definitions=annotated_definitions)
+    return AnnotatedModule(
+        name=type_derivation.module.name,
+        annotated_definitions=annotated_definitions,
+        specs=type_derivation.module.specs,
+    )
