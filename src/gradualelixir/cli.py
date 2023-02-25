@@ -96,7 +96,10 @@ def type_check_command(static, annotate, filename):
         code = "".join(f.readlines())
 
     try:
-        mod = ast_transform(code, syntactic_level=SyntacticLevel.module)
+        mod, ok = ast_transform(code, syntactic_level=SyntacticLevel.module)
+        if not ok:
+            print(f"{Bcolors.FAIL}Failed to run because the file couldn't be parsed as elixir code from the fragment fr{Bcolors.ENDC}\n")
+            return
     except ElixirProcessError as e:
         raise click.ClickException(e.args[0])
 
@@ -141,7 +144,10 @@ def run_command(filename, gradual):
         code = "".join(f.readlines())
 
     try:
-        mod = ast_transform(code, syntactic_level=SyntacticLevel.module)
+        mod, ok = ast_transform(code, syntactic_level=SyntacticLevel.module)
+        if not ok:
+            print(f"{Bcolors.FAIL}Failed to run because the file couldn't be parsed as elixir code from the fragment{Bcolors.ENDC}\n")
+            return
     except ElixirProcessError as e:
         raise click.ClickException(e.args[0])
 

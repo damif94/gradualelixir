@@ -34,7 +34,7 @@ def format_code(elixir_code: str) -> str:
     return text
 
 
-def ast_transform(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
+def ast_transform(elixir_code: str, syntactic_level: "SyntacticLevel") -> Tuple[Any, bool]:
     elixir_ast_converter_output = subprocess.run(
         ["mix", "run", f"lib/ast_transformer.exs", elixir_code], capture_output=True, cwd=project_path + "/elixir_port"
     )
@@ -43,7 +43,10 @@ def ast_transform(elixir_code: str, syntactic_level: "SyntacticLevel") -> Any:
         raise ElixirProcessError(f"Elixir ast transformer failed for code {elixir_code}\n" + error.decode("ascii"))
 
     out = str(elixir_ast_converter_output.stdout)[2:-5]
-    return syntactic_level.parse(json.loads(out))
+    try:
+        return syntactic_level.parse(json.loads(out)), True
+    except ElixirParseError:
+        return "", False
 
 
 def run(elixir_code: str) -> Tuple[str, bool]:

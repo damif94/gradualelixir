@@ -19,7 +19,11 @@ defmodule Program do
     map((&succ/1) | (number -> number) ~> (any -> any), l | [number] ~> [any]) | [any] ~> [number]
   end
 
+  def untyped(x) do
+    x
+  end
+
   def main() do
-    map_succ([1 | [2.0 | [-0.1 | [3 | []]]]]) | [number] ~> any
+    map_succ(untyped(true | true ~> any) | any ~> [number]) | [number] ~> any
   end
 end

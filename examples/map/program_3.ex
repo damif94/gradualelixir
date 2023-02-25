@@ -22,6 +22,7 @@ defmodule Program do
   end
 
   def main do
-    map_succ([1, 2.0, -0.1, 3])
+#    map_succ(untyped([true]))
+    map_succ(untyped(true))
   end
 end

@@ -1,11 +1,10 @@
-defmodule ElixirPortTest do
+defmodule AstTransformerTest do
   use ExUnit.Case
   use UseCast
   alias Cast
   alias Code
   require Cast
   require Inspect
-  doctest ElixirPort
 
   defmacro assert_raise_error(error_module_ast, expr_ast) do
     quote do
@@ -324,7 +323,7 @@ defmodule ElixirPortTest do
     untyped_plus1_to_number_number = (fn x -> x + 1 end | (any -> any) ~> (number -> number))
 
     for {function, input, result} <- [
-          # input 1
+#           input 1
           {untyped_plus1, 1, {:ok, 2}},
           {integer_integer_plus1_to_untyped, 1, {:ok, 2}},
           {integer_number_plus1_to_untyped, 1, {:ok, 2}},
@@ -334,25 +333,25 @@ defmodule ElixirPortTest do
           {untyped_plus1_to_integer_number, 1, {:ok, 2}},
           {untyped_plus1_to_number_integer, 1, {:ok, 2}},
           {untyped_plus1_to_number_number, 1, {:ok, 2}},
-#          # input 1.0
+          # input 1.0
           {untyped_plus1, 1.0, {:ok, 2.0}},
-          {integer_integer_plus1_to_untyped, 1.0, {:cast_error, "Couldn't cast 1.0 from type :float into :integer"}},
-          {integer_number_plus1_to_untyped, 1.0, {:cast_error, "Couldn't cast 1.0 from type :float into :integer"}},
-          {number_integer_plus1_to_untyped, 1.0, {:bad_argument_error, "Cast is forbidden: 2.0 is not of type :integer"}},
+          {integer_integer_plus1_to_untyped, 1.0, {:cast_error, "Couldn't cast 1.0 from type float into integer"}},
+          {integer_number_plus1_to_untyped, 1.0, {:cast_error, "Couldn't cast 1.0 from type float into integer"}},
+          {number_integer_plus1_to_untyped, 1.0, {:bad_argument_error, "Cast is forbidden: 2.0 is not of type integer"}},
           {number_number_plus1_to_untyped, 1.0, {:ok, 2.0}},
-          {untyped_plus1_to_integer_integer,1.0, {:bad_argument_error, "Cast is forbidden: 1.0 is not of type :integer"}},
-          {untyped_plus1_to_integer_number, 1.0, {:bad_argument_error, "Cast is forbidden: 1.0 is not of type :integer"}},
-          {untyped_plus1_to_number_integer, 1.0, {:cast_error, "Couldn't cast 2.0 from type :float into :integer"}},
+          {untyped_plus1_to_integer_integer,1.0, {:bad_argument_error, "Cast is forbidden: 1.0 is not of type integer"}},
+          {untyped_plus1_to_integer_number, 1.0, {:bad_argument_error, "Cast is forbidden: 1.0 is not of type integer"}},
+          {untyped_plus1_to_number_integer, 1.0, {:cast_error, "Couldn't cast 2.0 from type float into integer"}},
           {untyped_plus1_to_number_number, 1.0, {:ok, 2.0}},
-#          # input :a
+          # input :a
           {untyped_plus1, :a, {:arithmethic_error, "bad argument in arithmetic expression"}},
-          {integer_integer_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type {:atom, :a} into :integer"}},
-          {integer_number_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type {:atom, :a} into :integer"}},
-          {number_number_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type {:atom, :a} into :number"}},
-          {untyped_plus1_to_integer_integer,:a, {:bad_argument_error, "Cast is forbidden: :a is not of type :integer"}},
-          {untyped_plus1_to_integer_number, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type :integer"}},
-          {untyped_plus1_to_number_integer, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type :number"}},
-          {untyped_plus1_to_number_number, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type :number"}}
+          {integer_integer_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type :a into integer"}},
+          {integer_number_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type :a into integer"}},
+          {number_number_plus1_to_untyped, :a, {:cast_error, "Couldn't cast :a from type :a into number"}},
+          {untyped_plus1_to_integer_integer,:a, {:bad_argument_error, "Cast is forbidden: :a is not of type integer"}},
+          {untyped_plus1_to_integer_number, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type integer"}},
+          {untyped_plus1_to_number_integer, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type number"}},
+          {untyped_plus1_to_number_number, :a, {:bad_argument_error, "Cast is forbidden: :a is not of type number"}}
         ] do
       case result do
         {:ok, output} ->

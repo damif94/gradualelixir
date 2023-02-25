@@ -1,8 +1,23 @@
 defmodule Cast do
   require IEx
-  defmodule Foo do
-    def head([h | _ ]) do
-      h
+
+  def key_to_string(type) do
+    case type do
+      type when is_integer(type) -> Integer.to_string(type)
+      type when is_float(type) -> Float.to_string(type)
+      type when is_atom(type) -> ":" <> Atom.to_string(type)
+    end
+  end
+
+  def type_to_string(type) do
+    case type do
+      type when (type in [:integer, :float, :number, :atom, :boolean, :any]) -> Atom.to_string(type)
+      {:atom, a} when is_atom(a) -> ":" <> Atom.to_string(a)
+      :elist -> "[]"
+      {:list, type} -> "[" <> type_to_string(type) <> "]"
+      {:tuple, type_list} -> "{" <> (type_list |> Enum.map(&type_to_string/1) |> Enum.join(", ")) <> "}"
+      {:map, type_pair_list} -> "%{" <> (type_pair_list |> Enum.map(fn {k, v} -> key_to_string(k) <> " => " <> type_to_string(v) end) |> Enum.join(", ")) <> "}"
+      {:fun, type_list, left_type} -> "(" <> (type_list |> Enum.map(&type_to_string/1) |> Enum.join(", ")) <> ") -> " <> type_to_string(left_type)
     end
   end
 
@@ -16,10 +31,10 @@ defmodule Cast do
       message =
         case reason do
           :type_error ->
-            "#{inspect(value)} is not of type #{inspect(left_type)}"
+            "#{inspect(value)} is not of type #{Cast.type_to_string(left_type)}"
 
           :inconsistent_types ->
-            "#{inspect(left_type)} is not consistent with #{inspect(right_type)}"
+            "#{Cast.type_to_string(left_type)} is not consistent with #{Cast.type_to_string(right_type)}"
         end
 
       message =
@@ -30,10 +45,11 @@ defmodule Cast do
   end
 
   defmodule CastError do
+
     defexception message: "Cast error", expression: nil, left_type: nil, right_type: nil
 
     def new(%{value: value, left_type: left_type, right_type: right_type} = params) do
-      message = "Couldn't cast #{inspect(value)} from type #{inspect(left_type)} into #{inspect(right_type)}"
+      message = "Couldn't cast #{inspect(value)} from type #{Cast.type_to_string(left_type)} into #{Cast.type_to_string(right_type)}"
 
       struct(CastError, Map.put(params, :message, message))
     end
@@ -90,6 +106,7 @@ defmodule Cast do
     end
   end
 
+
   def is_subtype(left_type, right_type) do
     case {left_type, right_type} do
       _ when is_base(left_type) and is_base(right_type) ->
@@ -136,7 +153,6 @@ defmodule Cast do
         false
     end
   end
-
 
   def ground_type_for_value(value) do
     case value do
@@ -189,7 +205,6 @@ defmodule Cast do
         {:fun, type_list |> Enum.map(fn _ -> :any end), :any}
     end
   end
-
 
   def cast(value, left_type, right_type) do
     result = case {value, left_type, right_type} do
