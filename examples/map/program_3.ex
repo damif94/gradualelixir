@@ -22,7 +22,7 @@ defmodule Program do
   end
 
   def main do
-#    map_succ(untyped([true]))
+    #    map_succ(untyped([true]))
     map_succ(untyped(true))
   end
 end

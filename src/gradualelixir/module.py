@@ -277,7 +277,7 @@ def type_check(
         definition_key = (definition.name, len(definition.parameters))
         for i in range(len(definition.parameters)):
             parameter_type = specs_env[definition_key][0][i]
-            parameter_match_type_result = pattern.pattern_match(
+            parameter_match_type_result = pattern.type_check(
                 definition.parameters[i], parameter_type, parameters_env, gtypes.TypeEnv()
             )
 

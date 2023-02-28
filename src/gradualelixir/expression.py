@@ -993,7 +993,7 @@ def type_check_pattern_match(
             ],
         )
     else:
-        pattern_match_result = pattern.pattern_match(
+        pattern_match_result = pattern.type_check(
             expr.pattern,
             expression_type_check_result.type,
             gtypes.TypeEnv(),
@@ -1214,7 +1214,7 @@ def type_check_case(expr: CaseExpression, env: gtypes.TypeEnv, specs_env: gtypes
     clauses_type_check_results = []
     for i in range(len(expr.clauses)):
         new_env = gtypes.TypeEnv.merge(env, test_type_check_result.exported_env)
-        pattern_match_result = pattern.pattern_match(
+        pattern_match_result = pattern.type_check(
             expr.clauses[i][0], test_type_check_result.type, gtypes.TypeEnv(), new_env
         )
         if isinstance(pattern_match_result, pattern.PatternMatchError):
