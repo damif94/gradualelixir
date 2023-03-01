@@ -714,15 +714,15 @@ class PatternMatchSuccess:
     pattern: Pattern
     type: gtypes.Type
     external_env: gtypes.TypeEnv
-    hijacked_pattern_env: gtypes.TypeEnv
+    env: gtypes.TypeEnv
     refined_type: gtypes.Type
     exported_env: gtypes.TypeEnv
 
     def __str__(self):
         pattern_msg = format_pattern_match(self.pattern, self.type, padding="    ")
         hijacked_pattern_env_msg = (
-            f"{Bcolors.OKBLUE}Hijacked Pattern Variables:{Bcolors.ENDC} {self.hijacked_pattern_env}\n"
-            if self.hijacked_pattern_env.env != {}
+            f"{Bcolors.OKBLUE}Hijacked Pattern Variables:{Bcolors.ENDC} {self.env}\n"
+            if self.env.env != {}
             else ""
         )
         return (
@@ -734,15 +734,12 @@ class PatternMatchSuccess:
         )
 
 
-PatternMatchResult = t.Union[PatternMatchSuccess, PatternMatchError]
-
-
 def type_check(
     pattern: Pattern,
     type: gtypes.Type,
     env: gtypes.TypeEnv,
     external_env: gtypes.TypeEnv,
-) -> PatternMatchResult:
+) -> t.Union[PatternMatchSuccess, PatternMatchError]:
     collect_env_result = collect_env(pattern, type, env, external_env)
     if isinstance(collect_env_result, PatternMatchError):
         return collect_env_result
