@@ -75,7 +75,7 @@ def print_command(filename):
         "gradually type checks a mini elixir file with path <filename>, " "optionally generating an annotated version"
     ),
 )
-@click.option("--static", is_flag=True, default=False, help="Used to toggle the type checker with the static modality.")
+@click.option("--gradual", is_flag=True, default=False, help="Used to toggle the type checker with the gradual modality.")
 @click.option(
     "--annotate",
     default=None,
@@ -83,10 +83,7 @@ def print_command(filename):
     help="Generates an annotated version of <filename> and optionally annotates it with types or casts.",
 )
 @click.argument("filename", metavar="<filename>", type=ClickWorkingDirAwarePath(exists=True, file_okay=True))
-def type_check_command(static, annotate, filename):
-    if static and annotate == "casts":
-        raise click.ClickException("--annotate types is a forbidden value option in combination with --static")
-
+def type_check_command(gradual, annotate, filename):
     casts = annotate == "casts"
     annotate = bool(annotate)
     base_path = os.path.join(get_key(dotenv_path, "WORKING_DIR"), "")
@@ -98,13 +95,13 @@ def type_check_command(static, annotate, filename):
     try:
         mod, ok = ast_transform(code, syntactic_level=SyntacticLevel.module)
         if not ok:
-            print(f"{Bcolors.FAIL}Failed to run because the file couldn't be parsed as elixir code from the fragment fr{Bcolors.ENDC}\n")
+            print(f"{Bcolors.FAIL}Failed to run because the file couldn't be parsed as elixir code from the fragment{Bcolors.ENDC}\n")
             return
     except ElixirProcessError as e:
         raise click.ClickException(e.args[0])
 
-    type_check_result = module.type_check(mod, static=static)
-    if isinstance(type_check_result, module.CollectResultErrors):
+    type_check_result = module.type_check(mod, static=not gradual)
+    if isinstance(type_check_result, module.CollectSpecsResultErrors):
         print(f"{Bcolors.OKBLUE}Definitions collection errors for module {mod.name}{Bcolors.ENDC}\n")
         print(type_check_result)
         return

@@ -14,6 +14,7 @@ defmodule Program do
     x + 1
   end
 
+  @spec main() :: number
   def main do
     iterate(&inc/1, 10, 4)
   end

@@ -1,7 +1,6 @@
 defmodule Program do
   use UseCast
 
-  @spec untyped(any) :: any
   def untyped(x) do
     x
   end
@@ -16,9 +15,8 @@ defmodule Program do
     b
   end
 
-  @spec main() :: any
+  @spec main() :: {}
   def main() do
     assert_function_arity_1(untyped((&foo/2) | (atom, atom -> atom) ~> any) | any ~> (any -> any))
-    | {} ~> any
   end
 end

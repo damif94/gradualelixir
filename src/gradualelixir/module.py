@@ -107,7 +107,7 @@ class DefinitionReturnTypeError:
 
 
 @dataclass
-class CollectResultErrors:
+class CollectSpecsResultErrors:
     module: Module
     definitions_missing_spec: t.Set[t.Tuple[str, int]]
     specs_missing_definition: t.Set[Spec]
@@ -203,7 +203,7 @@ def format_module(module: Module, padding="") -> str:
     return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])
 
 
-def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, gtypes.SpecsEnv]:
+def collect_specs(module: Module, static: bool) -> t.Union[CollectSpecsResultErrors, gtypes.SpecsEnv]:
     definition_keys: t.Set[t.Tuple[str, int]] = set()
     for definition in module.definitions:
         definition_keys.add((definition.name, definition.arity))
@@ -237,7 +237,7 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, 
         + len(duplicated_specs)
         + len(gradual_specs)
     ) > 0:
-        return CollectResultErrors(
+        return CollectSpecsResultErrors(
             module=module,
             definitions_missing_spec=definitions_missing_spec,
             specs_missing_definition=specs_missing_definition,
@@ -261,9 +261,9 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectResultErrors, 
 
 def type_check(
     module: Module, static: bool
-) -> t.Union[CollectResultErrors, TypeCheckErrors, TypeCheckSuccess]:
+) -> t.Union[CollectSpecsResultErrors, TypeCheckErrors, TypeCheckSuccess]:
     collect_result = collect_specs(module, static)
-    if isinstance(collect_result, CollectResultErrors):
+    if isinstance(collect_result, CollectSpecsResultErrors):
         return collect_result
 
     specs_env = collect_result

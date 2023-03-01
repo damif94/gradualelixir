@@ -1,5 +1,4 @@
 defmodule Program do
-  use UseCast
   def untyped(x) do
     x
   end
