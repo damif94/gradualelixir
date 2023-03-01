@@ -125,7 +125,7 @@ def assert_type_check_expression_error(expr, expected_context, env=None, specs_e
         print(f"\n{long_line}\n{ret.message(padding='', **env_args)}")
 
 
-def test_literal():
+def test_type_check_literal():
     assert_type_check_expression_ok(
         IntegerExpression(42),
         expected_type=IntegerType(),
@@ -144,7 +144,7 @@ def test_literal():
     )
 
 
-def test_ident():
+def test_type_check_var():
     assert_type_check_expression_ok(
         IdentExpression("x"),
         {"x": IntegerType()},
@@ -164,14 +164,14 @@ def test_ident():
     )
 
 
-def test_elist():
+def test_type_check_elist():
     assert_type_check_expression_ok(
         ElistExpression(),
         expected_type=ElistType(),
     )
 
 
-def test_list():
+def test_type_check_list():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         ListExpression(IntegerExpression(1), ElistExpression()),
@@ -295,7 +295,7 @@ def test_list():
     )
 
 
-def test_tuple():
+def test_type_check_tuple():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         TupleExpression([]),
@@ -430,7 +430,7 @@ def test_tuple():
     )
 
 
-def test_map():
+def test_type_check_map():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         MapExpression(OrderedDict([])),
@@ -440,8 +440,6 @@ def test_map():
         MapExpression(OrderedDict([(MapKey("a"), IntegerExpression(1))])),
         expected_type=MapType(OrderedDict([(MapKey("a"), IntegerType())])),
     )
-    # TODO[thesis] add comment in the thesis text about how using python's dicts for types gives us
-    #  the map's type equivalence for free
     assert_type_check_expression_ok(
         MapExpression(
             OrderedDict(
@@ -655,7 +653,7 @@ def test_map():
     )
 
 
-def test_unary_op():
+def test_type_check_unary_op():
     # RESULT TYPE behavior
     for t in [IntegerType(), FloatType(), NumberType()]:
         assert_type_check_expression_ok(
@@ -736,7 +734,7 @@ def test_unary_op():
     )
 
 
-def test_binary_op():
+def test_type_check_binary_op():
     # RESULT TYPE behavior
     for t in [IntegerType(), FloatType(), NumberType()]:
         assert_type_check_expression_ok(
@@ -1009,7 +1007,7 @@ def test_binary_op():
     )
 
 
-def test_pattern_match():
+def test_type_check_pattern_match():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
@@ -1080,7 +1078,7 @@ def test_pattern_match():
     )
 
 
-def test_if_else():
+def test_type_check_if_else():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         IfElseExpression(AtomLiteralExpression("true"), IdentExpression("x"), IdentExpression("x")),
@@ -1188,7 +1186,7 @@ def test_if_else():
     )
 
 
-def test_seq():
+def test_type_check_seq():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         SeqExpression(IdentExpression("x"), IdentExpression("y")),
@@ -1259,7 +1257,7 @@ def test_seq():
     )
 
 
-def test_cond():
+def test_type_check_cond():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         CondExpression([(AtomLiteralExpression("true"), IdentExpression("x"))]),
@@ -1467,7 +1465,7 @@ def test_cond():
     )
 
 
-def test_case():
+def test_type_check_case():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         CaseExpression(IdentExpression("x"), [(AtomLiteralPattern("true"), IntegerExpression(1))]),
@@ -1578,7 +1576,7 @@ def test_case():
     )
 
 
-def test_call():
+def test_type_check_call():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
         FunctionCallExpression("foo", []), specs_env={("foo", 0): ([], IntegerType())}, expected_type=IntegerType()
@@ -1663,7 +1661,7 @@ def test_call():
     )
 
 
-def test_anon():
+def test_type_check_anon():
     assert_type_check_expression_ok(
         AnonymizedFunctionExpression("foo", 0),
         specs_env={("foo", 0): ([], AnyType())},

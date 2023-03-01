@@ -3,8 +3,8 @@ from collections import OrderedDict
 from gradualelixir.cast import (
     AnnotatedModule,
     CastAnnotatedExpression,
-    annotate_module,
-    cast_annotate_expression,
+    translate_module,
+    translate_expression_casts,
 )
 from gradualelixir.expression import (
     AnonymizedFunctionExpression,
@@ -54,7 +54,7 @@ from gradualelixir.module import (
     format_module,
 )
 from gradualelixir.module import type_check as type_check_module
-from gradualelixir.pattern import IdentPattern, WildPattern
+from gradualelixir.pattern import IdentPattern, WildPattern, PinIdentPattern
 from gradualelixir.utils import Bcolors, long_line
 
 from . import TEST_ENV
@@ -62,7 +62,7 @@ from . import TEST_ENV
 identifier_not_found_in_environment = ExpressionErrorEnum.identifier_not_found_in_environment
 
 
-def assert_cast_annotate_expression_ok(expr, env=None, expected_casted_expr=None, specs_env=None, comment: str = None):
+def assert_translate_expression_ok(expr, env=None, expected_casted_expr=None, specs_env=None, comment: str = None):
     if TEST_ENV.get("errors_only"):
         return
 
@@ -72,7 +72,7 @@ def assert_cast_annotate_expression_ok(expr, env=None, expected_casted_expr=None
 
     type_derivation = type_check(expr, env, specs_env)
     assert isinstance(type_derivation, ExpressionTypeCheckSuccess)
-    ret = cast_annotate_expression(type_derivation)
+    ret = translate_expression_casts(type_derivation)
     assert ret == expected_casted_expr
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
         print(f"{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {env}\n")
@@ -93,7 +93,7 @@ def assert_cast_annotate_module_ok(module: Module, expected_casted_module: Annot
 
     type_derivation = type_check_module(module, static=False)
     assert isinstance(type_derivation, TypeCheckSuccess)
-    ret = annotate_module(type_derivation, casts=True)
+    ret = translate_module(type_derivation, casts=True)
     assert isinstance(ret, AnnotatedModule)
     assert ret == expected_casted_module
     if TEST_ENV.get("display_results") or TEST_ENV.get("display_results_verbose"):
@@ -105,8 +105,8 @@ def assert_cast_annotate_module_ok(module: Module, expected_casted_module: Annot
         print(f"\n{long_line}\n\n")
 
 
-def test_list():
-    assert_cast_annotate_expression_ok(
+def test_translate_list():
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression())),
         {"x": AnyType(), "y": IntegerType()},
         expected_casted_expr=(
@@ -124,7 +124,7 @@ def test_list():
             "the tail's cast doesn't push deeper; this will happen on runtime"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression())),
         {"x": AnyType(), "y": NumberType()},
         expected_casted_expr=(
@@ -138,7 +138,7 @@ def test_list():
             "which is collapsed"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression())),
         {"x": IntegerType(), "y": AnyType()},
         expected_casted_expr=(
@@ -148,7 +148,7 @@ def test_list():
             )
         ),
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression())),
         {"x": NumberType(), "y": AnyType()},
         expected_casted_expr=(
@@ -162,7 +162,7 @@ def test_list():
             )
         ),
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(
             IdentExpression("x"),
             ListExpression(IdentExpression("y"), ListExpression(IdentExpression("z"), ElistExpression()))
@@ -179,7 +179,7 @@ def test_list():
             "they get transformed into identities"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression())),
         {"x": TupleType([IntegerType(), AnyType()]), "y": TupleType([NumberType(), NumberType()])},
         expected_casted_expr=(
@@ -194,7 +194,7 @@ def test_list():
         ),
         comment="The merge operator's effect can be noticed explicitly on the head"
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": AnyType()},
         expected_casted_expr=(
@@ -206,7 +206,7 @@ def test_list():
         comment="As y is the list tail, it must be casted to [any]"
     )
 
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         ListExpression(IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": ListType(AnyType())},
         expected_casted_expr=(
@@ -218,18 +218,18 @@ def test_list():
     )
 
 
-def test_unary_op():
-    assert_cast_annotate_expression_ok(
+def test_translate_unary_op():
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
         {"x": IntegerType()},
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
         {"x": NumberType()},
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x"))
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negative, IdentExpression("x")),
         {"x": AnyType()},
         CastAnnotatedExpression(
@@ -244,17 +244,17 @@ def test_unary_op():
             "\nThe result is then casted from the result type for this maximal argument type into any"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": AtomLiteralType("true")},
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": BooleanType()},
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x")),
         {"x": AnyType()},
         CastAnnotatedExpression(
@@ -267,13 +267,13 @@ def test_unary_op():
     )
 
 
-def test_binary_op():
-    assert_cast_annotate_expression_ok(
+def test_translate_binary_op():
+    assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": NumberType()},
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y"))
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": AnyType()},
         CastAnnotatedExpression(
@@ -290,7 +290,7 @@ def test_binary_op():
             "on each coordinate"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": FloatType(), "y": AnyType()},
         BinaryOpExpression(
@@ -299,7 +299,7 @@ def test_binary_op():
             CastAnnotatedExpression(IdentExpression("y"), AnyType(), NumberType())
         ),
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": IntegerType()},
         CastAnnotatedExpression(
@@ -312,7 +312,7 @@ def test_binary_op():
             right_type=AnyType()
         ),
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": AnyType(), "y": AnyType()},
         CastAnnotatedExpression(
@@ -327,8 +327,8 @@ def test_binary_op():
     )
 
 
-def test_if_else():
-    assert_cast_annotate_expression_ok(
+def test_translate_if_else():
+    assert_translate_expression_ok(
         IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": AnyType(), "b": AnyType()},
         expected_casted_expr=(
@@ -344,7 +344,7 @@ def test_if_else():
             "The condition must be casted to boolean"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
         {"x": TupleType([IntegerType(), AnyType()]), "y": TupleType([FloatType(), AnyType()]), "b": BooleanType()},
         expected_casted_expr=IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
@@ -352,7 +352,7 @@ def test_if_else():
             "Nothing to do; since the merge operator forces the identity cast on both branches"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         IfElseExpression(IdentExpression("b"), IdentExpression("x"), IdentExpression("y")),
         {
             "x": TupleType([IntegerType(), AnyType(), IntegerType()]),
@@ -375,7 +375,7 @@ def test_if_else():
             )
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         IfElseExpression(
             IdentExpression("b"),
             TupleExpression([IntegerExpression(1), IdentExpression("x"), IntegerExpression(1)]),
@@ -401,14 +401,14 @@ def test_if_else():
     )
 
 
-def test_case():
-    assert_cast_annotate_expression_ok(
+def test_translate_case():
+    assert_translate_expression_ok(
         CaseExpression(
             test=IdentExpression("test"),
             clauses=[
                 (IdentPattern("a"), IdentExpression("x")),
                 (IdentPattern("b"), IdentExpression("y")),
-                (IdentPattern("^x"), IdentExpression("z")),
+                (PinIdentPattern("x"), IdentExpression("z")),
                 (WildPattern(), IdentExpression("w"))
             ]
         ),
@@ -419,7 +419,7 @@ def test_case():
                 clauses=[
                     (IdentPattern("a"), IdentExpression("x")),
                     (IdentPattern("b"), IdentExpression("y")),
-                    (IdentPattern("^x"), CastAnnotatedExpression(IdentExpression("z"), AnyType(), NumberType())),
+                    (PinIdentPattern("x"), CastAnnotatedExpression(IdentExpression("z"), AnyType(), NumberType())),
                     (WildPattern(), IdentExpression("w"))
                 ]
             )
@@ -429,7 +429,7 @@ def test_case():
             "the expression derived type"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         CaseExpression(
             test=IdentExpression("test"),
             clauses=[
@@ -468,8 +468,8 @@ def test_case():
     )
 
 
-def test_cond():
-    assert_cast_annotate_expression_ok(
+def test_translate_cond():
+    assert_translate_expression_ok(
         CondExpression(
             clauses=[
                 (IdentExpression("a"), IdentExpression("x")),
@@ -513,8 +513,8 @@ def test_cond():
     )
 
 
-def test_function_call():
-    assert_cast_annotate_expression_ok(
+def test_translate_function_call():
+    assert_translate_expression_ok(
         FunctionCallExpression("foo", [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
         env={"x": IntegerType(), "y": IntegerType(), "z": AnyType()},
         specs_env={("foo", 3): ([IntegerType(), AnyType(), NumberType()], IntegerType())},
@@ -535,8 +535,8 @@ def test_function_call():
     )
 
 
-def test_anonymous_call():
-    assert_cast_annotate_expression_ok(
+def test_translate_anonymous_call():
+    assert_translate_expression_ok(
         AnonCallExpression(IdentExpression("foo"), [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
         env={
             "foo": FunctionType([IntegerType(), AnyType(), NumberType()], IntegerType()),
@@ -559,7 +559,7 @@ def test_anonymous_call():
             "spec in question"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         AnonCallExpression(IdentExpression("foo"), [IdentExpression("x"), IdentExpression("y"), IdentExpression("z")]),
         env={
             "foo": AnyType(), "x": IntegerType(), "y": IntegerType(), "z": AnyType()
@@ -582,7 +582,7 @@ def test_anonymous_call():
             "spec in question"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         AnonCallExpression(
             function=IfElseExpression(
                 condition=AtomLiteralExpression("true"),
@@ -613,7 +613,7 @@ def test_anonymous_call():
     )
 
 
-def test_uninteresting_cases():
+def test_translate_uninteresting_cases():
     subexpression = ListExpression(IdentExpression("x"), ListExpression(IdentExpression("y"), ElistExpression()))
     casted_subexpression = ListExpression(
         IdentExpression("x"),
@@ -624,7 +624,7 @@ def test_uninteresting_cases():
         )
     )
 
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         TupleExpression([subexpression, subexpression]),
         {"x": AnyType(), "y": IntegerType()},
         expected_casted_expr=(
@@ -634,7 +634,7 @@ def test_uninteresting_cases():
             "The casts push recursively into the tuple's components"
         )
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         MapExpression(OrderedDict([(MapKey(1), subexpression)])),
         {"x": AnyType(), "y": IntegerType()},
         expected_casted_expr=(
@@ -645,31 +645,31 @@ def test_uninteresting_cases():
         )
     )
 
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         PatternMatchExpression(IdentPattern("x"), subexpression),
         {"x": AnyType(), "y": IntegerType()},
         PatternMatchExpression(IdentPattern("x"), casted_subexpression)
     )
 
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         SeqExpression(subexpression, subexpression),
         {"x": AnyType(), "y": IntegerType()},
         SeqExpression(casted_subexpression, casted_subexpression)
     )
 
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         AnonymizedFunctionExpression("foo", 2),
         specs_env={("foo", 2): ([IntegerType(), AnyType()], AnyType())},
         expected_casted_expr=AnonymizedFunctionExpression("foo", 2)
     )
-    assert_cast_annotate_expression_ok(
+    assert_translate_expression_ok(
         AnonymizedFunctionExpression("foo", 2),
         specs_env={("foo", 2): ([IntegerType(), AnyType()], IntegerType())},
         expected_casted_expr=AnonymizedFunctionExpression("foo", 2)
     )
 
 
-def test_cast_annotate_module__untyped_sum():
+def test_translate_module__untyped_sum():
     module = Module(
         name="Demo",
         specs=[],
@@ -731,7 +731,7 @@ def test_cast_annotate_module__untyped_sum():
     assert_cast_annotate_module_ok(module, cast_annotated_module)
 
 
-def test_cast_annotate_module__untyped_sum_untyped():
+def test_translate_module__untyped_sum_untyped():
     module = Module(
         name="Demo",
         specs=[],
@@ -823,7 +823,7 @@ def test_cast_annotate_module__untyped_sum_untyped():
     assert_cast_annotate_module_ok(module, cast_annotated_module)
 
 
-def test_cast_annotate_module__equal_x_differ_y():
+def test_translate_module__equal_x_differ_y():
     module = Module(
         name="Demo",
         specs=[

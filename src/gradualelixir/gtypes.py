@@ -259,24 +259,6 @@ def is_static_type(tau: Type) -> bool:
         return False
 
 
-def is_higher_order(tau: Type) -> bool:
-    if isinstance(tau, BaseType):
-        return False
-    elif isinstance(tau, ElistType):
-        return False
-    elif isinstance(tau, ListType):
-        return is_higher_order(tau.type)
-    elif isinstance(tau, TupleType):
-        return any([is_higher_order(sigma) for sigma in tau.types])
-    elif isinstance(tau, MapType):
-        return any([is_higher_order(sigma) for sigma in tau.map_type.values()])
-    if isinstance(tau, FunctionType):
-        return True
-    else:
-        assert isinstance(tau, AnyType)
-        return False
-
-
 def is_subtype(tau: Type, sigma: Type, consistent=True) -> bool:
     if isinstance(tau, BaseType) and isinstance(sigma, BaseType):
         return is_base_subtype(tau, sigma)
@@ -369,30 +351,6 @@ def merge_operator(tau: Type, sigma: Type) -> Type:
 
 
 def supremum_infimum_aux(tau: Type, sigma: Type, is_supremum=True) -> t.Union[Type, TypingError]:
-    # TODO make supremum_infimum_aux(types: t.List[Type]) -> t.Union[Type, TypingError]
-    #  to support arbitrary arity correctness with respect to gradual lifting
-    #  => It may be the case that t1 \/ (t2 \/ t3) != \/{t1, t2, t2}
-    #     Take (integer, any, float):
-    #       *  integer \/ (any \/ float) = integer \/ any = any
-    #       *  \/{integer, any, float} = number
-    #  This will eventually impact on the cond expression, case expression and list pattern typing rules
-
-    # TODO[thesis] this is the non standard part: explain this with full detail
-    #  any \/\ any = any
-    #  any /\ b = b when b is minimal else any
-    #  any \/ b = b when b is maximal else any
-    #  any \/ [] = any
-    #  any /\ [] = []
-    #  any \/ [s] = [any \/ s]
-    #  any /\ [s] = any (I think we can adapt the AGT adjunction to have [any] as result)
-    #  (s1, ..., sn) \/\ (t1, ..., tn) = (s1 \/\ t1, ..., sn \/\ tn)
-    #  any \/\ (s1, ..., sn) = (any \/\ s1, ..., any \/\ sn)
-    #  %{ki => ti, kj => tj} \/ %{ki => si, kl => sl} = %{ki => ti /\ si}
-    #  % any \/ %{ki => si} = %{}
-    #  %{ki => ti, kj => tj} /\ %{ki => si, kl => sl} = %{ki => ti /\ si, kj => tj, kl => sl}
-    #  % any /\ %{ki => si} = any (Adding gradual maps would yield {ki => si, any}
-    #  (s1, ..., sn) -> s0 \/\ (t1, ..., tn) -> t1 = (s1 /\/ t1, ..., sn /\/ tn) -> s0 \/\ t0
-    #  any \/\ (s1, ..., sn) -> s0 = (any /\/ s1, ..., any /\/ sn) -> any \/\ s0
     if isinstance(tau, AnyType) and isinstance(sigma, AnyType):
         return tau
     if isinstance(tau, BaseType):

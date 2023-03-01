@@ -237,7 +237,6 @@ defmodule AstTransformerTest do
     assert_raise_error(Cast.BadCastError, [1, 2.0] | [float] ~> [float])
   end
 
-  # @tag disabled: true
   test "d_tuple_cast" do
     assert ({} | {} ~> {}) == {}
     assert ({} | any ~> any) == {}
@@ -277,7 +276,6 @@ defmodule AstTransformerTest do
     assert_raise_error(Cast.BadCastError, {1, 2.0} | {integer, float, any} ~> {integer, float, any})
   end
 
-  # @tag disabled: true
   test "d_map_cast" do
     assert (%{} | %{} ~> %{}) == %{}
     assert (%{} | any ~> any) == %{}
@@ -309,8 +307,6 @@ defmodule AstTransformerTest do
     assert_raise_error(Cast.BadCastError, %{:a => 1, :b => 2.0} | %{:b => any} ~> %{:a => any, :b => any})
   end
 
-
-#  # @tag disabled: true
   test "d_fun_cast" do
     untyped_plus1 = (fn x -> x + 1 end | (any -> any) ~> (any -> any))
     integer_integer_plus1_to_untyped = (fn x -> x + 1 end | (integer -> integer) ~> (any -> any))

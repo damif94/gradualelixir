@@ -733,7 +733,7 @@ ExpressionTypeCheckResult = t.Union[ExpressionTypeCheckSuccess, ExpressionTypeCh
 
 def type_check(expr: Expression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv) -> ExpressionTypeCheckResult:
     if isinstance(expr, IdentExpression):
-        return type_check_ident(expr, env, specs_env)
+        return type_check_var(expr, env, specs_env)
     if isinstance(expr, LiteralExpression):
         return type_check_literal(expr, env, specs_env)
     if isinstance(expr, ElistExpression):
@@ -767,7 +767,7 @@ def type_check(expr: Expression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
         return type_check_anonymous_call(expr, env, specs_env)
 
 
-def type_check_ident(
+def type_check_var(
     expr: IdentExpression, env: gtypes.TypeEnv, specs_env: gtypes.SpecsEnv
 ) -> ExpressionTypeCheckResult:
     if (ret_type := env.get(expr.identifier)) is not None:

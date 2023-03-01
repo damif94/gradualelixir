@@ -119,7 +119,7 @@ def type_check_command(static, annotate, filename):
     if not annotate:
         return
 
-    annotated_code = str(cast.annotate_module(type_check_result, casts=casts))
+    annotated_code = str(cast.translate_module(type_check_result, casts=casts))
     print(
         f"{Bcolors.OKBLUE}An annotated version of {type_check_result.module.name} module was "
         f"generated in {base_name}_{'casts' if casts else 'types'}.{mime}{Bcolors.ENDC}\n"
@@ -156,7 +156,7 @@ def run_command(filename, gradual):
         if not isinstance(type_check_result, module.TypeCheckSuccess):
             print(f"{Bcolors.OKBLUE}Failed to run with gradual semantics because {mod.name} has type errors{Bcolors.ENDC}\n")
             return
-        mod = cast.annotate_module(type_check_result, casts=True)
+        mod = cast.translate_module(type_check_result, casts=True)
 
     try:
         runner_output, ok = run(str(mod))

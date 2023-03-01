@@ -141,19 +141,11 @@ def format_pattern_match(pattern: Pattern, type: gtypes.Type, padding="") -> str
 class PatternErrorEnum(enum.Enum):
     incompatible_type_for_variable = "Couldn't match identifier {identifier}'s current type with this type"
     incompatible_type_for_literal = "Couldn't match literal {literal} with this type"
-    arrow_types_into_nonlinear_identifier = (
-        "Can't match {identifier}'s current type against this type. "
-        "Arrow types can only be used for assignment in pattern matches"
-    )
     incompatible_type_for_pinned_variable = (
         "Couldn't match pinned identifier {identifier}'s current type against this type"
     )
     pinned_identifier_not_found_in_environment = (
         "Couldn't find pinned variable ^{identifier} in the pattern environment"
-    )
-    arrow_types_into_pinned_identifier = (
-        "Can't match ^{identifier}'s current type  in external environment.\n"
-        "Arrow types can only be used for assignment in pattern matches"
     )
     incompatible_tuples_error = "Couldn't match tuples of different sizes ({n} and {m})"
     incompatible_maps_error = "Couldn't match map pattern because of missing {k} key is not present in this type"
@@ -278,31 +270,31 @@ CollectVarsResult = t.Union[gtypes.TypeEnv, PatternMatchError]
 RefineTypeResult = t.Union[gtypes.Type, PatternMatchError]
 
 
-def collect_vars(
+def collect_env(
     pattern: Pattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if isinstance(pattern, LiteralPattern):
-        return collect_vars_literal(pattern, type, env, external_env)
+        return collect_env_literal(pattern, type, env, external_env)
     if isinstance(pattern, IdentPattern):
-        return collect_vars_ident(pattern, type, env, external_env)
+        return collect_env_var(pattern, type, env, external_env)
     if isinstance(pattern, PinIdentPattern):
-        return collect_vars_pin_ident(pattern, type, env, external_env)
+        return collect_env_pin_var(pattern, type, env, external_env)
     if isinstance(pattern, WildPattern):
-        return collect_vars_wild(pattern, type, env, external_env)
+        return collect_env_wild(pattern, type, env, external_env)
     if isinstance(type, gtypes.AnyType):
-        return collect_vars_any(pattern, type, env, external_env)
+        return collect_env_any(pattern, type, env, external_env)
     if isinstance(pattern, ElistPattern):
-        return collect_vars_elist(pattern, type, env, external_env)
+        return collect_env_elist(pattern, type, env, external_env)
     if isinstance(pattern, ListPattern):
-        return collect_vars_list(pattern, type, env, external_env)
+        return collect_env_list(pattern, type, env, external_env)
     if isinstance(pattern, TuplePattern):
-        return collect_vars_tuple(pattern, type, env, external_env)
+        return collect_env_tuple(pattern, type, env, external_env)
     else:
         assert isinstance(pattern, MapPattern)
-        return collect_vars_map(pattern, type, env, external_env)
+        return collect_env_map(pattern, type, env, external_env)
 
 
-def collect_vars_literal(
+def collect_env_literal(
     pattern: LiteralPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if gtypes.is_subtype(pattern.type, type):
@@ -316,17 +308,10 @@ def collect_vars_literal(
         )
 
 
-def collect_vars_ident(
+def collect_env_var(
     pattern: IdentPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if sigma := env.get(pattern.identifier):
-        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
-            return BasePatternMatchError(
-                pattern=pattern,
-                type=type,
-                kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
-                args={"identifier": pattern.identifier},
-            )
         if not isinstance(mu := gtypes.infimum(type, sigma), gtypes.TypingError):
             new_env = env.copy()
             new_env[pattern.identifier] = mu
@@ -343,18 +328,11 @@ def collect_vars_ident(
         return new_env
 
 
-def collect_vars_pin_ident(
+def collect_env_pin_var(
     pattern: PinIdentPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if sigma := external_env.get(pattern.identifier):
-        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
-            return BasePatternMatchError(
-                pattern=pattern,
-                type=type,
-                kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
-                args={"identifier": pattern.identifier},
-            )
-        elif not isinstance(gtypes.infimum(type, sigma), gtypes.SupremumError):
+        if not isinstance(gtypes.infimum(type, sigma), gtypes.SupremumError):
             return env
         return BasePatternMatchError(
             pattern=pattern,
@@ -371,13 +349,13 @@ def collect_vars_pin_ident(
         )
 
 
-def collect_vars_wild(
+def collect_env_wild(
     _pattern: WildPattern, _type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     return env
 
 
-def collect_vars_elist(
+def collect_env_elist(
     pattern: ElistPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if gtypes.is_subtype(gtypes.ElistType(), type):
@@ -390,7 +368,7 @@ def collect_vars_elist(
         )
 
 
-def collect_vars_list(
+def collect_env_list(
     pattern: ListPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if not isinstance(type, gtypes.ListType):
@@ -399,7 +377,7 @@ def collect_vars_list(
             type=type,
             kind=PatternErrorEnum.incompatible_constructors_error,
         )
-    head_pattern_match_result = collect_vars(pattern.head, type.type, env, external_env)
+    head_pattern_match_result = collect_env(pattern.head, type.type, env, external_env)
     if isinstance(head_pattern_match_result, PatternMatchError):
         return NestedPatternMatchError(
             pattern=pattern,
@@ -409,7 +387,7 @@ def collect_vars_list(
             context=ListPatternContext(head=True),
             bullet=head_pattern_match_result,
         )
-    tail_pattern_match_result = collect_vars(pattern.tail, type, head_pattern_match_result, external_env)
+    tail_pattern_match_result = collect_env(pattern.tail, type, head_pattern_match_result, external_env)
     if isinstance(tail_pattern_match_result, PatternMatchError):
         return NestedPatternMatchError(
             pattern=pattern,
@@ -423,7 +401,7 @@ def collect_vars_list(
     return tail_pattern_match_result
 
 
-def collect_vars_tuple(
+def collect_env_tuple(
     pattern: TuplePattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if not isinstance(type, gtypes.TupleType):
@@ -441,7 +419,7 @@ def collect_vars_tuple(
         )
     env_acc = env.copy()
     for i in range(len(pattern.items)):
-        aux = collect_vars(pattern.items[i], type.types[i], env_acc, external_env)
+        aux = collect_env(pattern.items[i], type.types[i], env_acc, external_env)
         if isinstance(aux, PatternMatchError):
             return NestedPatternMatchError(
                 pattern=pattern,
@@ -457,7 +435,7 @@ def collect_vars_tuple(
     return env_acc
 
 
-def collect_vars_map(
+def collect_env_map(
     pattern: MapPattern, type: gtypes.Type, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if not isinstance(type, gtypes.MapType):
@@ -478,7 +456,7 @@ def collect_vars_map(
     for key in type.map_type.keys():
         if key not in pattern.map.keys():
             continue
-        aux = collect_vars(pattern.map[key], type.map_type[key], env_acc, external_env)
+        aux = collect_env(pattern.map[key], type.map_type[key], env_acc, external_env)
         if isinstance(aux, PatternMatchError):
             return NestedPatternMatchError(
                 pattern=pattern,
@@ -494,7 +472,7 @@ def collect_vars_map(
     return env_acc
 
 
-def collect_vars_any(
+def collect_env_any(
     pattern: Pattern, type: gtypes.AnyType, env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> CollectVarsResult:
     if isinstance(pattern, ElistPattern):
@@ -506,7 +484,7 @@ def collect_vars_any(
     else:
         assert isinstance(pattern, MapPattern)
         ground_type = gtypes.MapType({k: type for k in pattern.map})
-    return collect_vars(pattern, ground_type, env, external_env)
+    return collect_env(pattern, ground_type, env, external_env)
 
 
 def refine_type(
@@ -551,13 +529,6 @@ def refine_type_ident(
     pattern: IdentPattern, type: gtypes.Type, env: gtypes.TypeEnv, _external_env: gtypes.TypeEnv
 ) -> RefineTypeResult:
     if sigma := env.get(pattern.identifier):
-        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
-            return BasePatternMatchError(
-                pattern=pattern,
-                type=type,
-                kind=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
-                args={"identifier": pattern.identifier},
-            )
         if not isinstance(mu := gtypes.infimum(type, sigma), gtypes.TypingError):
             return mu
         return BasePatternMatchError(
@@ -574,14 +545,7 @@ def refine_type_pin_ident(
     pattern: PinIdentPattern, type: gtypes.Type, _env: gtypes.TypeEnv, external_env: gtypes.TypeEnv
 ) -> RefineTypeResult:
     if sigma := external_env.get(pattern.identifier):
-        if gtypes.is_higher_order(type) or gtypes.is_higher_order(sigma):
-            return BasePatternMatchError(
-                pattern=pattern,
-                type=type,
-                kind=PatternErrorEnum.arrow_types_into_pinned_identifier,
-                args={"identifier": pattern.identifier},
-            )
-        elif not isinstance(mu := gtypes.infimum(type, sigma), gtypes.SupremumError):
+        if not isinstance(mu := gtypes.infimum(type, sigma), gtypes.SupremumError):
             return mu
         return BasePatternMatchError(
             pattern=pattern,
@@ -779,10 +743,10 @@ def type_check(
     env: gtypes.TypeEnv,
     external_env: gtypes.TypeEnv,
 ) -> PatternMatchResult:
-    collect_vars_result = collect_vars(pattern, type, env, external_env)
-    if isinstance(collect_vars_result, PatternMatchError):
-        return collect_vars_result
-    refine_types_result = refine_type(pattern, type, collect_vars_result, external_env)
+    collect_env_result = collect_env(pattern, type, env, external_env)
+    if isinstance(collect_env_result, PatternMatchError):
+        return collect_env_result
+    refine_types_result = refine_type(pattern, type, collect_env_result, external_env)
     if isinstance(refine_types_result, PatternMatchError):
         return refine_types_result
-    return PatternMatchSuccess(pattern, type, external_env, env, refine_types_result, collect_vars_result)
+    return PatternMatchSuccess(pattern, type, external_env, env, refine_types_result, collect_env_result)

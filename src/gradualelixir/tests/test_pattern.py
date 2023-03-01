@@ -52,7 +52,7 @@ py = "^y"
 pz = "^z"
 
 
-def assert_pattern_match_ok(
+def assert_type_check_pattern_ok(
     pattern, type, hijacked_pattern_env=None, env=None, expected_type=None, expected_pattern_env=None
 ):
     if TEST_ENV.get("errors_only"):
@@ -70,7 +70,7 @@ def assert_pattern_match_ok(
         print(f"\n{long_line}\n\n{ret}")
 
 
-def assert_pattern_match_error(pattern, type, hijacked_pattern_env=None, env=None, expected_context=None):
+def assert_type_check_pattern_error(pattern, type, hijacked_pattern_env=None, env=None, expected_context=None):
     if TEST_ENV.get("success_only"):
         return
     env = TypeEnv(env)
@@ -103,65 +103,72 @@ def sett(*args):
     return aux
 
 
-def test_tp_lit():
-    assert_pattern_match_ok(
+def test_type_check_lit():
+    assert_type_check_pattern_ok(
         AtomLiteralPattern("true"),
         AtomType(),
         expected_type=AtomLiteralType("true"),
     )
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         AtomLiteralPattern("true"), IntegerType(), expected_context=PatternErrorEnum.incompatible_type_for_literal
     )
 
 
-def test_tp_pin():
-    assert_pattern_match_ok(
+def test_type_check_pin():
+    assert_type_check_pattern_ok(
         PinIdentPattern("x"),
         IntegerType(),
         env={"x": IntegerType()},
         expected_type=IntegerType(),
     )
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         PinIdentPattern("x"),
         IntegerType(),
         env={"x": NumberType()},
         expected_type=IntegerType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         PinIdentPattern("x"),
         MapType({MapKey(1): TupleType([])}),
         env={"x": MapType({MapKey(2): TupleType([])})},
         expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_ok(
+        PinIdentPattern("x"),
+        FunctionType([FloatType()], NumberType()),
+        env={"x": FunctionType([NumberType()], IntegerType())},
+        expected_type=FunctionType([NumberType()], IntegerType())
+    )
+
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         env={"y": IntegerType()},
         expected_context=PatternErrorEnum.pinned_identifier_not_found_in_environment,
     )
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         env={"x": FloatType()},
         expected_context=PatternErrorEnum.incompatible_type_for_pinned_variable,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         env={"x": FloatType()},
         expected_context=PatternErrorEnum.incompatible_type_for_pinned_variable,
     )
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         env={"y": IntegerType()},
         expected_context=PatternErrorEnum.pinned_identifier_not_found_in_environment,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"x": IntegerType()},
@@ -169,18 +176,18 @@ def test_tp_pin():
         expected_context=PatternErrorEnum.pinned_identifier_not_found_in_environment,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         PinIdentPattern("x"),
         IntegerType(),
         env={"x": FunctionType([IntegerType()], IntegerType())},
-        expected_context=PatternErrorEnum.arrow_types_into_pinned_identifier,
+        expected_context=PatternErrorEnum.incompatible_type_for_pinned_variable,
     )
 
 
-def test_tp_wild():
-    assert_pattern_match_ok(WildPattern(), IntegerType(), expected_type=IntegerType())
+def test_type_check_wild():
+    assert_type_check_pattern_ok(WildPattern(), IntegerType(), expected_type=IntegerType())
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         WildPattern(),
         IntegerType(),
         hijacked_pattern_env={"x": FloatType()},
@@ -188,7 +195,7 @@ def test_tp_wild():
         expected_type=IntegerType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         WildPattern(),
         ListType(FloatType()),
         hijacked_pattern_env={"x": FloatType()},
@@ -197,15 +204,15 @@ def test_tp_wild():
     )
 
 
-def test_tp_var():
-    assert_pattern_match_ok(
+def test_type_check_var():
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         IntegerType(),
         expected_type=IntegerType(),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         IntegerType(),
         env={"x": FloatType()},
@@ -213,7 +220,7 @@ def test_tp_var():
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"y": FloatType()},
@@ -221,7 +228,7 @@ def test_tp_var():
         expected_pattern_env={"x": IntegerType(), "y": FloatType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         ListType(FloatType()),
         expected_type=ListType(FloatType()),
@@ -229,15 +236,15 @@ def test_tp_var():
     )
 
 
-def test_tp_varn():
-    assert_pattern_match_ok(
+def test_type_check_varn():
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"x": IntegerType()},
         expected_type=IntegerType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         MapType({MapKey(1): TupleType([])}),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -245,7 +252,7 @@ def test_tp_varn():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         MapType({MapKey(1): TupleType([])}),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -254,7 +261,7 @@ def test_tp_varn():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         MapType({MapKey(1): TupleType([])}),
         hijacked_pattern_env={
@@ -268,7 +275,7 @@ def test_tp_varn():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         MapType({MapKey(1): TupleType([])}),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -277,74 +284,82 @@ def test_tp_varn():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_ok(
+        IdentPattern("x"),
+        FunctionType([IntegerType()], FloatType()),
+        hijacked_pattern_env={"x": FunctionType([NumberType()], NumberType())},
+        expected_type=FunctionType([NumberType()], FloatType()),
+        expected_pattern_env={"x": FunctionType([NumberType()], FloatType())},
+    )
+
+    assert_type_check_pattern_error(
         IdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"x": FloatType()},
         expected_context=PatternErrorEnum.incompatible_type_for_variable,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         IdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"x": FunctionType([IntegerType()], IntegerType())},
-        expected_context=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
+        expected_context=PatternErrorEnum.incompatible_type_for_variable,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         IdentPattern("x"),
         FunctionType([IntegerType()], IntegerType()),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_context=PatternErrorEnum.arrow_types_into_nonlinear_identifier,
+        expected_context=PatternErrorEnum.incompatible_type_for_variable,
     )
 
 
-def test_tp_elist():
-    assert_pattern_match_ok(ElistPattern(), ElistType(), expected_type=ElistType())
+def test_type_check_elist():
+    assert_type_check_pattern_ok(ElistPattern(), ElistType(), expected_type=ElistType())
 
-    assert_pattern_match_ok(ElistPattern(), ListType(NumberType()), expected_type=ElistType())
+    assert_type_check_pattern_ok(ElistPattern(), ListType(NumberType()), expected_type=ElistType())
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ElistPattern(),
         IntegerType(),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ElistPattern(),
         TupleType([IntegerType()]),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
 
 
-def test_tp_list():
-    assert_pattern_match_ok(
+def test_type_check_list():
+    assert_type_check_pattern_ok(
         ListPattern(IntegerPattern(1), ElistPattern()),
         ListType(IntegerType()),
         expected_type=ListType(IntegerType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         ListType(IntegerType()),
         expected_type=ListType(IntegerType()),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IntegerPattern(1), ListPattern(FloatPattern(1.0), ElistPattern())),
         ListType(NumberType()),
         expected_type=ListType(NumberType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("x"), ElistPattern())),
         ListType(IntegerType()),
         expected_type=ListType(IntegerType()),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("x"), ElistPattern())),
         ListType(MapType({MapKey(1): TupleType([])})),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -352,7 +367,7 @@ def test_tp_list():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         ListType(MapType({MapKey(1): TupleType([])})),
         hijacked_pattern_env={"y": MapType({MapKey(2): TupleType([])})},
@@ -363,7 +378,7 @@ def test_tp_list():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         ListType(MapType({MapKey(1): TupleType([])})),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -374,7 +389,7 @@ def test_tp_list():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             IdentPattern("x"),
             ListPattern(
@@ -391,7 +406,7 @@ def test_tp_list():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             IdentPattern("x"),
             ListPattern(
@@ -408,13 +423,13 @@ def test_tp_list():
         },
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(IntegerPattern(1), ElistPattern()),
         IntegerType(),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(PinIdentPattern("x"), ElistPattern()),
         ListType(IntegerType()),
         expected_context=(
@@ -423,7 +438,7 @@ def test_tp_list():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(IntegerPattern(1), ListPattern(PinIdentPattern("x"), ElistPattern())),
         ListType(IntegerType()),
         expected_context=(
@@ -433,17 +448,17 @@ def test_tp_list():
     )
 
 
-def test_tp_tuple():
-    assert_pattern_match_ok(TuplePattern([]), TupleType([]), expected_type=TupleType([]))
+def test_type_check_tuple():
+    assert_type_check_pattern_ok(TuplePattern([]), TupleType([]), expected_type=TupleType([]))
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
         TupleType([IntegerType()]),
         expected_type=TupleType([IntegerType()]),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
         TupleType([MapType({MapKey(1): TupleType([])})]),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -451,21 +466,21 @@ def test_tp_tuple():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("y")]),
         TupleType([IntegerType(), FloatType()]),
         expected_type=TupleType([IntegerType(), FloatType()]),
         expected_pattern_env={"x": IntegerType(), "y": FloatType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         TupleType([IntegerType(), IntegerType()]),
         expected_type=TupleType([IntegerType(), IntegerType()]),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
@@ -482,7 +497,7 @@ def test_tp_tuple():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("y"), IdentPattern("x")]),
         TupleType(
             [
@@ -504,7 +519,7 @@ def test_tp_tuple():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([PinIdentPattern("x"), IdentPattern("y"), IdentPattern("x")]),
         TupleType(
             [
@@ -527,13 +542,13 @@ def test_tp_tuple():
         },
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         TuplePattern([IdentPattern("x")]),
         TupleType([FloatType(), IntegerType()]),
         expected_context=PatternErrorEnum.incompatible_tuples_error,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         TuplePattern([IntegerPattern(1), IdentPattern("x")]),
         TupleType([FloatType(), IntegerType()]),
         expected_context=(
@@ -542,7 +557,7 @@ def test_tp_tuple():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         TuplePattern(
             [
                 WildPattern(),
@@ -571,62 +586,62 @@ def test_tp_tuple():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         TuplePattern([IdentPattern("x")]),
         ListType(FloatType()),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
 
 
-def test_tp_map():
-    # assert_pattern_match_ok(
-    #     MapPattern(OrderedDict()),
-    #     MapType({}),
-    #     expected_type=MapType({}),
-    # )
+def test_type_check_map():
+    assert_type_check_pattern_ok(
+        MapPattern(OrderedDict()),
+        MapType({}),
+        expected_type=MapType({}),
+    )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
         MapType({MapKey(1): IntegerType()}),
         expected_type=MapType({MapKey(1): IntegerType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict()),
         MapType({MapKey(1): IntegerType()}),
         expected_type=MapType({MapKey(1): IntegerType()}),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), FloatPattern(2.0))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(2), FloatPattern(2.0)), (MapKey(1), IdentPattern("x"))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(2), FloatPattern(2.0)), (MapKey(1), IdentPattern("x"))])),
         MapType({MapKey(2): FloatType(), MapKey(1): IntegerType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), FloatPattern(2.0))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_type=MapType({MapKey(2): FloatType(), MapKey(1): IntegerType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
         MapType({MapKey(1): MapType({MapKey(1): TupleType([])})}),
         hijacked_pattern_env={"x": MapType({MapKey(2): TupleType([])})},
@@ -634,27 +649,27 @@ def test_tp_map():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("y"))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
         expected_pattern_env={"x": IntegerType(), "y": FloatType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("x"))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
         expected_pattern_env={"x": IntegerType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(2), IntegerPattern(3))])),
         MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
         expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("x"))])),
         MapType(
             {
@@ -671,7 +686,7 @@ def test_tp_map():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(
             OrderedDict(
                 [
@@ -701,7 +716,7 @@ def test_tp_map():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(
             OrderedDict(
                 [
@@ -731,13 +746,13 @@ def test_tp_map():
             "y": MapType({MapKey(2): TupleType([])}),
         },
     )
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
         MapType({MapKey(2): FloatType(), MapKey(3): IntegerType()}),
         expected_context=PatternErrorEnum.incompatible_maps_error,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
@@ -746,7 +761,7 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
@@ -755,7 +770,7 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
         MapType({MapKey(2): IntegerType(), MapKey(1): FloatType()}),
         expected_context=(
@@ -764,7 +779,7 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
         MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
         expected_context=(
@@ -773,7 +788,7 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(
             OrderedDict(
                 [
@@ -827,7 +842,7 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(
             OrderedDict(
                 [
@@ -881,31 +896,31 @@ def test_tp_map():
         ),
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         MapPattern(OrderedDict([(MapKey(2), IdentPattern("x"))])),
         ListType(FloatType()),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
 
 
-def test_tp_any():
-    assert_pattern_match_ok(IntegerPattern(1), AnyType(), expected_type=IntegerType())
+def test_type_check_any():
+    assert_type_check_pattern_ok(IntegerPattern(1), AnyType(), expected_type=IntegerType())
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         AnyType(),
         hijacked_pattern_env={"x": IntegerType()},
         expected_type=IntegerType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         IntegerType(),
         hijacked_pattern_env={"x": IntegerType()},
         expected_type=IntegerType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         AnyType(),
         hijacked_pattern_env={"x": NumberType()},
@@ -913,79 +928,79 @@ def test_tp_any():
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         IdentPattern("x"),
         NumberType(),
         hijacked_pattern_env={"x": AnyType()},
         expected_type=AnyType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         PinIdentPattern("x"),
         AnyType(),
         env={"x": NumberType()},
         expected_type=AnyType(),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         PinIdentPattern("x"),
         NumberType(),
         env={"x": AnyType()},
         expected_type=AnyType(),
     )
 
-    assert_pattern_match_ok(ElistPattern(), AnyType(), expected_type=ElistType())
+    assert_type_check_pattern_ok(ElistPattern(), AnyType(), expected_type=ElistType())
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(WildPattern(), ElistPattern()),
         AnyType(),
         expected_type=ListType(AnyType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IntegerPattern(1), WildPattern()),
         AnyType(),
         expected_type=ListType(AnyType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IntegerPattern(1), ListPattern(IntegerPattern(2), ElistPattern())),
         AnyType(),
         expected_type=ListType(IntegerType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(WildPattern(), ListPattern(IntegerPattern(2), ElistPattern())),
         ListType(IntegerType()),
         expected_type=ListType(IntegerType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(WildPattern(), ListPattern(IntegerPattern(2), ElistPattern())),
         AnyType(),
         expected_type=ListType(AnyType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(WildPattern(), WildPattern()),
         AnyType(),
         expected_type=ListType(AnyType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(WildPattern(), ListPattern(WildPattern(), ElistPattern())),
         AnyType(),
         expected_type=ListType(AnyType()),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         AnyType(),
         expected_type=ListType(AnyType()),
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         AnyType(),
         hijacked_pattern_env={"x": NumberType()},
@@ -993,7 +1008,7 @@ def test_tp_any():
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         AnyType(),
         hijacked_pattern_env={"x": NumberType()},
@@ -1001,7 +1016,7 @@ def test_tp_any():
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         AnyType(),
         hijacked_pattern_env={"x": NumberType(), "y": NumberType()},
@@ -1009,43 +1024,43 @@ def test_tp_any():
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
 
-    assert_pattern_match_ok(TuplePattern([]), AnyType(), expected_type=TupleType([]))
+    assert_type_check_pattern_ok(TuplePattern([]), AnyType(), expected_type=TupleType([]))
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
         AnyType(),
         expected_type=TupleType([AnyType()]),
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("y")]),
         AnyType(),
         expected_type=TupleType([AnyType(), AnyType()]),
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         AnyType(),
         expected_type=TupleType([AnyType(), AnyType()]),
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("y"))])),
         AnyType(),
         expected_type=MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(IntegerPattern(1), ListPattern(AtomLiteralPattern("true"), ElistPattern())),
         AnyType(),
         expected_context=PatternErrorEnum.incompatible_type_for_pattern,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(
             TuplePattern([IntegerPattern(1), IntegerPattern(2)]),
             ListPattern(
@@ -1057,7 +1072,7 @@ def test_tp_any():
         expected_context=PatternErrorEnum.incompatible_type_for_pattern,
     )
 
-    assert_pattern_match_error(
+    assert_type_check_pattern_error(
         ListPattern(
             MapPattern(OrderedDict([(MapKey(1), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
             ListPattern(
@@ -1085,7 +1100,7 @@ def test_tp_any():
         expected_context=PatternErrorEnum.incompatible_type_for_pattern,
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             MapPattern(OrderedDict([(MapKey(1), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
             ListPattern(
@@ -1114,8 +1129,8 @@ def test_tp_any():
     )
 
 
-def test_tp_ok_progressions():
-    assert_pattern_match_ok(
+def test_type_check_ok_progressions():
+    assert_type_check_pattern_ok(
         ListPattern(
             PinIdentPattern("x"),
             ListPattern(
@@ -1133,7 +1148,7 @@ def test_tp_ok_progressions():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             PinIdentPattern("x"),
             ListPattern(
@@ -1157,7 +1172,7 @@ def test_tp_ok_progressions():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             PinIdentPattern("x"),
             ListPattern(
@@ -1184,7 +1199,7 @@ def test_tp_ok_progressions():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             ListPattern(IntegerPattern(1), ElistPattern()),
             ListPattern(ListPattern(FloatPattern(1.0), ElistPattern()), ElistPattern()),
@@ -1193,7 +1208,7 @@ def test_tp_ok_progressions():
         expected_type=ListType(ListType(NumberType())),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             ListPattern(ListPattern(IntegerPattern(1), ElistPattern()), ElistPattern()),
             ListPattern(
@@ -1205,7 +1220,7 @@ def test_tp_ok_progressions():
         expected_type=ListType(ListType(ListType(NumberType()))),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             ListPattern(ListPattern(IntegerPattern(1), ElistPattern()), ElistPattern()),
             ListPattern(
@@ -1226,7 +1241,7 @@ def test_tp_ok_progressions():
         expected_type=ListType(ListType(ListType(NumberType()))),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             TuplePattern([IntegerPattern(1), IntegerPattern(2)]),
             ListPattern(TuplePattern([IntegerPattern(1), FloatPattern(2.0)]), ElistPattern()),
@@ -1235,7 +1250,7 @@ def test_tp_ok_progressions():
         expected_type=ListType(TupleType([IntegerType(), NumberType()])),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             TuplePattern([IntegerPattern(1), IntegerPattern(2)]),
             ListPattern(TuplePattern([IntegerPattern(1), FloatPattern(2.0)]), ElistPattern()),
@@ -1244,7 +1259,7 @@ def test_tp_ok_progressions():
         expected_type=ListType(TupleType([IntegerType(), NumberType()])),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(
             TuplePattern([IntegerPattern(1), IntegerPattern(2)]),
             ListPattern(
@@ -1256,14 +1271,14 @@ def test_tp_ok_progressions():
         expected_type=ListType(TupleType([NumberType(), NumberType()])),
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
         TupleType([MapType({MapKey(1): TupleType([])})]),
         expected_type=TupleType([MapType({MapKey(1): TupleType([])})]),
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
@@ -1280,7 +1295,7 @@ def test_tp_ok_progressions():
         expected_pattern_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
@@ -1325,21 +1340,21 @@ def test_tp_ok_progressions():
         },
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         AnyType(),
         hijacked_pattern_env={"x": AtomLiteralType("true")},
         expected_type=ListType(AtomLiteralType("true")),
         expected_pattern_env={"x": AtomLiteralType("true")},
     )
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         AnyType(),
         hijacked_pattern_env={"x": BooleanType()},
         expected_type=ListType(AnyType()),
         expected_pattern_env={"x": AnyType()},
     )
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ElistPattern()),
         AnyType(),
         hijacked_pattern_env={"x": AtomType()},
@@ -1347,21 +1362,21 @@ def test_tp_ok_progressions():
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         AnyType(),
         hijacked_pattern_env={"x": AtomLiteralType("true")},
         expected_type=ListType(AnyType()),
         expected_pattern_env={"x": AtomLiteralType("true"), "y": AnyType()},
     )
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         AnyType(),
         hijacked_pattern_env={"x": BooleanType()},
         expected_type=ListType(AnyType()),
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
         AnyType(),
         hijacked_pattern_env={"x": AtomType()},
@@ -1369,7 +1384,7 @@ def test_tp_ok_progressions():
         expected_pattern_env={"x": AnyType(), "y": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         TuplePattern(
             [
                 ListPattern(IdentPattern("x"), ElistPattern()),
@@ -1382,7 +1397,7 @@ def test_tp_ok_progressions():
         expected_pattern_env={"x": AnyType()},
     )
 
-    assert_pattern_match_ok(
+    assert_type_check_pattern_ok(
         MapPattern(
             OrderedDict(
                 [
@@ -1411,8 +1426,8 @@ def test_tp_ok_progressions():
     )
 
 
-def test_tp_errors():
-    assert_pattern_match_error(
+def test_type_check_errors():
+    assert_type_check_pattern_error(
         ListPattern(
             TuplePattern(
                 [
