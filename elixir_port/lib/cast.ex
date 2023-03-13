@@ -4,6 +4,7 @@ defmodule Cast do
   def key_to_string(type) do
     case type do
       type when is_integer(type) -> Integer.to_string(type)
+      type when is_bitstring(type) -> type
       type when is_float(type) -> Float.to_string(type)
       type when is_atom(type) -> ":" <> Atom.to_string(type)
     end
@@ -11,7 +12,7 @@ defmodule Cast do
 
   def type_to_string(type) do
     case type do
-      type when (type in [:integer, :float, :number, :atom, :boolean, :any]) -> Atom.to_string(type)
+      type when (type in [:integer, :float, :number, :atom, :boolean, :any, :string]) -> Atom.to_string(type)
       {:atom, a} when is_atom(a) -> ":" <> Atom.to_string(a)
       :elist -> "[]"
       {:list, type} -> "[" <> type_to_string(type) <> "]"
@@ -57,10 +58,10 @@ defmodule Cast do
 
 
   defguard is_literal(value)
-           when is_atom(value) or is_integer(value) or is_float(value)
+           when is_atom(value) or is_integer(value) or is_float(value) or is_bitstring(value)
 
   defguard is_base(type)
-           when (is_atom(type) and type in [:integer, :float, :number, :atom, :boolean]) or
+           when (is_atom(type) and type in [:integer, :float, :number, :atom, :boolean, :string]) or
                   (is_tuple(type) and tuple_size(type) == 2 and elem(type, 0) == :atom and
                      is_atom(elem(type, 1)))
 
@@ -161,6 +162,7 @@ defmodule Cast do
           is_atom(value) -> {:atom, value}
           is_integer(value) -> :integer
           is_float(value) -> :float
+          is_bitstring(value) -> :string
         end
 
       [] ->

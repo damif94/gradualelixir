@@ -1,7 +1,9 @@
 from collections import OrderedDict
 
+from dotenv import find_dotenv, get_key
 from gradualelixir import elixir_port
 from gradualelixir.expression import (
+    AnonCallExpression,
     AnonymizedFunctionExpression,
     AtomLiteralExpression,
     BinaryOpEnum,
@@ -19,10 +21,10 @@ from gradualelixir.expression import (
     MapExpression,
     PatternMatchExpression,
     SeqExpression,
+    StringExpression,
     TupleExpression,
     UnaryOpEnum,
     UnaryOpExpression,
-    AnonCallExpression,
 )
 from gradualelixir.gtypes import (
     AtomLiteralType,
@@ -35,6 +37,7 @@ from gradualelixir.gtypes import (
     MapKey,
     MapType,
     NumberType,
+    StringType,
     TupleType,
 )
 from gradualelixir.module import Spec
@@ -47,10 +50,10 @@ from gradualelixir.pattern import (
     ListPattern,
     MapPattern,
     PinIdentPattern,
+    StringPattern,
     TuplePattern,
     WildPattern,
 )
-from dotenv import find_dotenv, get_key
 
 dotenv_path = find_dotenv()
 
@@ -62,21 +65,21 @@ def parse_expression(code):
         code = "\n".join(list(code))
     if isinstance(code, list):
         code = "\n".join(code)
-    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
+    res, _ = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
     assert isinstance(res, Expression)
     return res
 
 
 def parse_pattern(code: str):
     code = code + " = {}"
-    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
+    res, _ = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.expression)
     assert isinstance(res, PatternMatchExpression)
     return res.pattern
 
 
 def parse_type(code: str):
-    code = f"@spec foo()::{code}"
-    res = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.spec)
+    code = f"@spec foo() :: {code}"
+    res, _ = elixir_port.ast_transform(code, elixir_port.SyntacticLevel.spec)
     assert isinstance(res, Spec)
     return res.return_type
 
@@ -92,12 +95,14 @@ def test_parse_data_expressions():
     assert parse_expression("{}") == TupleExpression([])
     assert parse_expression("{1}") == TupleExpression([IntegerExpression(1)])
     assert parse_expression("{1,2}") == TupleExpression([IntegerExpression(1), IntegerExpression(2)])
+    assert parse_expression("{:a, \"a\"}") == TupleExpression([AtomLiteralExpression("a"), StringExpression("a")])
     assert parse_expression("{1,2,3}") == TupleExpression(
         [IntegerExpression(1), IntegerExpression(2), IntegerExpression(3)]
     )
     assert parse_expression("%{}") == MapExpression(OrderedDict([]))
     assert parse_expression("%{1 => :a}") == MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("a"))]))
     assert parse_expression("%{:a => 42.0}") == MapExpression(OrderedDict([(MapKey("a"), FloatExpression(42))]))
+    assert parse_expression("%{\"a\" => 42.0}") == MapExpression(OrderedDict([(MapKey(["a"]), FloatExpression(42))]))
     assert parse_expression("%{42.1 => true}") == MapExpression(
         OrderedDict([(MapKey(42.1), AtomLiteralExpression("true"))])
     )
@@ -191,6 +196,7 @@ def test_base_pattern():
     assert parse_pattern("42.0") == FloatPattern(42.0)
     assert parse_pattern("true") == AtomLiteralPattern("true")
     assert parse_pattern(":a") == AtomLiteralPattern("a")
+    assert parse_pattern("\":ab\"") == StringPattern(":ab")
     assert parse_pattern("x") == IdentPattern("x")
     assert parse_pattern("^x") == PinIdentPattern("x")
     assert parse_pattern("_") == WildPattern()
@@ -204,11 +210,9 @@ def test_parse_data_patterns():
     assert parse_pattern("%{}") == MapPattern(OrderedDict([]))
     assert parse_pattern("%{1 => :a}") == MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("a"))]))
     assert parse_pattern("%{:a => 42.0}") == MapPattern(OrderedDict([(MapKey("a"), FloatPattern(42))]))
+    assert parse_pattern("%{1 => \":a\"}") == MapPattern(OrderedDict([(MapKey(1), StringPattern(":a"))]))
+    assert parse_pattern("%{\":a\" => 42.0}") == MapPattern(OrderedDict([(MapKey([":a"]), FloatPattern(42))]))
     assert parse_pattern("%{42.1 => true}") == MapPattern(OrderedDict([(MapKey(42.1), AtomLiteralPattern("true"))]))
-    # TODO this one should be error...should fix it somehow!
-    assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
-        OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
-    )
     assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
         OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
     )
@@ -278,6 +282,9 @@ def test_operations():
     assert parse_expression("not x") == UnaryOpExpression(UnaryOpEnum.negation, IdentExpression("x"))
     assert parse_expression("not []") == UnaryOpExpression(UnaryOpEnum.negation, ElistExpression())
     assert parse_expression("1 + 2.0") == BinaryOpExpression(BinaryOpEnum.sum, IntegerExpression(1), FloatExpression(2))
+    assert parse_expression("\"a\" <> \":abc\"") == BinaryOpExpression(
+        BinaryOpEnum.concatenation, StringExpression("a"), StringExpression(":abc")
+    )
     assert parse_expression("3 - 1 == 2.0") == (
         BinaryOpExpression(
             BinaryOpEnum.equality,
@@ -355,15 +362,15 @@ def test_control_flow_expressions():
             ]
         )
     )
-    assert parse_expression("case {x,y} do\n" "  {^x,1} -> 2\n" "  _ -> 3\n" "end\n") == (
+    assert parse_expression("case {x,y} do\n" "  {^x,\"1\"} -> 2\n" "  _ -> \"a\"\n" "end\n") == (
         CaseExpression(
             test=TupleExpression([IdentExpression("x"), IdentExpression("y")]),
             clauses=[
                 (
-                    TuplePattern([PinIdentPattern("x"), IntegerPattern(1)]),
+                    TuplePattern([PinIdentPattern("x"), StringPattern("1")]),
                     IntegerExpression(2),
                 ),
-                (WildPattern(), IntegerExpression(3)),
+                (WildPattern(), StringExpression("a")),
             ],
         )
     )
@@ -418,21 +425,22 @@ def test_types():
     assert parse_type("float") == FloatType()
     assert parse_type("number") == NumberType()
     assert parse_type("atom") == AtomType()
-    assert parse_type("a") == AtomLiteralType("a")
-    assert parse_type("b") == AtomLiteralType("b")
+    assert parse_type(":a") == AtomLiteralType("a")
+    assert parse_type(":b") == AtomLiteralType("b")
     assert parse_type("true") == AtomLiteralType("true")
     assert parse_type("integer") == IntegerType()
+    assert parse_type("string") == StringType()
     assert parse_type("[]") == ElistType()
-    assert parse_type("[a]") == ListType(AtomLiteralType("a"))
-    assert parse_type("{a}") == TupleType([AtomLiteralType("a")])
+    assert parse_type("[:a]") == ListType(AtomLiteralType("a"))
+    assert parse_type("{:a}") == TupleType([AtomLiteralType("a")])
     assert parse_type("{}") == TupleType([])
-    assert parse_type("{a, b}") == TupleType([AtomLiteralType("a"), AtomLiteralType("b")])
+    assert parse_type("{:a, :b}") == TupleType([AtomLiteralType("a"), AtomLiteralType("b")])
     assert parse_type("%{}") == MapType({})
-    assert parse_type("%{1 => a}") == MapType({MapKey(1): AtomLiteralType("a")})
-    assert parse_type("%{1 => a, true => float, 2.0 => atom}") == MapType(
+    assert parse_type("%{1 => :a}") == MapType({MapKey(1): AtomLiteralType("a")})
+    assert parse_type("%{1 => :a, true => float, 2.0 => atom}") == MapType(
         {MapKey(1): AtomLiteralType("a"), MapKey("true"): FloatType(), MapKey(2.0): AtomType()}
     )
-    assert parse_type("(() -> a)") == FunctionType([], AtomLiteralType("a"))
-    assert parse_type("(integer -> a)") == FunctionType([IntegerType()], AtomLiteralType("a"))
-    assert parse_type("(integer, b -> a)") == FunctionType([IntegerType(), AtomLiteralType("b")], AtomLiteralType("a"))
-    assert parse_type("{(() -> a)}") == TupleType([FunctionType([], AtomLiteralType("a"))])
+    assert parse_type("(() -> :a)") == FunctionType([], AtomLiteralType("a"))
+    assert parse_type("(integer -> :a)") == FunctionType([IntegerType()], AtomLiteralType("a"))
+    assert parse_type("(integer, :b -> :a)") == FunctionType([IntegerType(), AtomLiteralType("b")], AtomLiteralType("a"))
+    assert parse_type("{(() -> :a)}") == TupleType([FunctionType([], AtomLiteralType("a"))])

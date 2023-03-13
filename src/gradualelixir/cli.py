@@ -1,22 +1,17 @@
 import logging
 import os
+import subprocess
 
 import click
-from dotenv import find_dotenv, set_key, get_key
+import pytest
+from dotenv import find_dotenv, get_key, set_key
 from gradualelixir import cast, module
-from gradualelixir.elixir_port import (
-    SyntacticLevel,
-    format_code,
-    ast_transform,
-    run,
-)
+from gradualelixir.elixir_port import SyntacticLevel, ast_transform, format_code, run
 from gradualelixir.exception import ElixirProcessError
 from gradualelixir.utils import Bcolors
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.erlang import ElixirLexer
-import pytest
-import subprocess
 
 dotenv_path = find_dotenv()
 

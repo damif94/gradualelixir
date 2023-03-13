@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
 from gradualelixir.expression import (
-    AnonymizedFunctionExpression,
+    AnonCallExpression,
     AnonCallExpressionContext,
+    AnonymizedFunctionExpression,
     AtomLiteralExpression,
     BaseExpressionTypeCheckError,
     BinaryOpContext,
@@ -32,12 +33,12 @@ from gradualelixir.expression import (
     PatternMatchExpressionContext,
     SeqExpression,
     SeqExpressionContext,
+    StringExpression,
     TupleExpression,
     TupleExpressionContext,
     UnaryOpContext,
     UnaryOpEnum,
     UnaryOpExpression,
-    AnonCallExpression,
     type_check,
 )
 from gradualelixir.gtypes import (
@@ -54,6 +55,7 @@ from gradualelixir.gtypes import (
     MapType,
     NumberType,
     SpecsEnv,
+    StringType,
     TupleType,
     TypeEnv,
 )
@@ -63,6 +65,7 @@ from gradualelixir.pattern import (
     IntegerPattern,
     PatternErrorEnum,
     PinIdentPattern,
+    StringPattern,
     TuplePattern,
     WildPattern,
 )
@@ -142,6 +145,10 @@ def test_type_check_literal():
         AtomLiteralExpression("a"),
         expected_type=AtomLiteralType("a"),
     )
+    assert_type_check_expression_ok(
+        StringExpression(":a"),
+        expected_type=StringType(),
+    )
 
 
 def test_type_check_var():
@@ -174,8 +181,8 @@ def test_type_check_elist():
 def test_type_check_list():
     # RESULT TYPE behavior
     assert_type_check_expression_ok(
-        ListExpression(IntegerExpression(1), ElistExpression()),
-        expected_type=ListType(IntegerType()),
+        ListExpression(StringExpression("1"), ElistExpression()),
+        expected_type=ListType(StringType()),
     )
     assert_type_check_expression_ok(
         ListExpression(IdentExpression("x"), ElistExpression()),
@@ -470,6 +477,7 @@ def test_type_check_map():
                     (MapKey(1), AtomLiteralExpression("a")),
                     (MapKey("a"), IntegerExpression(1)),
                     (MapKey("false"), FloatExpression(2.1)),
+                    (MapKey(["false"]), StringExpression("true")),
                 ]
             )
         ),
@@ -480,6 +488,7 @@ def test_type_check_map():
                 MapKey(1): AtomLiteralType("a"),
                 MapKey(1.0): AtomLiteralType("true"),
                 MapKey("false"): FloatType(),
+                MapKey(["false"]): StringType(),
             }
         ),
         {},
@@ -736,6 +745,16 @@ def test_type_check_unary_op():
 
 def test_type_check_binary_op():
     # RESULT TYPE behavior
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.concatenation, IdentExpression("x"), StringExpression("y")),
+        {"x": StringType()},
+        StringType(),
+    )
+    assert_type_check_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.concatenation, IdentExpression("x"), StringExpression("y")),
+        {"x": AnyType()},
+        StringType(),
+    )
     for t in [IntegerType(), FloatType(), NumberType()]:
         assert_type_check_expression_ok(
             BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),

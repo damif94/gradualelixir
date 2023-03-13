@@ -59,6 +59,8 @@ defmodule AstTransformer do
               node
             else
               case node do
+                _ when node in [:true, :false, :nil, :do, :else] -> node
+                _ when is_atom(node) -> {:atom, nil, node}
                 {x, y} -> {:{}, nil, [x, y]}
                 otherwise -> otherwise
               end

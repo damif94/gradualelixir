@@ -57,6 +57,7 @@ class UnaryOpEnum(Enum):
 class BinaryOpEnum(Enum):
     conjunction = "and"
     disjunction = "or"
+    concatenation = "<>"
     sum = "+"
     subtraction = "-"
     product = "*"
@@ -177,6 +178,14 @@ class BinaryOpEnum(Enum):
                     gtypes.AnyType(),
                 ),
             ]
+        if self is BinaryOpEnum.concatenation:
+            return [
+                (gtypes.StringType(), gtypes.StringType(), gtypes.StringType()),
+                (gtypes.StringType(), gtypes.AnyType(), gtypes.StringType()),
+                (gtypes.AnyType(), gtypes.StringType(), gtypes.StringType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.StringType())
+            ]
+
         elif self in [BinaryOpEnum.sum, BinaryOpEnum.product, BinaryOpEnum.subtraction]:
             return [
                 (gtypes.IntegerType(), gtypes.IntegerType(), gtypes.IntegerType()),
@@ -290,6 +299,18 @@ class IdentExpression(Expression):
 class LiteralExpression(Expression):
     type: gtypes.Type
     value: t.Any
+
+
+@dataclass
+class StringExpression(LiteralExpression):
+    value: str
+
+    def __init__(self, value: str):
+        self.type = gtypes.StringType()
+        self.value = value
+
+    def __str__(self):
+        return "\"" + str(self.value) + "\""
 
 
 @dataclass

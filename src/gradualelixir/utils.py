@@ -33,6 +33,8 @@ def parse_type(x):
             return gtypes.BooleanType()
         if x == "atom":
             return gtypes.AtomType()
+        if x == "string":
+            return gtypes.StringType()
         if x == "integer":
             return gtypes.IntegerType()
         if x == "float":

@@ -31,6 +31,14 @@ class LiteralType(BaseType):
 
 
 @dataclass
+class StringType(LiteralType):
+    python_type = list
+
+    def __str__(self):
+        return "string"
+
+
+@dataclass
 class IntegerType(LiteralType):
     python_type = int
 
@@ -108,9 +116,12 @@ class MapKey:
         literal_type_classes: t.List[t.Type[LiteralType]] = [
             IntegerType,
             FloatType,
+            StringType,
             AtomLiteralType,
         ]
         for type_class in literal_type_classes:
+            if type(value) == list:
+                self.value = value[0]
             if type(value) == type_class.python_type:
                 self.type_class = type_class
                 return
@@ -181,6 +192,7 @@ def is_maximal(tau: Type) -> bool:
         [
             isinstance(tau, klass)
             for klass in [
+                StringType,
                 AtomType,
                 NumberType,
             ]

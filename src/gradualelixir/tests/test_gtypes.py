@@ -14,14 +14,15 @@ from gradualelixir.gtypes import (
     MapKey,
     MapType,
     NumberType,
+    StringType,
     TupleType,
     Type,
     is_materialization,
     is_subtype,
 )
 
+from ..utils import Bcolors, long_line
 from . import TEST_ENV
-from ..utils import long_line, Bcolors
 
 
 def MapUnit(*args) -> MapType:
@@ -120,6 +121,7 @@ def assert_infimum_error(tau: Type, sigma: Type, sup=False):
 
 
 def test_subtype_base():
+    assert_subtype(StringType(), StringType())
     assert_subtype(IntegerType(), IntegerType())
     assert_subtype(IntegerType(), NumberType())
     assert_subtype(FloatType(), FloatType())
@@ -290,6 +292,7 @@ def test_subtype_function():
 
 
 def test_materialization_base():
+    assert_materialization(StringType(), StringType())
     assert_materialization(IntegerType(), IntegerType())
     assert_materialization(FloatType(), FloatType())
     assert_materialization(NumberType(), NumberType())
@@ -468,6 +471,7 @@ def test_merge_operator():
 
 
 def test_supremum_base():
+    assert_supremum_ok((StringType(), StringType()), StringType())
     assert_supremum_ok((IntegerType(), IntegerType()), IntegerType())
     assert_supremum_ok((IntegerType(), NumberType()), NumberType())
     assert_supremum_ok((NumberType(), IntegerType()), NumberType())
@@ -507,6 +511,7 @@ def test_supremum_base():
 
 
 def test_infimum_base():
+    assert_supremum_ok((StringType(), StringType()), StringType())
     assert_infimum_ok((IntegerType(), IntegerType()), IntegerType())
     assert_infimum_ok((IntegerType(), NumberType()), IntegerType())
     assert_infimum_ok((NumberType(), IntegerType()), IntegerType())
@@ -920,6 +925,7 @@ def test_supremum_any():
     assert_supremum_ok((AnyType(), IntegerType()), AnyType())
     assert_supremum_ok((FloatType(), AnyType()), AnyType())
     assert_supremum_ok((AnyType(), FloatType()), AnyType())
+    assert_supremum_ok((StringType(), AnyType()), StringType())
     assert_supremum_ok((NumberType(), AnyType()), NumberType())
     assert_supremum_ok((AnyType(), NumberType()), NumberType())
     assert_supremum_ok((BooleanType(), AnyType()), AnyType())
@@ -972,6 +978,7 @@ def test_infimum_any():
     assert_infimum_ok((FloatType(), AnyType()), FloatType())
     assert_infimum_ok((AnyType(), FloatType()), FloatType())
     assert_infimum_ok((NumberType(), AnyType()), AnyType())
+    assert_supremum_ok((AnyType(), StringType()), StringType())
     assert_infimum_ok((AnyType(), NumberType()), AnyType())
     assert_infimum_ok((BooleanType(), AnyType()), AnyType())
     assert_infimum_ok((AnyType(), BooleanType()), AnyType())

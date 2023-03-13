@@ -5,9 +5,9 @@ import subprocess
 from collections import OrderedDict
 from typing import Any, Tuple
 
+from dotenv import find_dotenv, get_key
 from gradualelixir import expression, gtypes, module, pattern
 from gradualelixir.exception import ElixirParseError, ElixirProcessError
-from dotenv import get_key, find_dotenv
 
 dotenv_path = find_dotenv()
 
@@ -102,6 +102,10 @@ class SyntacticLevel(enum.Enum):
 def parse_key(j) -> gtypes.MapKey:
     if isinstance(j, bool):
         return gtypes.MapKey("true" if j else "false")
+    if isinstance(j, list) and len(j) == 3 and j[0] == "atom" and len(j[2]) == 1 and isinstance(j[2][0], str):
+        return gtypes.MapKey(j[2][0])
+    if isinstance(j, str):
+        return gtypes.MapKey([j])
     else:
         return gtypes.MapKey(j)
 
@@ -109,6 +113,8 @@ def parse_key(j) -> gtypes.MapKey:
 def parse_type(j) -> gtypes.Type:
     if isinstance(j, bool):
         return gtypes.AtomLiteralType(atom="true" if j else "false")
+    if isinstance(j, str):
+        return gtypes.StringType(j)
     if isinstance(j, list) and len(j) == 0:
         return gtypes.ElistType()
     if isinstance(j, list) and len(j) == 1:
@@ -120,6 +126,8 @@ def parse_type(j) -> gtypes.Type:
     else:
         assert isinstance(j, list) and len(j) == 3
         op, meta, children_nodes = j
+        if op == "atom" and isinstance(children_nodes, str):
+            return gtypes.AtomLiteralType(children_nodes)
         if op == "{}":
             items = []
             for child_node in children_nodes:
@@ -146,6 +154,7 @@ def parse_type(j) -> gtypes.Type:
             return gtypes.FunctionType(parameter_types, return_type)
         else:
             base_types = [
+                gtypes.StringType(),
                 gtypes.IntegerType(),
                 gtypes.AtomType(),
                 gtypes.FloatType(),
@@ -162,14 +171,16 @@ def parse_type(j) -> gtypes.Type:
 def parse_pattern(j) -> pattern.Pattern:
     if isinstance(j, bool):
         return pattern.AtomLiteralPattern(value="true" if j else "false")
-    elif isinstance(j, str):
-        return pattern.AtomLiteralPattern(value=j)
+    if isinstance(j, str):
+        return pattern.StringPattern(j)
     if isinstance(j, int):
         return pattern.IntegerPattern(j)
     if isinstance(j, float):
         return pattern.FloatPattern(j)
     if len(j) == 3:
         op, meta, children_nodes = j
+        if op == "atom" and len(children_nodes) == 1 and isinstance(children_nodes[0], str):
+            return pattern.AtomLiteralPattern(children_nodes[0])
         if op == "{}":
             items = []
             for child_node in children_nodes:
@@ -214,8 +225,8 @@ def parse_pattern(j) -> pattern.Pattern:
 def parse_expression(j) -> expression.Expression:
     if isinstance(j, bool):
         return expression.AtomLiteralExpression(value="true" if j else "false")
-    elif isinstance(j, str):
-        return expression.AtomLiteralExpression(value=j)
+    if isinstance(j, str):
+        return expression.StringExpression(j)
     elif isinstance(j, int):
         return expression.IntegerExpression(j)
     elif isinstance(j, float):
@@ -224,6 +235,8 @@ def parse_expression(j) -> expression.Expression:
         assert isinstance(j, list)
         if len(j) == 3:
             op, meta, children_nodes = j
+            if op == "atom" and len(children_nodes) == 1 and isinstance(children_nodes[0], str):
+                return expression.AtomLiteralExpression(children_nodes[0])
             if op == "{}":
                 items = []
                 for child_node in children_nodes:
@@ -362,7 +375,7 @@ def parse_spec(j) -> module.Spec:
 def parse_module(j) -> module.Module:
     op, meta, children = j
     assert op == "defmodule"
-    name = children[0][2][0]
+    name = children[0][2][0][2]
     body = children[1]["do"]
     if body[0] == "__block__":
         body = body[2]

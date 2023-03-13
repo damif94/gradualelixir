@@ -3,10 +3,11 @@ from collections import OrderedDict
 from gradualelixir.cast import (
     AnnotatedModule,
     CastAnnotatedExpression,
-    translate_module,
     translate_expression_casts,
+    translate_module,
 )
 from gradualelixir.expression import (
+    AnonCallExpression,
     AnonymizedFunctionExpression,
     AtomLiteralExpression,
     BinaryOpEnum,
@@ -28,7 +29,6 @@ from gradualelixir.expression import (
     TupleExpression,
     UnaryOpEnum,
     UnaryOpExpression,
-    AnonCallExpression,
     format_expression,
     type_check,
 )
@@ -43,6 +43,7 @@ from gradualelixir.gtypes import (
     MapKey,
     NumberType,
     SpecsEnv,
+    StringType,
     TupleType,
     TypeEnv,
 )
@@ -54,7 +55,7 @@ from gradualelixir.module import (
     format_module,
 )
 from gradualelixir.module import type_check as type_check_module
-from gradualelixir.pattern import IdentPattern, WildPattern, PinIdentPattern
+from gradualelixir.pattern import IdentPattern, PinIdentPattern, WildPattern
 from gradualelixir.utils import Bcolors, long_line
 
 from . import TEST_ENV
@@ -268,6 +269,24 @@ def test_translate_unary_op():
 
 
 def test_translate_binary_op():
+    assert_translate_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.concatenation, IdentExpression("x"), IdentExpression("y")),
+        {"x": AnyType(), "y": AnyType()},
+        BinaryOpExpression(
+            BinaryOpEnum.concatenation,
+            CastAnnotatedExpression(IdentExpression("x"), AnyType(), StringType()),
+            CastAnnotatedExpression(IdentExpression("y"), AnyType(), StringType())
+        )
+    )
+    assert_translate_expression_ok(
+        BinaryOpExpression(BinaryOpEnum.concatenation, IdentExpression("x"), IdentExpression("y")),
+        {"x": AnyType(), "y": StringType()},
+        BinaryOpExpression(
+            BinaryOpEnum.concatenation,
+            CastAnnotatedExpression(IdentExpression("x"), AnyType(), StringType()),
+            IdentExpression("y")
+        )
+    )
     assert_translate_expression_ok(
         BinaryOpExpression(BinaryOpEnum.sum, IdentExpression("x"), IdentExpression("y")),
         {"x": IntegerType(), "y": NumberType()},
