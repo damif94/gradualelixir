@@ -26,7 +26,7 @@ from . import TEST_ENV
 
 
 def MapUnit(*args) -> MapType:
-    return MapType({MapKey(arg): TupleType([]) for arg in args})
+    return MapType({MapKey(arg, gtypes.IntegerType()): TupleType([]) for arg in args})
 
 
 def assert_subtype(tau: Type, sigma: Type):
@@ -211,39 +211,39 @@ def test_subtype_tuple():
 
 def test_subtype_map():
     assert_subtype(MapType({}), MapType({}))
-    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): IntegerType()}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): IntegerType()}))
     assert_subtype(
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
     )
 
-    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({}))
-    assert_subtype(MapType({MapKey(1): AnyType()}), MapType({}))
-    assert_subtype(MapType({MapKey(1): TupleType([IntegerType(), AnyType()])}), MapType({}))
-    assert_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): NumberType()}))
-    assert_subtype(MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}), MapType({}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): AnyType()}), MapType({}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): TupleType([IntegerType(), AnyType()])}), MapType({}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): NumberType()}))
+    assert_subtype(MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): TupleType([BooleanType(), AnyType()])}), MapType({}))
     assert_subtype(
-        MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}),
-        MapType({MapKey(1): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): TupleType([BooleanType(), AnyType()])}),
+        MapType({MapKey(1, IntegerType()): NumberType()}),
     )
     assert_subtype(
-        MapType({MapKey(1): IntegerType(), MapKey(2): TupleType([BooleanType(), AnyType()])}),
-        MapType({MapKey(2): TupleType([BooleanType(), NumberType()])}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): TupleType([BooleanType(), AnyType()])}),
+        MapType({MapKey(2, IntegerType()): TupleType([BooleanType(), NumberType()])}),
     )
 
-    assert_not_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): IntegerType()}))
-    assert_not_subtype(MapType({MapKey(1): NumberType()}), MapType({MapKey(1): BooleanType()}))
+    assert_not_subtype(MapType({MapKey(1, IntegerType()): NumberType()}), MapType({MapKey(1, IntegerType()): IntegerType()}))
+    assert_not_subtype(MapType({MapKey(1, IntegerType()): NumberType()}), MapType({MapKey(1, IntegerType()): BooleanType()}))
     assert_not_subtype(
-        MapType({MapKey(1): TupleType([NumberType(), AnyType()])}),
-        MapType({MapKey(1): TupleType([IntegerType(), AnyType()])}),
+        MapType({MapKey(1, IntegerType()): TupleType([NumberType(), AnyType()])}),
+        MapType({MapKey(1, IntegerType()): TupleType([IntegerType(), AnyType()])}),
     )
 
-    assert_not_subtype(MapType({}), MapType({MapKey(1): IntegerType()}))
-    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType()}))
-    assert_not_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
-    assert_not_subtype(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
-    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
-    assert_not_subtype(MapType({}), MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1, IntegerType()): IntegerType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1, IntegerType()): AnyType()}))
+    assert_not_subtype(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}))
+    assert_not_subtype(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): NumberType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}))
+    assert_not_subtype(MapType({}), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): NumberType()}))
 
 
 def test_subtype_function():
@@ -348,35 +348,35 @@ def test_materialization_tuple():
 
 def test_materialization_map():
     assert_materialization(
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
     )
     assert_materialization(
-        MapType({MapKey(1): IntegerType(), MapKey(2): AnyType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): AnyType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
     )
     assert_materialization(
-        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
     )
-    assert_materialization(AnyType(), MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}))
-    assert_materialization(AnyType(), MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}))
+    assert_materialization(AnyType(), MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}))
+    assert_materialization(AnyType(), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}))
 
     assert_not_materialization(
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
-        MapType({MapKey(1): NumberType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
+        MapType({MapKey(1, IntegerType()): NumberType(), MapKey(2, IntegerType()): NumberType()}),
     )
     assert_not_materialization(
-        MapType({MapKey(1): IntegerType(), MapKey(2): AnyType()}),
-        MapType({MapKey(1): AnyType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): AnyType()}),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): NumberType()}),
     )
     assert_not_materialization(
-        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}), MapType({MapKey(1): IntegerType()})
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}), MapType({MapKey(1, IntegerType()): IntegerType()})
     )
-    assert_not_materialization(MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}), MapType({MapKey(1): AnyType()}))
+    assert_not_materialization(MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}), MapType({MapKey(1, IntegerType()): AnyType()}))
     assert_not_materialization(
-        MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
-        MapType({MapKey(1): AnyType(), MapKey(2): AnyType(), MapKey(3): AnyType()}),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType(), MapKey(3, IntegerType()): AnyType()}),
     )
 
 
@@ -415,20 +415,20 @@ def test_merge_operator():
     )
 
     assert_merge_operator((AnyType(), MapType({})), MapType({}))
-    assert_merge_operator((AnyType(), MapType({MapKey(1): IntegerType()})), MapType({MapKey(1): IntegerType()}))
+    assert_merge_operator((AnyType(), MapType({MapKey(1, IntegerType()): IntegerType()})), MapType({MapKey(1, IntegerType()): IntegerType()}))
     assert_merge_operator(
         (
-            MapType({MapKey(1): AnyType(), MapKey(2): IntegerType()}),
-            MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+            MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): IntegerType()}),
+            MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
         ),
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
     )
     assert_merge_operator(
         (
-            MapType({MapKey(1): AnyType(), MapKey(2): IntegerType(), MapKey(3): AtomType()}),
-            MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+            MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): IntegerType(), MapKey(3, IntegerType()): AtomType()}),
+            MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
         ),
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType(), MapKey(3): AtomType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType(), MapKey(3, IntegerType()): AtomType()}),
     )
 
     assert_merge_operator(
@@ -453,18 +453,18 @@ def test_merge_operator():
         (
             MapType(
                 {
-                    MapKey(1): TupleType([IntegerType(), ListType(AnyType())]),
-                    MapKey(2): IntegerType(),
-                    MapKey(3): TupleType([IntegerType(), AnyType()]),
+                    MapKey(1, IntegerType()): TupleType([IntegerType(), ListType(AnyType())]),
+                    MapKey(2, IntegerType()): IntegerType(),
+                    MapKey(3, IntegerType()): TupleType([IntegerType(), AnyType()]),
                 }
             ),
-            MapType({MapKey(1): TupleType([NumberType(), ListType(NumberType())]), MapKey(2): NumberType()}),
+            MapType({MapKey(1, IntegerType()): TupleType([NumberType(), ListType(NumberType())]), MapKey(2, IntegerType()): NumberType()}),
         ),
         MapType(
             {
-                MapKey(1): TupleType([IntegerType(), ListType(NumberType())]),
-                MapKey(2): IntegerType(),
-                MapKey(3): TupleType([IntegerType(), AnyType()]),
+                MapKey(1, IntegerType()): TupleType([IntegerType(), ListType(NumberType())]),
+                MapKey(2, IntegerType()): IntegerType(),
+                MapKey(3, IntegerType()): TupleType([IntegerType(), AnyType()]),
             }
         ),
     )
@@ -568,7 +568,7 @@ def test_infimum_list():
     assert_infimum_ok((ListType(IntegerType()), ElistType()), ElistType())
     assert_infimum_ok((ListType(IntegerType()), ListType(IntegerType())), ListType(IntegerType()))
     assert_infimum_ok(
-        (ListType(MapType({MapKey(1): TupleType([])})), ListType(MapType({MapKey(2): TupleType([])}))),
+        (ListType(MapType({MapKey(1, IntegerType()): TupleType([])})), ListType(MapType({MapKey(2, IntegerType()): TupleType([])}))),
         ListType(MapUnit(1, 2)),
     )
 
@@ -576,8 +576,8 @@ def test_infimum_list():
     assert_infimum_ok((ListType(ElistType()), ListType(ListType(FloatType()))), ListType(ElistType()))
     assert_infimum_ok(
         (
-            ListType(ListType(MapType({MapKey(1): TupleType([])}))),
-            ListType(ListType(MapType({MapKey(2): TupleType([])}))),
+            ListType(ListType(MapType({MapKey(1, IntegerType()): TupleType([])}))),
+            ListType(ListType(MapType({MapKey(2, IntegerType()): TupleType([])}))),
         ),
         ListType(ListType(MapUnit(1, 2))),
     )
@@ -676,70 +676,70 @@ def test_supremum_map():
         MapUnit(3),
     )
 
-    assert_supremum_ok((MapType({MapKey(1): IntegerType()}), MapType({MapKey(2): FloatType()})), MapType({}))
+    assert_supremum_ok((MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(2, IntegerType()): FloatType()})), MapType({}))
     assert_supremum_ok(
-        (MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): FloatType()})), MapType({MapKey(1): NumberType()})
+        (MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): FloatType()})), MapType({MapKey(1, IntegerType()): NumberType()})
     )
     assert_supremum_ok(
         (
-            MapType({MapKey(1): MapType({MapKey(1): IntegerType()})}),
-            MapType({MapKey(1): MapType({MapKey(1): FloatType()})}),
+            MapType({MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): IntegerType()})}),
+            MapType({MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): FloatType()})}),
         ),
-        MapType({MapKey(1): MapType({MapKey(1): NumberType()})}),
+        MapType({MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): NumberType()})}),
     )
     assert_supremum_ok(
         (
-            MapType({MapKey(1): MapType({MapKey(2): IntegerType()})}),
-            MapType({MapKey(1): MapType({MapKey(2): FloatType()})}),
+            MapType({MapKey(1, IntegerType()): MapType({MapKey(2, IntegerType()): IntegerType()})}),
+            MapType({MapKey(1, IntegerType()): MapType({MapKey(2, IntegerType()): FloatType()})}),
         ),
-        MapType({MapKey(1): MapType({MapKey(2): NumberType()})}),
+        MapType({MapKey(1, IntegerType()): MapType({MapKey(2, IntegerType()): NumberType()})}),
     )
 
     assert_supremum_ok(
         (
-            MapType({MapKey(1): MapUnit(3)}),
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
         ),
-        MapType({MapKey(1): MapType({})}),
+        MapType({MapKey(1, IntegerType()): MapType({})}),
     )
     assert_supremum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(3)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3)}),
         ),
-        MapType({MapKey(1): MapType({})}),
+        MapType({MapKey(1, IntegerType()): MapType({})}),
     )
     assert_supremum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(3), MapKey(2): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3), MapKey(2, IntegerType()): MapUnit(2)}),
         ),
-        MapType({MapKey(1): MapType({}), MapKey(2): MapUnit(2)}),
+        MapType({MapKey(1, IntegerType()): MapType({}), MapKey(2, IntegerType()): MapUnit(2)}),
     )
 
     assert_supremum_ok(
         (
-            MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-            MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
+            MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+            MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
         ),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
     )
     assert_supremum_ok(
         (
-            MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-            MapType({MapKey(2): IntegerType(), MapKey(1): IntegerType()}),
+            MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+            MapType({MapKey(2, IntegerType()): IntegerType(), MapKey(1, IntegerType()): IntegerType()}),
         ),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
     )
 
-    assert_supremum_error(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): BooleanType()}))
+    assert_supremum_error(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): BooleanType()}))
     assert_supremum_error(
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
-        MapType({MapKey(1): BooleanType(), MapKey(2): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): BooleanType(), MapKey(2, IntegerType()): IntegerType()}),
     )
     assert_supremum_error(
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): BooleanType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): BooleanType()}),
     )
 
 
@@ -752,77 +752,77 @@ def test_infimum_map():
             MapUnit(1, 3),
             MapUnit(2, 3),
         ),
-        MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([]), MapKey(3): TupleType([])}),
+        MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
     )
 
     assert_infimum_ok(
-        (MapType({MapKey(1): MapUnit(1)}), MapType({MapKey(2): MapUnit(2)})),
-        MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
+        (MapType({MapKey(1, IntegerType()): MapUnit(1)}), MapType({MapKey(2, IntegerType()): MapUnit(2)})),
+        MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
     )
     assert_infimum_ok(
-        (MapType({MapKey(1): MapUnit(1)}), MapType({MapKey(1): MapUnit(2)})),
-        MapType({MapKey(1): MapUnit(1, 2)}),
-    )
-    assert_infimum_ok(
-        (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1)}),
-        ),
-        MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1, 2)}),
+        (MapType({MapKey(1, IntegerType()): MapUnit(1)}), MapType({MapKey(1, IntegerType()): MapUnit(2)})),
+        MapType({MapKey(1, IntegerType()): MapUnit(1, 2)}),
     )
     assert_infimum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(2): MapUnit(1), MapKey(1): MapUnit(1)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1)}),
         ),
-        MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1, 2)}),
-    )
-
-    assert_infimum_ok(
-        (
-            MapType({MapKey(1): MapUnit(3)}),
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-        ),
-        MapType({MapKey(1): MapUnit(1, 3), MapKey(2): MapUnit(2)}),
+        MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1, 2)}),
     )
     assert_infimum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(3)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(2, IntegerType()): MapUnit(1), MapKey(1, IntegerType()): MapUnit(1)}),
         ),
-        MapType({MapKey(1): MapUnit(1, 3), MapKey(2): MapUnit(2)}),
-    )
-    assert_infimum_ok(
-        (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(3), MapKey(2): MapUnit(2)}),
-        ),
-        MapType({MapKey(1): MapUnit(1, 3), MapKey(2): MapUnit(2)}),
+        MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1, 2)}),
     )
 
     assert_infimum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
         ),
-        MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1, 2)}),
+        MapType({MapKey(1, IntegerType()): MapUnit(1, 3), MapKey(2, IntegerType()): MapUnit(2)}),
     )
     assert_infimum_ok(
         (
-            MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(2)}),
-            MapType({MapKey(2): MapUnit(1), MapKey(1): MapUnit(1)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3)}),
         ),
-        MapType({MapKey(1): MapUnit(1), MapKey(2): MapUnit(1, 2)}),
+        MapType({MapKey(1, IntegerType()): MapUnit(1, 3), MapKey(2, IntegerType()): MapUnit(2)}),
+    )
+    assert_infimum_ok(
+        (
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(3), MapKey(2, IntegerType()): MapUnit(2)}),
+        ),
+        MapType({MapKey(1, IntegerType()): MapUnit(1, 3), MapKey(2, IntegerType()): MapUnit(2)}),
     )
 
-    assert_infimum_error(MapType({MapKey(1): IntegerType()}), MapType({MapKey(1): FloatType()}))
+    assert_infimum_ok(
+        (
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1)}),
+        ),
+        MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1, 2)}),
+    )
+    assert_infimum_ok(
+        (
+            MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(2)}),
+            MapType({MapKey(2, IntegerType()): MapUnit(1), MapKey(1, IntegerType()): MapUnit(1)}),
+        ),
+        MapType({MapKey(1, IntegerType()): MapUnit(1), MapKey(2, IntegerType()): MapUnit(1, 2)}),
+    )
+
+    assert_infimum_error(MapType({MapKey(1, IntegerType()): IntegerType()}), MapType({MapKey(1, IntegerType()): FloatType()}))
     assert_infimum_error(
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
-        MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): FloatType(), MapKey(2, IntegerType()): IntegerType()}),
     )
     assert_infimum_error(
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
     )
 
 
@@ -860,7 +860,7 @@ def test_supremum_function():
         FunctionType(
             [
                 MapUnit(1, 2),
-                MapType({MapKey(3): TupleType([]), MapKey(4): TupleType([])}),
+                MapType({MapKey(3, IntegerType()): TupleType([]), MapKey(4, IntegerType()): TupleType([])}),
             ],
             MapType({}),
         ),
@@ -942,7 +942,7 @@ def test_supremum_any():
     assert_supremum_ok((AnyType(), TupleType([IntegerType(), FloatType()])), TupleType([AnyType(), AnyType()]))
     assert_supremum_ok((AnyType(), TupleType([IntegerType(), NumberType()])), TupleType([AnyType(), NumberType()]))
     assert_supremum_ok((AnyType(), MapType({})), MapType({}))
-    assert_supremum_ok((AnyType(), MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()})), MapType({}))
+    assert_supremum_ok((AnyType(), MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()})), MapType({}))
     assert_supremum_ok((AnyType(), TupleType([IntegerType(), NumberType()])), TupleType([AnyType(), NumberType()]))
     assert_supremum_ok(
         (AnyType(), FunctionType([IntegerType()], IntegerType())), FunctionType([IntegerType()], AnyType())
@@ -958,8 +958,8 @@ def test_supremum_any():
         (TupleType([AnyType(), IntegerType()]), TupleType([FloatType(), AnyType()])), TupleType([AnyType(), AnyType()])
     )
     assert_supremum_ok(
-        (MapType({MapKey(1): AnyType()}), MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()})),
-        MapType({MapKey(1): AnyType()}),
+        (MapType({MapKey(1, IntegerType()): AnyType()}), MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()})),
+        MapType({MapKey(1, IntegerType()): AnyType()}),
     )
     assert_supremum_ok(
         (FunctionType([MapUnit(1), AnyType()], IntegerType()), FunctionType([MapUnit(2), AnyType()], IntegerType())),
@@ -1006,12 +1006,12 @@ def test_infimum_any():
         TupleType([AnyType(), IntegerType()]),
     )
     assert_infimum_ok(
-        (MapType({MapKey(1): AnyType()}), MapType({MapKey(1): NumberType(), MapKey(2): FloatType()})),
-        MapType({MapKey(1): AnyType(), MapKey(2): FloatType()}),
+        (MapType({MapKey(1, IntegerType()): AnyType()}), MapType({MapKey(1, IntegerType()): NumberType(), MapKey(2, IntegerType()): FloatType()})),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): FloatType()}),
     )
     assert_infimum_ok(
-        (MapType({MapKey(1): AnyType()}), MapType({MapKey(1): AnyType(), MapKey(2): FloatType()})),
-        MapType({MapKey(1): AnyType(), MapKey(2): FloatType()}),
+        (MapType({MapKey(1, IntegerType()): AnyType()}), MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): FloatType()})),
+        MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): FloatType()}),
     )
     assert_infimum_ok(
         (AnyType(), FunctionType([AnyType(), NumberType()], NumberType())),

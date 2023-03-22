@@ -88,8 +88,6 @@ class BinaryOpEnum(Enum):
     def types(self) -> t.List[t.Tuple[gtypes.Type, gtypes.Type, gtypes.Type]]:
         # TODO[improvements] adding term would unlock 'untyped' operators like
         #   ==, or !,&,||
-
-        # TODO bug when any is provided - maybe on inverse order
         if self is BinaryOpEnum.conjunction:
             return [
                 (
@@ -244,7 +242,7 @@ class BinaryOpEnum(Enum):
                 BinaryOpEnum.equality,
                 BinaryOpEnum.inequality
             ]
-            # TODO[improvements] improve so that if x!= y
+            # TODO[improvements] improve so that if x != y
             #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=y)) raises error
             return [
                 (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
@@ -339,7 +337,6 @@ class FloatExpression(LiteralExpression):
         return str(self.value)
 
 
-# TODO make AtomLiteralSetExpression
 @dataclass
 class AtomLiteralExpression(LiteralExpression):
     value: str

@@ -100,17 +100,17 @@ def test_parse_data_expressions():
         [IntegerExpression(1), IntegerExpression(2), IntegerExpression(3)]
     )
     assert parse_expression("%{}") == MapExpression(OrderedDict([]))
-    assert parse_expression("%{1 => :a}") == MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("a"))]))
-    assert parse_expression("%{:a => 42.0}") == MapExpression(OrderedDict([(MapKey("a"), FloatExpression(42))]))
-    assert parse_expression("%{\"a\" => 42.0}") == MapExpression(OrderedDict([(MapKey(["a"]), FloatExpression(42))]))
+    assert parse_expression("%{1 => :a}") == MapExpression(OrderedDict([(MapKey(1, IntegerType()), AtomLiteralExpression("a"))]))
+    assert parse_expression("%{:a => 42.0}") == MapExpression(OrderedDict([(MapKey("a", AtomLiteralType("a")), FloatExpression(42))]))
+    assert parse_expression("%{\"a\" => 42.0}") == MapExpression(OrderedDict([(MapKey("a", StringType()), FloatExpression(42))]))
     assert parse_expression("%{42.1 => true}") == MapExpression(
-        OrderedDict([(MapKey(42.1), AtomLiteralExpression("true"))])
+        OrderedDict([(MapKey(42.1, FloatType()), AtomLiteralExpression("true"))])
     )
     assert parse_expression("%{42.0 => {1,2}}") == MapExpression(
         OrderedDict(
             [
                 (
-                    MapKey(42.0),
+                    MapKey(42.0, FloatType()),
                     TupleExpression([IntegerExpression(1), IntegerExpression(2)]),
                 )
             ]
@@ -120,7 +120,7 @@ def test_parse_data_expressions():
         OrderedDict(
             [
                 (
-                    MapKey(42.0),
+                    MapKey(42.0, FloatType()),
                     TupleExpression([IntegerExpression(1), IntegerExpression(2)]),
                 )
             ]
@@ -130,8 +130,8 @@ def test_parse_data_expressions():
         OrderedDict(
             [
                 (
-                    MapKey(42.0),
-                    MapExpression(OrderedDict([(MapKey(1), IntegerExpression(2))])),
+                    MapKey(42.0, FloatType()),
+                    MapExpression(OrderedDict([(MapKey(1, IntegerType()), IntegerExpression(2))])),
                 )
             ]
         )
@@ -140,10 +140,10 @@ def test_parse_data_expressions():
         OrderedDict(
             [
                 (
-                    MapKey(42.0),
-                    MapExpression(OrderedDict([(MapKey(1), AtomLiteralExpression("x"))])),
+                    MapKey(42.0, FloatType()),
+                    MapExpression(OrderedDict([(MapKey(1, IntegerType()), AtomLiteralExpression("x"))])),
                 ),
-                (MapKey("a"), TupleExpression([])),
+                (MapKey("a", AtomLiteralType("a")), TupleExpression([])),
             ]
         )
     )
@@ -166,7 +166,7 @@ def test_parse_data_expressions():
             ListExpression(
                 AtomLiteralExpression("a"),
                 ListExpression(
-                    MapExpression(OrderedDict([(MapKey("x"), FloatExpression(2))])),
+                    MapExpression(OrderedDict([(MapKey("x", AtomLiteralType("x")), FloatExpression(2))])),
                     ListExpression(ElistExpression(), ElistExpression()),
                 ),
             ),
@@ -183,7 +183,7 @@ def test_parse_data_expressions():
             ListExpression(
                 AtomLiteralExpression("a"),
                 ListExpression(
-                    MapExpression(OrderedDict([(MapKey("x"), FloatExpression(2))])),
+                    MapExpression(OrderedDict([(MapKey("x", AtomLiteralType("x")), FloatExpression(2))])),
                     ListExpression(ElistExpression(), ElistExpression()),
                 ),
             ),
@@ -208,25 +208,25 @@ def test_parse_data_patterns():
     assert parse_pattern("{1,2}") == TuplePattern([IntegerPattern(1), IntegerPattern(2)])
     assert parse_pattern("{1,2,3}") == TuplePattern([IntegerPattern(1), IntegerPattern(2), IntegerPattern(3)])
     assert parse_pattern("%{}") == MapPattern(OrderedDict([]))
-    assert parse_pattern("%{1 => :a}") == MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("a"))]))
-    assert parse_pattern("%{:a => 42.0}") == MapPattern(OrderedDict([(MapKey("a"), FloatPattern(42))]))
-    assert parse_pattern("%{1 => \":a\"}") == MapPattern(OrderedDict([(MapKey(1), StringPattern(":a"))]))
-    assert parse_pattern("%{\":a\" => 42.0}") == MapPattern(OrderedDict([(MapKey([":a"]), FloatPattern(42))]))
-    assert parse_pattern("%{42.1 => true}") == MapPattern(OrderedDict([(MapKey(42.1), AtomLiteralPattern("true"))]))
+    assert parse_pattern("%{1 => :a}") == MapPattern(OrderedDict([(MapKey(1, IntegerType()), AtomLiteralPattern("a"))]))
+    assert parse_pattern("%{:a => 42.0}") == MapPattern(OrderedDict([(MapKey("a", AtomLiteralType("a")), FloatPattern(42))]))
+    assert parse_pattern("%{1 => \":a\"}") == MapPattern(OrderedDict([(MapKey(1, IntegerType()), StringPattern(":a"))]))
+    assert parse_pattern("%{\":a\" => 42.0}") == MapPattern(OrderedDict([(MapKey(":a", StringType()), FloatPattern(42))]))
+    assert parse_pattern("%{42.1 => true}") == MapPattern(OrderedDict([(MapKey(42.1, FloatType()), AtomLiteralPattern("true"))]))
     assert parse_pattern("%{42.0 => {1,2}}") == MapPattern(
-        OrderedDict([(MapKey(42.0), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
+        OrderedDict([(MapKey(42.0, FloatType()), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])
     )
     assert parse_pattern("%{42.0 => %{1 => 2}}") == MapPattern(
-        OrderedDict([(MapKey(42.0), MapPattern(OrderedDict([(MapKey(1), IntegerPattern(2))])))])
+        OrderedDict([(MapKey(42.0, FloatType()), MapPattern(OrderedDict([(MapKey(1, IntegerType()), IntegerPattern(2))])))])
     )
     assert parse_pattern("%{42.0 => %{1 => :x}, :a => {}}") == MapPattern(
         OrderedDict(
             [
                 (
-                    MapKey(42.0),
-                    MapPattern(OrderedDict([(MapKey(1), AtomLiteralPattern("x"))])),
+                    MapKey(42.0, FloatType()),
+                    MapPattern(OrderedDict([(MapKey(1, IntegerType()), AtomLiteralPattern("x"))])),
                 ),
-                (MapKey("a"), TuplePattern([])),
+                (MapKey("a", AtomLiteralType("a")), TuplePattern([])),
             ]
         )
     )
@@ -245,7 +245,7 @@ def test_parse_data_patterns():
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
-                    MapPattern(OrderedDict([(MapKey("x"), FloatPattern(2))])),
+                    MapPattern(OrderedDict([(MapKey("x", AtomLiteralType("x")), FloatPattern(2))])),
                     ListPattern(ElistPattern(), ElistPattern()),
                 ),
             ),
@@ -257,7 +257,7 @@ def test_parse_data_patterns():
             ListPattern(
                 AtomLiteralPattern("a"),
                 ListPattern(
-                    MapPattern(OrderedDict([(MapKey("x"), FloatPattern(2))])),
+                    MapPattern(OrderedDict([(MapKey("x", AtomLiteralType("x")), FloatPattern(2))])),
                     ListPattern(ElistPattern(), ElistPattern()),
                 ),
             ),
@@ -269,7 +269,7 @@ def test_parse_data_patterns():
             ListPattern(
                 IdentPattern("z"),
                 ListPattern(
-                    MapPattern(OrderedDict([(MapKey("x"), WildPattern())])),
+                    MapPattern(OrderedDict([(MapKey("x", AtomLiteralType("x")), WildPattern())])),
                     ListPattern(ListPattern(IntegerPattern(1), WildPattern()), ElistPattern()),
                 ),
             ),
@@ -436,9 +436,9 @@ def test_types():
     assert parse_type("{}") == TupleType([])
     assert parse_type("{:a, :b}") == TupleType([AtomLiteralType("a"), AtomLiteralType("b")])
     assert parse_type("%{}") == MapType({})
-    assert parse_type("%{1 => :a}") == MapType({MapKey(1): AtomLiteralType("a")})
+    assert parse_type("%{1 => :a}") == MapType({MapKey(1, IntegerType()): AtomLiteralType("a")})
     assert parse_type("%{1 => :a, true => float, 2.0 => atom}") == MapType(
-        {MapKey(1): AtomLiteralType("a"), MapKey("true"): FloatType(), MapKey(2.0): AtomType()}
+        {MapKey(1, IntegerType()): AtomLiteralType("a"), MapKey("true", AtomLiteralType("true")): FloatType(), MapKey(2.0, FloatType()): AtomType()}
     )
     assert parse_type("(() -> :a)") == FunctionType([], AtomLiteralType("a"))
     assert parse_type("(integer -> :a)") == FunctionType([IntegerType()], AtomLiteralType("a"))

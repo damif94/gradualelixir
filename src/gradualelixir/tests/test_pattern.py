@@ -130,9 +130,9 @@ def test_type_check_pin():
 
     assert_type_check_pattern_ok(
         PinIdentPattern("x"),
-        MapType({MapKey(1): TupleType([])}),
-        external_env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+        MapType({MapKey(1, IntegerType()): TupleType([])}),
+        external_env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
     )
 
     assert_type_check_pattern_ok(
@@ -246,42 +246,42 @@ def test_type_check_varn():
 
     assert_type_check_pattern_ok(
         IdentPattern("x"),
-        MapType({MapKey(1): TupleType([])}),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        MapType({MapKey(1, IntegerType()): TupleType([])}),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         IdentPattern("x"),
-        MapType({MapKey(1): TupleType([])}),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        external_env={"x": MapType({MapKey(3): TupleType([])})},
-        expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        MapType({MapKey(1, IntegerType()): TupleType([])}),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        external_env={"x": MapType({MapKey(3, IntegerType()): TupleType([])})},
+        expected_type=MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         IdentPattern("x"),
-        MapType({MapKey(1): TupleType([])}),
+        MapType({MapKey(1, IntegerType()): TupleType([])}),
         env={
-            "x": MapType({MapKey(2): TupleType([])}),
-            "y": MapType({MapKey(3): TupleType([])}),
+            "x": MapType({MapKey(2, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(3, IntegerType()): TupleType([])}),
         },
-        expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+        expected_type=MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-            "y": MapType({MapKey(3): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(3, IntegerType()): TupleType([])}),
         },
     )
 
     assert_type_check_pattern_ok(
         IdentPattern("x"),
-        MapType({MapKey(1): TupleType([])}),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        external_env={"y": MapType({MapKey(3): TupleType([])})},
-        expected_type=MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        MapType({MapKey(1, IntegerType()): TupleType([])}),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        external_env={"y": MapType({MapKey(3, IntegerType()): TupleType([])})},
+        expected_type=MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
@@ -309,7 +309,7 @@ def test_type_check_varn():
     assert_type_check_pattern_error(
         IdentPattern("x"),
         FunctionType([IntegerType()], IntegerType()),
-        env={"x": MapType({MapKey(2): TupleType([])})},
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
         expected_context=PatternErrorEnum.incompatible_type_for_variable,
     )
 
@@ -361,31 +361,31 @@ def test_type_check_list():
 
     assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("x"), ElistPattern())),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"y": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"y": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([])}),
-            "y": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
     assert_type_check_pattern_ok(
         ListPattern(IdentPattern("x"), ListPattern(IdentPattern("y"), ElistPattern())),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-            "y": MapType({MapKey(1): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([])}),
         },
     )
 
@@ -397,12 +397,12 @@ def test_type_check_list():
                 ListPattern(IdentPattern("y"), ElistPattern()),
             ),
         ),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"y": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"y": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([])}),
-            "y": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
@@ -414,12 +414,12 @@ def test_type_check_list():
                 ListPattern(IdentPattern("y"), ElistPattern()),
             ),
         ),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-            "y": MapType({MapKey(1): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([])}),
         },
     )
 
@@ -460,10 +460,10 @@ def test_type_check_tuple():
 
     assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
-        TupleType([MapType({MapKey(1): TupleType([])})]),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=TupleType([MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})]),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        TupleType([MapType({MapKey(1, IntegerType()): TupleType([])})]),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=TupleType([MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})]),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
@@ -484,38 +484,38 @@ def test_type_check_tuple():
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
-                MapType({MapKey(1): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
             ]
         ),
         expected_type=TupleType(
             [
-                MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-                MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
             ]
         ),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("y"), IdentPattern("x")]),
         TupleType(
             [
-                MapType({MapKey(1): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
-                MapType({MapKey(3): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(3, IntegerType()): TupleType([])}),
             ]
         ),
         expected_type=TupleType(
             [
-                MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
-                MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
             ]
         ),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
-            "y": MapType({MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
@@ -523,22 +523,22 @@ def test_type_check_tuple():
         TuplePattern([PinIdentPattern("x"), IdentPattern("y"), IdentPattern("x")]),
         TupleType(
             [
-                MapType({MapKey(1): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
-                MapType({MapKey(3): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(3, IntegerType()): TupleType([])}),
             ]
         ),
-        external_env={"x": MapType({MapKey(4): TupleType([])})},
+        external_env={"x": MapType({MapKey(4, IntegerType()): TupleType([])})},
         expected_type=TupleType(
             [
-                MapType({MapKey(1): TupleType([]), MapKey(4): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
-                MapType({MapKey(3): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(4, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(3, IntegerType()): TupleType([])}),
             ]
         ),
         expected_env={
-            "x": MapType({MapKey(3): TupleType([])}),
-            "y": MapType({MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(3, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
@@ -601,118 +601,118 @@ def test_type_check_map():
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
-        MapType({MapKey(1): IntegerType()}),
-        expected_type=MapType({MapKey(1): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(1, IntegerType()): IntegerType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
         MapPattern(OrderedDict()),
-        MapType({MapKey(1): IntegerType()}),
-        expected_type=MapType({MapKey(1): IntegerType()}),
+        MapType({MapKey(1, IntegerType()): IntegerType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType()}),
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), FloatPattern(2.0))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), FloatPattern(2.0))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(2), FloatPattern(2.0)), (MapKey(1), IdentPattern("x"))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), FloatPattern(2.0)), (MapKey(1, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(2), FloatPattern(2.0)), (MapKey(1), IdentPattern("x"))])),
-        MapType({MapKey(2): FloatType(), MapKey(1): IntegerType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), FloatPattern(2.0)), (MapKey(1, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(2, IntegerType()): FloatType(), MapKey(1, IntegerType()): IntegerType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), FloatPattern(2.0))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-        expected_type=MapType({MapKey(2): FloatType(), MapKey(1): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), FloatPattern(2.0))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+        expected_type=MapType({MapKey(2, IntegerType()): FloatType(), MapKey(1, IntegerType()): IntegerType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
-        MapType({MapKey(1): MapType({MapKey(1): TupleType([])})}),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=MapType({MapKey(1): MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})}),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([])})}),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=MapType({MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})}),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("y"))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): FloatType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), IdentPattern("y"))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): FloatType()}),
         expected_env={"x": IntegerType(), "y": FloatType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("x"))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
         expected_env={"x": IntegerType()},
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(2), IntegerPattern(3))])),
-        MapType({MapKey(1): IntegerType(), MapKey(2): NumberType()}),
-        expected_type=MapType({MapKey(1): IntegerType(), MapKey(2): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), IntegerPattern(3))])),
+        MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): NumberType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): IntegerType(), MapKey(2, IntegerType()): IntegerType()}),
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("x"))])),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), IdentPattern("x"))])),
         MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([])}),
-                MapKey(2): MapType({MapKey(2): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(2, IntegerType()): TupleType([])}),
             }
         ),
         expected_type=MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-                MapKey(2): MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
             }
         ),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         MapPattern(
             OrderedDict(
                 [
-                    (MapKey(1), IdentPattern("x")),
-                    (MapKey(2), IdentPattern("y")),
-                    (MapKey(3), IdentPattern("x")),
+                    (MapKey(1, IntegerType()), IdentPattern("x")),
+                    (MapKey(2, IntegerType()), IdentPattern("y")),
+                    (MapKey(3, IntegerType()), IdentPattern("x")),
                 ]
             )
         ),
         MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([])}),
-                MapKey(2): MapType({MapKey(2): TupleType([])}),
-                MapKey(3): MapType({MapKey(3): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapKey(3, IntegerType()): MapType({MapKey(3, IntegerType()): TupleType([])}),
             }
         ),
         expected_type=MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
-                MapKey(2): MapType({MapKey(2): TupleType([])}),
-                MapKey(3): MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapKey(3, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
             }
         ),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(3): TupleType([])}),
-            "y": MapType({MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
@@ -720,70 +720,70 @@ def test_type_check_map():
         MapPattern(
             OrderedDict(
                 [
-                    (MapKey(1), PinIdentPattern("x")),
-                    (MapKey(2), IdentPattern("y")),
-                    (MapKey(3), IdentPattern("x")),
+                    (MapKey(1, IntegerType()), PinIdentPattern("x")),
+                    (MapKey(2, IntegerType()), IdentPattern("y")),
+                    (MapKey(3, IntegerType()), IdentPattern("x")),
                 ]
             )
         ),
         MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([])}),
-                MapKey(2): MapType({MapKey(2): TupleType([])}),
-                MapKey(3): MapType({MapKey(3): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapKey(3, IntegerType()): MapType({MapKey(3, IntegerType()): TupleType([])}),
             }
         ),
-        external_env={"x": MapType({MapKey(4): TupleType([])})},
+        external_env={"x": MapType({MapKey(4, IntegerType()): TupleType([])})},
         expected_type=MapType(
             {
-                MapKey(1): MapType({MapKey(1): TupleType([]), MapKey(4): TupleType([])}),
-                MapKey(2): MapType({MapKey(2): TupleType([])}),
-                MapKey(3): MapType({MapKey(3): TupleType([])}),
+                MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(4, IntegerType()): TupleType([])}),
+                MapKey(2, IntegerType()): MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapKey(3, IntegerType()): MapType({MapKey(3, IntegerType()): TupleType([])}),
             }
         ),
         expected_env={
-            "x": MapType({MapKey(3): TupleType([])}),
-            "y": MapType({MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(3, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(2, IntegerType()): TupleType([])}),
         },
     )
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x"))])),
-        MapType({MapKey(2): FloatType(), MapKey(3): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(2, IntegerType()): FloatType(), MapKey(3, IntegerType()): IntegerType()}),
         expected_context=PatternErrorEnum.incompatible_maps_error,
     )
 
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
-        MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IntegerPattern(1)), (MapKey(2, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(1, IntegerType()): FloatType(), MapKey(2, IntegerType()): IntegerType()}),
         expected_context=(
-            MapPatternContext(key=MapKey(1)),
+            MapPatternContext(key=MapKey(1, IntegerType())),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
 
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
-        MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), IdentPattern("x")), (MapKey(1, IntegerType()), IntegerPattern(1))])),
+        MapType({MapKey(1, IntegerType()): FloatType(), MapKey(2, IntegerType()): IntegerType()}),
         expected_context=(
-            MapPatternContext(key=MapKey(1)),
+            MapPatternContext(key=MapKey(1, IntegerType())),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
 
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(1), IntegerPattern(1)), (MapKey(2), IdentPattern("x"))])),
-        MapType({MapKey(2): IntegerType(), MapKey(1): FloatType()}),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IntegerPattern(1)), (MapKey(2, IntegerType()), IdentPattern("x"))])),
+        MapType({MapKey(2, IntegerType()): IntegerType(), MapKey(1, IntegerType()): FloatType()}),
         expected_context=(
-            MapPatternContext(key=MapKey(1)),
+            MapPatternContext(key=MapKey(1, IntegerType())),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
 
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(2), IdentPattern("x")), (MapKey(1), IntegerPattern(1))])),
-        MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), IdentPattern("x")), (MapKey(1, IntegerType()), IntegerPattern(1))])),
+        MapType({MapKey(1, IntegerType()): FloatType(), MapKey(2, IntegerType()): IntegerType()}),
         expected_context=(
-            MapPatternContext(key=MapKey(1)),
+            MapPatternContext(key=MapKey(1, IntegerType())),
             PatternErrorEnum.incompatible_type_for_literal,
         ),
     )
@@ -792,25 +792,25 @@ def test_type_check_map():
         MapPattern(
             OrderedDict(
                 [
-                    (MapKey(1), WildPattern()),
-                    (MapKey(2), WildPattern()),
+                    (MapKey(1, IntegerType()), WildPattern()),
+                    (MapKey(2, IntegerType()), WildPattern()),
                     (
-                        MapKey(3),
+                        MapKey(3, IntegerType()),
                         MapPattern(
                             OrderedDict(
                                 [
                                     (
-                                        MapKey(1),
+                                        MapKey(1, IntegerType()),
                                         MapPattern(
                                             OrderedDict(
                                                 [
-                                                    (MapKey(1), IntegerPattern(1)),
-                                                    (MapKey(2), IdentPattern("x")),
+                                                    (MapKey(1, IntegerType()), IntegerPattern(1)),
+                                                    (MapKey(2, IntegerType()), IdentPattern("x")),
                                                 ]
                                             )
                                         ),
                                     ),
-                                    (MapKey(2), IdentPattern("x")),
+                                    (MapKey(2, IntegerType()), IdentPattern("x")),
                                 ]
                             )
                         ),
@@ -820,22 +820,22 @@ def test_type_check_map():
         ),
         MapType(
             {
-                MapKey(1): FloatType(),
-                MapKey(2): FloatType(),
-                MapKey(3): MapType(
+                MapKey(1, IntegerType()): FloatType(),
+                MapKey(2, IntegerType()): FloatType(),
+                MapKey(3, IntegerType()): MapType(
                     {
-                        MapKey(1): MapType({MapKey(1): FloatType(), MapKey(2): IntegerType()}),
-                        MapKey(2): FloatType(),
+                        MapKey(1, IntegerType()): MapType({MapKey(1, IntegerType()): FloatType(), MapKey(2, IntegerType()): IntegerType()}),
+                        MapKey(2, IntegerType()): FloatType(),
                     }
                 ),
             }
         ),
         expected_context=(
-            MapPatternContext(key=MapKey(3)),
+            MapPatternContext(key=MapKey(3, IntegerType())),
             (
-                MapPatternContext(key=MapKey(1)),
+                MapPatternContext(key=MapKey(1, IntegerType())),
                 (
-                    MapPatternContext(key=MapKey(1)),
+                    MapPatternContext(key=MapKey(1, IntegerType())),
                     PatternErrorEnum.incompatible_type_for_literal,
                 ),
             ),
@@ -846,25 +846,25 @@ def test_type_check_map():
         MapPattern(
             OrderedDict(
                 [
-                    (MapKey(2), WildPattern()),
-                    (MapKey(3), WildPattern()),
+                    (MapKey(2, IntegerType()), WildPattern()),
+                    (MapKey(3, IntegerType()), WildPattern()),
                     (
-                        MapKey(1),
+                        MapKey(1, IntegerType()),
                         MapPattern(
                             OrderedDict(
                                 [
                                     (
-                                        MapKey(1),
+                                        MapKey(1, IntegerType()),
                                         MapPattern(
                                             OrderedDict(
                                                 [
-                                                    (MapKey(2), IntegerPattern(1)),
-                                                    (MapKey(1), IdentPattern("x")),
+                                                    (MapKey(2, IntegerType()), IntegerPattern(1)),
+                                                    (MapKey(1, IntegerType()), IdentPattern("x")),
                                                 ]
                                             )
                                         ),
                                     ),
-                                    (MapKey(2), IdentPattern("x")),
+                                    (MapKey(2, IntegerType()), IdentPattern("x")),
                                 ]
                             )
                         ),
@@ -874,22 +874,22 @@ def test_type_check_map():
         ),
         MapType(
             {
-                MapKey(2): FloatType(),
-                MapKey(3): FloatType(),
-                MapKey(1): MapType(
+                MapKey(2, IntegerType()): FloatType(),
+                MapKey(3, IntegerType()): FloatType(),
+                MapKey(1, IntegerType()): MapType(
                     {
-                        MapKey(1): MapType({MapKey(2): FloatType(), MapKey(1): IntegerType()}),
-                        MapKey(2): FloatType(),
+                        MapKey(1, IntegerType()): MapType({MapKey(2, IntegerType()): FloatType(), MapKey(1, IntegerType()): IntegerType()}),
+                        MapKey(2, IntegerType()): FloatType(),
                     }
                 ),
             }
         ),
         expected_context=(
-            MapPatternContext(key=MapKey(1)),
+            MapPatternContext(key=MapKey(1, IntegerType())),
             (
-                MapPatternContext(key=MapKey(1)),
+                MapPatternContext(key=MapKey(1, IntegerType())),
                 (
-                    MapPatternContext(key=MapKey(2)),
+                    MapPatternContext(key=MapKey(2, IntegerType())),
                     PatternErrorEnum.incompatible_type_for_literal,
                 ),
             ),
@@ -897,7 +897,7 @@ def test_type_check_map():
     )
 
     assert_type_check_pattern_error(
-        MapPattern(OrderedDict([(MapKey(2), IdentPattern("x"))])),
+        MapPattern(OrderedDict([(MapKey(2, IntegerType()), IdentPattern("x"))])),
         ListType(FloatType()),
         expected_context=PatternErrorEnum.incompatible_constructors_error,
     )
@@ -1048,9 +1048,9 @@ def test_type_check_any():
     )
 
     assert_type_check_pattern_ok(
-        MapPattern(OrderedDict([(MapKey(1), IdentPattern("x")), (MapKey(2), IdentPattern("y"))])),
+        MapPattern(OrderedDict([(MapKey(1, IntegerType()), IdentPattern("x")), (MapKey(2, IntegerType()), IdentPattern("y"))])),
         AnyType(),
-        expected_type=MapType({MapKey(1): AnyType(), MapKey(2): AnyType()}),
+        expected_type=MapType({MapKey(1, IntegerType()): AnyType(), MapKey(2, IntegerType()): AnyType()}),
         expected_env={"x": AnyType(), "y": AnyType()},
     )
 
@@ -1074,13 +1074,13 @@ def test_type_check_any():
 
     assert_type_check_pattern_error(
         ListPattern(
-            MapPattern(OrderedDict([(MapKey(1), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
+            MapPattern(OrderedDict([(MapKey(1, IntegerType()), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
             ListPattern(
                 MapPattern(
                     OrderedDict(
                         [
                             (
-                                MapKey(1),
+                                MapKey(1, IntegerType()),
                                 TuplePattern(
                                     [
                                         AtomLiteralPattern("true"),
@@ -1102,13 +1102,13 @@ def test_type_check_any():
 
     assert_type_check_pattern_ok(
         ListPattern(
-            MapPattern(OrderedDict([(MapKey(1), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
+            MapPattern(OrderedDict([(MapKey(1, IntegerType()), TuplePattern([IntegerPattern(1), IntegerPattern(2)]))])),
             ListPattern(
                 MapPattern(
                     OrderedDict(
                         [
                             (
-                                MapKey(2),
+                                MapKey(2, IntegerType()),
                                 TuplePattern(
                                     [
                                         AtomLiteralPattern("true"),
@@ -1138,13 +1138,13 @@ def test_type_check_ok_progressions():
                 ListPattern(IdentPattern("y"), ElistPattern()),
             ),
         ),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"x": MapType({MapKey(2): TupleType([])})},
-        external_env={"x": MapType({MapKey(3): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        external_env={"x": MapType({MapKey(3, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-            "y": MapType({MapKey(1): TupleType([])}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([])}),
         },
     )
 
@@ -1156,19 +1156,19 @@ def test_type_check_ok_progressions():
                 ListPattern(IdentPattern("y"), ElistPattern()),
             ),
         ),
-        ListType(MapType({MapKey(1): TupleType([])})),
-        env={"x": MapType({MapKey(2): TupleType([]), MapKey(3): TupleType([])})},
-        external_env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
+        env={"x": MapType({MapKey(2, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])})},
+        external_env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         expected_env={
             "x": MapType(
                 {
-                    MapKey(1): TupleType([]),
-                    MapKey(2): TupleType([]),
-                    MapKey(3): TupleType([]),
+                    MapKey(1, IntegerType()): TupleType([]),
+                    MapKey(2, IntegerType()): TupleType([]),
+                    MapKey(3, IntegerType()): TupleType([]),
                 }
             ),
-            "y": MapType({MapKey(1): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([])}),
         },
     )
 
@@ -1180,22 +1180,22 @@ def test_type_check_ok_progressions():
                 ListPattern(IdentPattern("y"), ElistPattern()),
             ),
         ),
-        ListType(MapType({MapKey(1): TupleType([])})),
+        ListType(MapType({MapKey(1, IntegerType()): TupleType([])})),
         env={
-            "x": MapType({MapKey(2): TupleType([]), MapKey(3): TupleType([])}),
-            "y": MapType({MapKey(2): TupleType([])}),
+            "x": MapType({MapKey(2, IntegerType()): TupleType([]), MapKey(3, IntegerType()): TupleType([])}),
+            "y": MapType({MapKey(2, IntegerType()): TupleType([])}),
         },
-        external_env={"x": MapType({MapKey(2): TupleType([])})},
-        expected_type=ListType(MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})),
+        external_env={"x": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        expected_type=ListType(MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})),
         expected_env={
             "x": MapType(
                 {
-                    MapKey(1): TupleType([]),
-                    MapKey(2): TupleType([]),
-                    MapKey(3): TupleType([]),
+                    MapKey(1, IntegerType()): TupleType([]),
+                    MapKey(2, IntegerType()): TupleType([]),
+                    MapKey(3, IntegerType()): TupleType([]),
                 }
             ),
-            "y": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+            "y": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
         },
     )
 
@@ -1273,58 +1273,58 @@ def test_type_check_ok_progressions():
 
     assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x")]),
-        TupleType([MapType({MapKey(1): TupleType([])})]),
-        expected_type=TupleType([MapType({MapKey(1): TupleType([])})]),
-        expected_env={"x": MapType({MapKey(1): TupleType([])})},
+        TupleType([MapType({MapKey(1, IntegerType()): TupleType([])})]),
+        expected_type=TupleType([MapType({MapKey(1, IntegerType()): TupleType([])})]),
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
-                MapType({MapKey(1): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
             ]
         ),
         expected_type=TupleType(
             [
-                MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
-                MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}),
             ]
         ),
-        expected_env={"x": MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])})},
+        expected_env={"x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])})},
     )
 
     assert_type_check_pattern_ok(
         TuplePattern([IdentPattern("x"), IdentPattern("x"), IdentPattern("x")]),
         TupleType(
             [
-                MapType({MapKey(1): TupleType([])}),
-                MapType({MapKey(2): TupleType([])}),
-                MapType({MapKey(3): TupleType([])}),
+                MapType({MapKey(1, IntegerType()): TupleType([])}),
+                MapType({MapKey(2, IntegerType()): TupleType([])}),
+                MapType({MapKey(3, IntegerType()): TupleType([])}),
             ]
         ),
         expected_type=TupleType(
             [
                 MapType(
                     {
-                        MapKey(1): TupleType([]),
-                        MapKey(2): TupleType([]),
-                        MapKey(3): TupleType([]),
+                        MapKey(1, IntegerType()): TupleType([]),
+                        MapKey(2, IntegerType()): TupleType([]),
+                        MapKey(3, IntegerType()): TupleType([]),
                     }
                 ),
                 MapType(
                     {
-                        MapKey(1): TupleType([]),
-                        MapKey(2): TupleType([]),
-                        MapKey(3): TupleType([]),
+                        MapKey(1, IntegerType()): TupleType([]),
+                        MapKey(2, IntegerType()): TupleType([]),
+                        MapKey(3, IntegerType()): TupleType([]),
                     }
                 ),
                 MapType(
                     {
-                        MapKey(1): TupleType([]),
-                        MapKey(2): TupleType([]),
-                        MapKey(3): TupleType([]),
+                        MapKey(1, IntegerType()): TupleType([]),
+                        MapKey(2, IntegerType()): TupleType([]),
+                        MapKey(3, IntegerType()): TupleType([]),
                     }
                 ),
             ]
@@ -1332,9 +1332,9 @@ def test_type_check_ok_progressions():
         expected_env={
             "x": MapType(
                 {
-                    MapKey(1): TupleType([]),
-                    MapKey(2): TupleType([]),
-                    MapKey(3): TupleType([]),
+                    MapKey(1, IntegerType()): TupleType([]),
+                    MapKey(2, IntegerType()): TupleType([]),
+                    MapKey(3, IntegerType()): TupleType([]),
                 }
             )
         },
@@ -1402,7 +1402,7 @@ def test_type_check_ok_progressions():
             OrderedDict(
                 [
                     (
-                        MapKey(1),
+                        MapKey(1, IntegerType()),
                         TuplePattern(
                             [
                                 ListPattern(IdentPattern("x"), ElistPattern()),
@@ -1410,7 +1410,7 @@ def test_type_check_ok_progressions():
                             ]
                         ),
                     ),
-                    (MapKey(2), IdentPattern("x")),
+                    (MapKey(2, IntegerType()), IdentPattern("x")),
                 ]
             )
         ),
@@ -1418,8 +1418,8 @@ def test_type_check_ok_progressions():
         env={"x": NumberType()},
         expected_type=MapType(
             {
-                MapKey(1): TupleType([ListType(AnyType()), TupleType([AnyType(), AnyType()])]),
-                MapKey(2): AnyType(),
+                MapKey(1, IntegerType()): TupleType([ListType(AnyType()), TupleType([AnyType(), AnyType()])]),
+                MapKey(2, IntegerType()): AnyType(),
             }
         ),
         expected_env={"x": AnyType()},
@@ -1432,11 +1432,11 @@ def test_type_check_errors():
             TuplePattern(
                 [
                     ListPattern(
-                        MapPattern(OrderedDict([(MapKey(2), TuplePattern([]))])),
+                        MapPattern(OrderedDict([(MapKey(2, IntegerType()), TuplePattern([]))])),
                         ListPattern(
-                            MapPattern(OrderedDict([(MapKey(2), TuplePattern([]))])),
+                            MapPattern(OrderedDict([(MapKey(2, IntegerType()), TuplePattern([]))])),
                             ListPattern(
-                                MapPattern(OrderedDict([(MapKey(2), ElistPattern())])),
+                                MapPattern(OrderedDict([(MapKey(2, IntegerType()), ElistPattern())])),
                                 ElistPattern(),
                             ),
                         ),
@@ -1445,7 +1445,7 @@ def test_type_check_errors():
             ),
             ElistPattern(),
         ),
-        ListType(TupleType([ListType(MapType({MapKey(2): TupleType([])}))])),
+        ListType(TupleType([ListType(MapType({MapKey(2, IntegerType()): TupleType([])}))])),
         expected_context=(
             ListPatternContext(head=True),
             (
@@ -1457,7 +1457,7 @@ def test_type_check_errors():
                         (
                             ListPatternContext(head=True),
                             (
-                                MapPatternContext(key=MapKey(2)),
+                                MapPatternContext(key=MapKey(2, IntegerType())),
                                 PatternErrorEnum.incompatible_constructors_error,
                             ),
                         ),

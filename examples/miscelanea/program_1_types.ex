@@ -15,7 +15,6 @@ defmodule Program do
     x + x | integer
   end
 
-  @spec sum_x_yz(any, any) :: any
   def sum_x_yz(x, y) do
     ((if true do
         (&sum_x_x/2) | (number, integer -> number)
@@ -26,8 +25,8 @@ defmodule Program do
     | number
   end
 
-  @spec main() :: any
   def main() do
+    %{1.0 => 3} | %{1.0 => integer}
     sum_x_x(1, 2) | number
   end
 end

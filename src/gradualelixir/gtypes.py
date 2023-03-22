@@ -2,8 +2,6 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
-from gradualelixir.exception import SyntaxRestrictionError
-
 
 class Type:
     pass
@@ -108,27 +106,15 @@ class TupleType(CompositeType):
 @dataclass
 class MapKey:
     value: t.Any
-    type_class: t.Type[LiteralType]
+    type: LiteralType
 
-    def __init__(self, value: t.Any):
+    def __init__(self, value: t.Any, typ: LiteralType):
         super(MapKey, self).__init__()
         self.value = value
-        literal_type_classes: t.List[t.Type[LiteralType]] = [
-            IntegerType,
-            FloatType,
-            StringType,
-            AtomLiteralType,
-        ]
-        for type_class in literal_type_classes:
-            if type(value) == list:
-                self.value = value[0]
-            if type(value) == type_class.python_type:
-                self.type_class = type_class
-                return
-        raise SyntaxRestrictionError(f"couldn't find an appropriate literal type for {value}")
+        self.type = typ
 
     def __hash__(self):
-        return hash(self.type_class) + hash(self.value)
+        return hash(self.value.__class__) + hash(self.value)
 
     def __str__(self):
         if isinstance(self.value, str):
@@ -137,15 +123,6 @@ class MapKey:
             return str(AtomLiteralType("true" if self.value else "false"))
         else:
             return str(self.value)
-
-    def __repr__(self):
-        return f"MapKey(value={str(self.value)})"
-
-    @property
-    def type(self) -> LiteralType:
-        if self.type_class == AtomLiteralType:
-            return AtomLiteralType(self.value)
-        return self.type_class()
 
 
 @dataclass

@@ -1,7 +1,6 @@
 defmodule Program do
   use UseCast
 
-  @spec untyped(any) :: any
   def untyped(value) do
     value
   end
@@ -11,8 +10,7 @@ defmodule Program do
     x + y
   end
 
-  @spec main(any) :: any
-  def main(options) do
+  def main() do
     choice = 1
     untyped_sum = untyped((&sum/2) | (integer, integer -> integer) ~> any)
 

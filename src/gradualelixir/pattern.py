@@ -39,6 +39,7 @@ class LiteralPattern(Pattern):
     value: t.Any
     type: LiteralType
 
+
 @dataclass
 class StringPattern(LiteralPattern):
     value: str
@@ -49,6 +50,7 @@ class StringPattern(LiteralPattern):
 
     def __str__(self):
         return str(self.value)
+
 
 @dataclass
 class IntegerPattern(LiteralPattern):
@@ -83,7 +85,7 @@ class AtomLiteralPattern(LiteralPattern):
         self.type = gtypes.AtomLiteralType(value)
 
     def __str__(self):
-        return str(gtypes.MapKey(self.value))
+        return str(gtypes.MapKey(self.value, gtypes.AtomLiteralType(self.value)))
 
 
 @dataclass
@@ -310,7 +312,6 @@ def collect_env_literal(
     if gtypes.is_subtype(pattern.type, type):
         return env
     else:
-        # TODO: refactor MapKey on string
         pattern_value = pattern.value
         if isinstance(pattern, StringPattern):
             pattern_value = [pattern.value]
@@ -318,7 +319,7 @@ def collect_env_literal(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
-            args={"literal": gtypes.MapKey(pattern_value)},
+            args={"literal": gtypes.MapKey(pattern_value, pattern.type)},
         )
 
 
@@ -531,7 +532,6 @@ def refine_type_literal(
     if gtypes.is_subtype(pattern.type, type):
         return pattern.type
     else:
-        # TODO: refactor MapKey on string
         pattern_value = pattern.value
         if isinstance(pattern.value, StringPattern):
             pattern_value = [pattern_value]
@@ -539,7 +539,7 @@ def refine_type_literal(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
-            args={"literal": gtypes.MapKey(pattern_value)},
+            args={"literal": gtypes.MapKey(pattern_value, pattern.type)},
         )
 
 

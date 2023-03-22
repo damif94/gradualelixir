@@ -654,10 +654,10 @@ def test_translate_uninteresting_cases():
         )
     )
     assert_translate_expression_ok(
-        MapExpression(OrderedDict([(MapKey(1), subexpression)])),
+        MapExpression(OrderedDict([(MapKey(1, IntegerType()), subexpression)])),
         {"x": AnyType(), "y": IntegerType()},
         expected_casted_expr=(
-            MapExpression(OrderedDict([(MapKey(1), casted_subexpression)]))
+            MapExpression(OrderedDict([(MapKey(1, IntegerType()), casted_subexpression)]))
         ),
         comment=(
             "The casts push recursively into the map's value components"

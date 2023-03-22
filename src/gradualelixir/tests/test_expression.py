@@ -65,7 +65,6 @@ from gradualelixir.pattern import (
     IntegerPattern,
     PatternErrorEnum,
     PinIdentPattern,
-    StringPattern,
     TuplePattern,
     WildPattern,
 )
@@ -444,27 +443,27 @@ def test_type_check_map():
         expected_type=MapType({}),
     )
     assert_type_check_expression_ok(
-        MapExpression(OrderedDict([(MapKey("a"), IntegerExpression(1))])),
-        expected_type=MapType(OrderedDict([(MapKey("a"), IntegerType())])),
+        MapExpression(OrderedDict([(MapKey("a", AtomLiteralType("a")), IntegerExpression(1))])),
+        expected_type=MapType(OrderedDict([(MapKey("a", AtomLiteralType("a")), IntegerType())])),
     )
     assert_type_check_expression_ok(
         MapExpression(
             OrderedDict(
                 [
-                    (MapKey("a"), IntegerExpression(1)),
-                    (MapKey(1), AtomLiteralExpression("a")),
-                    (MapKey(1.0), AtomLiteralExpression("true")),
-                    (MapKey("false"), FloatExpression(2.1)),
+                    (MapKey("a", AtomLiteralType("a")), IntegerExpression(1)),
+                    (MapKey(1, IntegerType()), AtomLiteralExpression("a")),
+                    (MapKey(1.0, FloatType()), AtomLiteralExpression("true")),
+                    (MapKey("false", AtomLiteralType("false")), FloatExpression(2.1)),
                 ]
             )
         ),
         {},
         MapType(
             {
-                MapKey("a"): IntegerType(),
-                MapKey(1): AtomLiteralType("a"),
-                MapKey(1.0): AtomLiteralType("true"),
-                MapKey("false"): FloatType(),
+                MapKey("a", AtomLiteralType("a")): IntegerType(),
+                MapKey(1, IntegerType()): AtomLiteralType("a"),
+                MapKey(1.0, FloatType()): AtomLiteralType("true"),
+                MapKey("false", AtomLiteralType("false")): FloatType(),
             }
         ),
         {},
@@ -473,22 +472,22 @@ def test_type_check_map():
         MapExpression(
             OrderedDict(
                 [
-                    (MapKey(1.0), AtomLiteralExpression("true")),
-                    (MapKey(1), AtomLiteralExpression("a")),
-                    (MapKey("a"), IntegerExpression(1)),
-                    (MapKey("false"), FloatExpression(2.1)),
-                    (MapKey(["false"]), StringExpression("true")),
+                    (MapKey(1.0, FloatType()), AtomLiteralExpression("true")),
+                    (MapKey(1, IntegerType()), AtomLiteralExpression("a")),
+                    (MapKey("a", AtomLiteralType("a")), IntegerExpression(1)),
+                    (MapKey("false", AtomLiteralType("false")), FloatExpression(2.1)),
+                    (MapKey("false", StringType()), StringExpression("true")),
                 ]
             )
         ),
         {},
         MapType(
             {
-                MapKey("a"): IntegerType(),
-                MapKey(1): AtomLiteralType("a"),
-                MapKey(1.0): AtomLiteralType("true"),
-                MapKey("false"): FloatType(),
-                MapKey(["false"]): StringType(),
+                MapKey("a", AtomLiteralType("a")): IntegerType(),
+                MapKey(1, IntegerType()): AtomLiteralType("a"),
+                MapKey(1.0, FloatType()): AtomLiteralType("true"),
+                MapKey("false", AtomLiteralType("false")): FloatType(),
+                MapKey("false", StringType()): StringType(),
             }
         ),
         {},
@@ -500,15 +499,15 @@ def test_type_check_map():
             OrderedDict(
                 [
                     (
-                        MapKey("a"),
+                        MapKey("a", AtomLiteralType("a")),
                         PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                     ),
-                    (MapKey("b"), IntegerExpression(1)),
+                    (MapKey("b", AtomLiteralType("b")), IntegerExpression(1)),
                 ]
             )
         ),
         {},
-        MapType({MapKey("a"): FloatType(), MapKey("b"): IntegerType()}),
+        MapType({MapKey("a", AtomLiteralType("a")): FloatType(), MapKey("b", AtomLiteralType("b")): IntegerType()}),
         {"x": FloatType()},
     )
     assert_type_check_expression_ok(
@@ -516,18 +515,18 @@ def test_type_check_map():
             OrderedDict(
                 [
                     (
-                        MapKey("a"),
+                        MapKey("a", AtomLiteralType("a")),
                         PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                     ),
                     (
-                        MapKey("b"),
+                        MapKey("b", AtomLiteralType("b")),
                         PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
                     ),
                 ]
             )
         ),
         {},
-        MapType({MapKey("a"): FloatType(), MapKey("b"): IntegerType()}),
+        MapType({MapKey("a", AtomLiteralType("a")): FloatType(), MapKey("b", AtomLiteralType("b")): IntegerType()}),
         {"x": IntegerType()},
     )
     assert_type_check_expression_ok(
@@ -535,15 +534,15 @@ def test_type_check_map():
             OrderedDict(
                 [
                     (
-                        MapKey("a"),
+                        MapKey("a", AtomLiteralType("a")),
                         PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                     ),
                     (
-                        MapKey("c"),
+                        MapKey("c", AtomLiteralType("c")),
                         PatternMatchExpression(IdentPattern("y"), AtomLiteralExpression("d")),
                     ),
                     (
-                        MapKey("b"),
+                        MapKey("b", AtomLiteralType("b")),
                         PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
                     ),
                 ]
@@ -552,9 +551,9 @@ def test_type_check_map():
         {},
         MapType(
             {
-                MapKey("a"): FloatType(),
-                MapKey("b"): IntegerType(),
-                MapKey("c"): AtomLiteralType("d"),
+                MapKey("a", AtomLiteralType("a")): FloatType(),
+                MapKey("b", AtomLiteralType("b")): IntegerType(),
+                MapKey("c", AtomLiteralType("c")): AtomLiteralType("d"),
             }
         ),
         {"x": IntegerType(), "y": AtomLiteralType("d")},
@@ -564,12 +563,12 @@ def test_type_check_map():
             OrderedDict(
                 [
                     (
-                        MapKey("a"),
+                        MapKey("a", AtomLiteralType("a")),
                         MapExpression(
                             OrderedDict(
                                 [
                                     (
-                                        MapKey(1),
+                                        MapKey(1, IntegerType()),
                                         PatternMatchExpression(IdentPattern("x"), FloatExpression(1.0)),
                                     )
                                 ]
@@ -577,12 +576,12 @@ def test_type_check_map():
                         ),
                     ),
                     (
-                        MapKey("c"),
+                        MapKey("c", AtomLiteralType("c")),
                         MapExpression(
                             OrderedDict(
                                 [
                                     (
-                                        MapKey("a"),
+                                        MapKey("a", AtomLiteralType("a")),
                                         PatternMatchExpression(
                                             IdentPattern("y"),
                                             AtomLiteralExpression("x"),
@@ -593,7 +592,7 @@ def test_type_check_map():
                         ),
                     ),
                     (
-                        MapKey("b"),
+                        MapKey("b", AtomLiteralType("b")),
                         PatternMatchExpression(IdentPattern("x"), IntegerExpression(1)),
                     ),
                 ]
@@ -602,9 +601,9 @@ def test_type_check_map():
         {},
         MapType(
             {
-                MapKey("a"): MapType({MapKey(1): FloatType()}),
-                MapKey("b"): IntegerType(),
-                MapKey("c"): MapType({MapKey("a"): AtomLiteralType("x")}),
+                MapKey("a", AtomLiteralType("a")): MapType({MapKey(1, IntegerType()): FloatType()}),
+                MapKey("b", AtomLiteralType("b")): IntegerType(),
+                MapKey("c", AtomLiteralType("c")): MapType({MapKey("a", AtomLiteralType("a")): AtomLiteralType("x")}),
             }
         ),
         {"x": IntegerType(), "y": AtomLiteralType("x")},
@@ -615,15 +614,15 @@ def test_type_check_map():
         MapExpression(
             OrderedDict(
                 [
-                    (MapKey("a"), IntegerExpression(1)),
-                    (MapKey("b"), IdentExpression("x")),
-                    (MapKey("c"), IntegerExpression(4)),
+                    (MapKey("a", AtomLiteralType("a")), IntegerExpression(1)),
+                    (MapKey("b", AtomLiteralType("b")), IdentExpression("x")),
+                    (MapKey("c", AtomLiteralType("c")), IntegerExpression(4)),
                 ]
             )
         ),
         [
             (
-                MapExpressionContext(key=MapKey("b")),
+                MapExpressionContext(key=MapKey("b", AtomLiteralType("b"))),
                 identifier_not_found_in_environment,
             )
         ],
@@ -632,28 +631,28 @@ def test_type_check_map():
         MapExpression(
             OrderedDict(
                 [
-                    (MapKey("a"), IntegerExpression(1)),
+                    (MapKey("a", AtomLiteralType("a")), IntegerExpression(1)),
                     (
-                        MapKey("b"),
+                        MapKey("b", AtomLiteralType("b")),
                         MapExpression(
                             OrderedDict(
                                 [
-                                    (MapKey("a"), IdentExpression("x")),
-                                    (MapKey("b"), IntegerExpression(2)),
+                                    (MapKey("a", AtomLiteralType("a")), IdentExpression("x")),
+                                    (MapKey("b", AtomLiteralType("b")), IntegerExpression(2)),
                                 ]
                             )
                         ),
                     ),
-                    (MapKey("c"), IntegerExpression(4)),
+                    (MapKey("c", AtomLiteralType("c")), IntegerExpression(4)),
                 ]
             )
         ),
         [
             (
-                MapExpressionContext(key=MapKey("b")),
+                MapExpressionContext(key=MapKey("b", AtomLiteralType("b"))),
                 [
                     (
-                        MapExpressionContext(key=MapKey("a")),
+                        MapExpressionContext(key=MapKey("a", AtomLiteralType("a"))),
                         identifier_not_found_in_environment,
                     )
                 ],
@@ -1044,20 +1043,20 @@ def test_type_check_pattern_match():
             TuplePattern([IdentPattern("x"), IdentPattern("x")]),
             TupleExpression(
                 [
-                    MapExpression(OrderedDict([(MapKey(1), TupleExpression([])), (MapKey(2), IntegerExpression(1))])),
+                    MapExpression(OrderedDict([(MapKey(1, IntegerType()), TupleExpression([])), (MapKey(2, IntegerType()), IntegerExpression(1))])),
                     IdentExpression("y"),
                 ]
             ),
         ),
-        {"y": MapType({MapKey(2): NumberType()})},
+        {"y": MapType({MapKey(2, IntegerType()): NumberType()})},
         expected_type=TupleType(
             [
-                MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
-                MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): IntegerType()}),
+                MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): IntegerType()}),
             ]
         ),
         expected_env={
-            "x": MapType({MapKey(1): TupleType([]), MapKey(2): IntegerType()}),
+            "x": MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): IntegerType()}),
         },
     )
 
@@ -1073,13 +1072,13 @@ def test_type_check_pattern_match():
             TuplePattern([IdentPattern("x"), IdentPattern("x")]),
             TupleExpression(
                 [
-                    MapExpression(OrderedDict([(MapKey(1), TupleExpression([])), (MapKey(2), IntegerExpression(1))])),
+                    MapExpression(OrderedDict([(MapKey(1, IntegerType()), TupleExpression([])), (MapKey(2, IntegerType()), IntegerExpression(1))])),
                     IdentExpression("y"),
                 ]
             ),
         ),
         ExpressionErrorEnum.pattern_match,
-        {"y": MapType({MapKey(2): AtomType()})},
+        {"y": MapType({MapKey(2, IntegerType()): AtomType()})},
     )
 
     # NESTED ERRORS behavior
@@ -1506,8 +1505,8 @@ def test_type_check_case():
                 )
             ],
         ),
-        {"x": MapType({MapKey(1): TupleType([])}), "y": MapType({MapKey(2): TupleType([])})},
-        TupleType([MapType({MapKey(1): TupleType([]), MapKey(2): TupleType([])}), IntegerType()]),
+        {"x": MapType({MapKey(1, IntegerType()): TupleType([])}), "y": MapType({MapKey(2, IntegerType()): TupleType([])})},
+        TupleType([MapType({MapKey(1, IntegerType()): TupleType([]), MapKey(2, IntegerType()): TupleType([])}), IntegerType()]),
     )
     assert_type_check_expression_ok(
         CaseExpression(

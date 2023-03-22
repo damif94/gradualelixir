@@ -101,13 +101,16 @@ class SyntacticLevel(enum.Enum):
 
 def parse_key(j) -> gtypes.MapKey:
     if isinstance(j, bool):
-        return gtypes.MapKey("true" if j else "false")
+        return gtypes.MapKey("true" if j else "false", gtypes.AtomLiteralType("true" if j else "false"))
     if isinstance(j, list) and len(j) == 3 and j[0] == "atom" and len(j[2]) == 1 and isinstance(j[2][0], str):
-        return gtypes.MapKey(j[2][0])
+        return gtypes.MapKey(j[2][0], gtypes.AtomLiteralType(j[2][0]))
     if isinstance(j, str):
-        return gtypes.MapKey([j])
+        return gtypes.MapKey(j, gtypes.StringType())
+    if isinstance(j, int):
+        return gtypes.MapKey(j, gtypes.IntegerType())
     else:
-        return gtypes.MapKey(j)
+        assert isinstance(j, float)
+        return gtypes.MapKey(j, gtypes.FloatType())
 
 
 def parse_type(j) -> gtypes.Type:
