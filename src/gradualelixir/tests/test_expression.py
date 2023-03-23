@@ -1039,6 +1039,12 @@ def test_type_check_pattern_match():
         expected_env={"x": IntegerType()},
     )
     assert_type_check_expression_ok(
+        PatternMatchExpression(PinIdentPattern("x"), PatternMatchExpression(IdentPattern("x"), IntegerExpression(1))),
+        {"x": NumberType()},
+        expected_type=IntegerType(),
+        expected_env={"x": IntegerType()},
+    )
+    assert_type_check_expression_ok(
         PatternMatchExpression(
             TuplePattern([IdentPattern("x"), IdentPattern("x")]),
             TupleExpression(
@@ -1079,6 +1085,11 @@ def test_type_check_pattern_match():
         ),
         ExpressionErrorEnum.pattern_match,
         {"y": MapType({MapKey(2, IntegerType()): AtomType()})},
+    )
+    assert_type_check_expression_error(
+        PatternMatchExpression(PinIdentPattern("x"), PatternMatchExpression(IdentPattern("x"), IntegerExpression(1))),
+        ExpressionErrorEnum.pattern_match,
+        {"x": FloatType()},
     )
 
     # NESTED ERRORS behavior

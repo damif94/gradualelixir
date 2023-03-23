@@ -1015,7 +1015,7 @@ def type_check_pattern_match(
             expr.pattern,
             expression_type_check_result.type,
             gtypes.TypeEnv(),
-            expression_type_check_result.exported_env,
+            env,
         )
         if isinstance(pattern_match_result, pattern.PatternMatchError):
             return BaseExpressionTypeCheckError(
