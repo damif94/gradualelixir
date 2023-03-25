@@ -2,10 +2,15 @@ import enum
 import typing as t
 from dataclasses import dataclass
 
+from dotenv import find_dotenv, get_key
+
 from gradualelixir import gtypes
 from gradualelixir.exception import SyntaxRestrictionError
 from gradualelixir.gtypes import LiteralType
 from gradualelixir.utils import Bcolors, ordinal
+
+dotenv_path = find_dotenv()
+type_check_debug_enabled: t.Optional[str] = get_key(dotenv_path, "TYPE_CHECK_DEBUG_ENABLED")
 
 
 class Pattern:
@@ -207,10 +212,10 @@ class PatternMatchError:
         env_msg = ""
         external_env_msg = ""
         eol = ""
-        if env is not None:
+        if env is not None and type_check_debug_enabled == "true":
             env_msg = f"{padding}{Bcolors.OKBLUE}Current Pattern Variables:{Bcolors.ENDC} {env}\n"
             eol = "\n"
-        if external_env is not None:
+        if external_env is not None and type_check_debug_enabled == "true":
             external_env_msg = f"{padding}{Bcolors.OKBLUE}External Variables:{Bcolors.ENDC} {external_env}\n"
             eol = "\n"
         return env_msg + external_env_msg + eol

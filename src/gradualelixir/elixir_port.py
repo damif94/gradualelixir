@@ -102,8 +102,8 @@ class SyntacticLevel(enum.Enum):
 def parse_key(j) -> gtypes.MapKey:
     if isinstance(j, bool):
         return gtypes.MapKey("true" if j else "false", gtypes.AtomLiteralType("true" if j else "false"))
-    if isinstance(j, list) and len(j) == 3 and j[0] == "atom" and len(j[2]) == 1 and isinstance(j[2][0], str):
-        return gtypes.MapKey(j[2][0], gtypes.AtomLiteralType(j[2][0]))
+    if isinstance(j, list) and len(j) == 3 and j[0] == "atom" and isinstance(j[2], str):
+        return gtypes.MapKey(j[2], gtypes.AtomLiteralType(j[2]))
     if isinstance(j, str):
         return gtypes.MapKey(j, gtypes.StringType())
     if isinstance(j, int):
@@ -182,8 +182,8 @@ def parse_pattern(j) -> pattern.Pattern:
         return pattern.FloatPattern(j)
     if len(j) == 3:
         op, meta, children_nodes = j
-        if op == "atom" and len(children_nodes) == 1 and isinstance(children_nodes[0], str):
-            return pattern.AtomLiteralPattern(children_nodes[0])
+        if op == "atom" and isinstance(children_nodes, str):
+            return pattern.AtomLiteralPattern(children_nodes)
         if op == "{}":
             items = []
             for child_node in children_nodes:
@@ -238,8 +238,8 @@ def parse_expression(j) -> expression.Expression:
         assert isinstance(j, list)
         if len(j) == 3:
             op, meta, children_nodes = j
-            if op == "atom" and len(children_nodes) == 1 and isinstance(children_nodes[0], str):
-                return expression.AtomLiteralExpression(children_nodes[0])
+            if op == "atom" and isinstance(children_nodes, str):
+                return expression.AtomLiteralExpression(children_nodes)
             if op == "{}":
                 items = []
                 for child_node in children_nodes:

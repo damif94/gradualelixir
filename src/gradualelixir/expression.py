@@ -3,9 +3,14 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 
+from dotenv import find_dotenv, get_key
+
 from gradualelixir import gtypes, pattern
 from gradualelixir.exception import SyntaxRestrictionError
 from gradualelixir.utils import Bcolors, enumerate_list, ordinal
+
+dotenv_path = find_dotenv()
+type_check_debug_enabled: t.Optional[str] = get_key(dotenv_path, "TYPE_CHECK_DEBUG_ENABLED")
 
 
 class UnaryOpEnum(Enum):
@@ -236,6 +241,9 @@ class BinaryOpEnum(Enum):
         ]:
             return [
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
+                (gtypes.AnyType(), gtypes.NumberType(), gtypes.BooleanType()),
+                (gtypes.NumberType(), gtypes.AnyType(), gtypes.BooleanType()),
+                (gtypes.AnyType(), gtypes.AnyType(), gtypes.BooleanType()),
             ]
         else:
             assert self in [
@@ -502,9 +510,9 @@ def format_expression(expression: Expression, padding="") -> str:
         from .elixir_port import format_code
 
         msg = format_code(str(expression))
-        return "\n\n" + "\n".join([padding + m for m in msg.split("\n")])
+        return "\n" + "\n".join([padding + m for m in msg.split("\n")])
     else:
-        return f" {expression}"
+        return f"\n{padding}{expression}"
 
 
 class ExpressionErrorEnum(Enum):
@@ -662,10 +670,10 @@ class ExpressionTypeCheckError:
         env_msg = ""
         specs_msg = ""
         eol = ""
-        if env is not None:
+        if env is not None and type_check_debug_enabled == "true":
             env_msg = f"{padding}{Bcolors.OKBLUE}Variables:{Bcolors.ENDC} {env}\n"
             eol = "\n"
-        if specs_env is not None:
+        if specs_env is not None and type_check_debug_enabled == "true":
             specs_msg = f"{padding}{Bcolors.OKBLUE}Specs:{Bcolors.ENDC} {specs_env}\n"
             eol = "\n"
         return env_msg + specs_msg + eol
@@ -718,7 +726,7 @@ class NestedExpressionTypeCheckError(ExpressionTypeCheckError):
             bullet_expression_msg = format_expression(expression=bullet.error.expression, padding=padding + "    ")
             bullet_msg = bullet.error._message(padding + "    ", bullet.env, specs_env)
             item_msgs.append(
-                f"{padding}{Bcolors.OKBLUE}  > {bullet.context}{Bcolors.ENDC}"
+                f"{padding}{Bcolors.OKBLUE}  > {bullet.context}{Bcolors.ENDC}\n"
                 f"{bullet_expression_msg}\n\n"
                 f"{env_msg}"
                 f"{bullet_msg}\n"

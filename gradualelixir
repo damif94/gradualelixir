@@ -3,6 +3,7 @@ if [ ! -f ".env" ]; then
   echo ".env file not found in project root: Creating new!"
   echo "PROJECT_PATH=$(pwd)" > .env
   echo "ELIXIR_PATH=$(which elixir)" >> .env
+  echo "TYPE_CHECK_DEBUG_ENABLED=false"
 fi
 if [ ! -d "venv" ]; then
   echo "Virtual environment not installed: Installing first!"

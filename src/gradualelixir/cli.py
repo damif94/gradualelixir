@@ -41,13 +41,16 @@ def cli():
 @cli.command("configure", short_help="sets the variables needed by the other commands")
 @click.option("--elixir-path", type=click.Path(exists=True, file_okay=True))
 @click.option("--working-dir", type=click.Path(exists=True, dir_okay=True))
-def configure_command(elixir_path, working_dir):
+@click.option("--type-check-debug-enabled", type=click.BOOL)
+def configure_command(elixir_path, working_dir, type_check_debug_enabled):
     if bool(get_key(dotenv_path, "DOCKER")):
         raise click.ClickException("This command is not available when running through docker\n")
     if elixir_path is not None:
         set_key(dotenv_path, "ELIXIR_PATH", elixir_path)
     if working_dir is not None:
         set_key(dotenv_path, "WORKING_DIR", working_dir)
+    if type_check_debug_enabled is not None:
+        set_key(dotenv_path, "TYPE_CHECK_DEBUG_ENABLED", str(type_check_debug_enabled).lower())
 
 
 @cli.command("print", short_help="prints a linted version of the mini elixir source file <filename> to standard output")
