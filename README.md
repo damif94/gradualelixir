@@ -1,4 +1,4 @@
-# A Gradual Type Checker for the (Mini) Elixir Language
+cd# A Gradual Type Checker for the (Mini) Elixir Language
 
 [comment]: <> (# The Type Checker)
 
