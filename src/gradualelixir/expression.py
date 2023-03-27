@@ -181,7 +181,7 @@ class BinaryOpEnum(Enum):
                     gtypes.AnyType(),
                 ),
             ]
-        if self is BinaryOpEnum.concatenation:
+        if self in [BinaryOpEnum.equality, BinaryOpEnum.inequality, BinaryOpEnum.concatenation]:
             return [
                 (gtypes.StringType(), gtypes.StringType(), gtypes.StringType()),
                 (gtypes.StringType(), gtypes.AnyType(), gtypes.StringType()),
@@ -243,19 +243,6 @@ class BinaryOpEnum(Enum):
                 (gtypes.NumberType(), gtypes.NumberType(), gtypes.BooleanType()),
                 (gtypes.AnyType(), gtypes.NumberType(), gtypes.BooleanType()),
                 (gtypes.NumberType(), gtypes.AnyType(), gtypes.BooleanType()),
-                (gtypes.AnyType(), gtypes.AnyType(), gtypes.BooleanType()),
-            ]
-        else:
-            assert self in [
-                BinaryOpEnum.equality,
-                BinaryOpEnum.inequality
-            ]
-            # TODO[improvements] improve so that if x != y
-            #  (gtypes.AtomLiteralType(value=x), gtypes.AtomLiteralType(value=y)) raises error
-            return [
-                (gtypes.AtomType(), gtypes.AtomType(), gtypes.BooleanType()),
-                (gtypes.AtomType(), gtypes.AnyType(), gtypes.BooleanType()),
-                (gtypes.AnyType(), gtypes.AtomType(), gtypes.BooleanType()),
                 (gtypes.AnyType(), gtypes.AnyType(), gtypes.BooleanType()),
             ]
 

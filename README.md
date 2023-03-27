@@ -81,6 +81,13 @@ This will also display all the available commands.
 $  ./gradualelixir <command_name> --help
 ```
 
+## Examples
+
+The project comes with a bunch of examples of valid (and some invalid) programs to be tried out.
+These are located under the `examples/` subfolder. The easiest way to use use them is by setting the working directory to that folder, by running:
+```bash
+$  ./gradualelixir configure --working-dir examples/
+```
 
 
 [comment]: <> (# Mini Elixir)
