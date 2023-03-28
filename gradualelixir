@@ -1,15 +1,15 @@
 #!/bin/bash
 if [ ! -f ".env" ]; then
   echo ".env file not found in project root: Creating new!"
-  echo "PROJECT_PATH=$(pwd)" > .env
+  echo "PROJECT_PATH=$(pwd)" >> .env
   echo "ELIXIR_PATH=$(which elixir)" >> .env
-  echo "TYPE_CHECK_DEBUG_ENABLED=false"
+  echo "TYPE_CHECK_DEBUG_ENABLED=false" >> .env
 fi
 if [ ! -d "venv" ]; then
   echo "Virtual environment not installed: Installing first!"
-  python3 -m virtualenv venv
+  python3 -m venv venv
   source venv/bin/activate
-  pip install -r requirements.txt
+  pip3 install -r requirements.txt
 fi
 export PYTHONPATH="${PWD}/src:${PYTHONPATH}"
 source venv/bin/activate
