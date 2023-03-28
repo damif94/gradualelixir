@@ -229,25 +229,6 @@ def base_infimum(tau: Type, sigma: Type) -> t.Union[Type, TypingError]:
         return sigma
     return SupremumError(is_supremum=False)
 
-
-def is_static_type(tau: Type) -> bool:
-    if isinstance(tau, BaseType):
-        return True
-    elif isinstance(tau, ElistType):
-        return True
-    elif isinstance(tau, ListType):
-        return is_static_type(tau.type)
-    elif isinstance(tau, TupleType):
-        return all([is_static_type(sigma) for sigma in tau.types])
-    elif isinstance(tau, MapType):
-        return all([is_static_type(sigma) for sigma in tau.map_type.values()])
-    elif isinstance(tau, FunctionType):
-        return all([is_static_type(sigma) for sigma in tau.arg_types]) and is_static_type(tau.ret_type)
-    else:
-        assert isinstance(tau, AnyType)
-        return False
-
-
 def is_subtype(tau: Type, sigma: Type, consistent=True) -> bool:
     if isinstance(tau, BaseType) and isinstance(sigma, BaseType):
         return is_base_subtype(tau, sigma)
@@ -274,41 +255,6 @@ def is_subtype(tau: Type, sigma: Type, consistent=True) -> bool:
             tau.ret_type, sigma.ret_type
         )
     else:
-        return False
-
-
-def is_materialization(tau: Type, sigma: Type) -> bool:
-    if isinstance(tau, AnyType):
-        return True
-    elif isinstance(tau, BaseType):
-        if isinstance(sigma, BaseType) and tau == sigma:
-            return True
-        return False
-    elif isinstance(tau, ElistType):
-        return isinstance(sigma, ElistType)
-    elif isinstance(tau, ListType):
-        return isinstance(sigma, ListType) and is_materialization(tau.type, sigma.type)
-    elif isinstance(tau, TupleType):
-        if isinstance(sigma, TupleType) and len(tau.types) == len(sigma.types):
-            for i in range(len(tau.types)):
-                if not is_materialization(tau.types[i], sigma.types[i]):
-                    return False
-            return True
-        return False
-    elif isinstance(tau, MapType):
-        if isinstance(sigma, MapType) and len(tau.map_type.keys()) == len(sigma.map_type.keys()):
-            for k in tau.map_type.keys():
-                if not is_materialization(tau.map_type[k], sigma.map_type[k]):
-                    return False
-            return True
-        return False
-    else:
-        assert isinstance(tau, FunctionType)
-        if isinstance(sigma, FunctionType) and len(tau.arg_types) == len(sigma.arg_types):
-            for i in range(len(tau.arg_types)):
-                if not is_materialization(tau.arg_types[i], sigma.arg_types[i]):
-                    return False
-            return is_materialization(tau.ret_type, sigma.ret_type)
         return False
 
 
