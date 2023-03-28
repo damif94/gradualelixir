@@ -1,26 +1,12 @@
-cd# A Gradual Type Checker for the (Mini) Elixir Language
+# A Gradual type checker for a fragment of the Elixir language
 
-[comment]: <> (# The Type Checker)
-
-[comment]: <> (### Allowed Types And Their Semantics)
-
-[comment]: <> (### Subtyping)
-
-[comment]: <> (### Examples)
-
-[comment]: <> (# The Runtime Semantics for Type Checked Modules)
-
-[comment]: <> (## Annotations Under The Hood)
-
-[comment]: <> (## The Extended Semantics For Annotations)
-
-# Introduction
+## Introduction
 
 This project was carried out in the context of my bachelor 's degree thesis at the Engineering Faculty of UDELAR (Universidad de la República, Uruguay). The main objective was to adapt the gradual typing discipline to the [Elixir programming language](https://elixir-lang.org/), in a careful way so as to endow the designed type system with:
 - **The Static Gradual Guarantee**: This constitutes a crucial quality standard about gradual type-checkers, and implies "well-behavior" of the type-checked programs as they get more heavily type-annotated.
 - **A cast-based gradual evaluation semantics** for type-checked programs: This will transfer the type information to the runtime system, in order to make the execution errors of the typed portions of match with the optimistic guesses based on the dynamic type usage.   
 
-The proof for the Static Gradual Guarantee was achieved by considering a formal syntax for the language and a set of algorithmic rules for the type system. On the other hand, the gradual semantics is based on the definition of a cast enrichment translation for the type-checked programs (as cast calculus from the literature) and a macro-based implementation for the casts. 
+The proof for the Static Graduadl Guarantee was achieved by considering a formal syntax for the language and a set of algorithmic rules for the type system. On the other hand, the gradual semantics is based on the definition of a cast enrichment translation for the type-checked programs (as cast calculus from the literature) and a macro-based implementation for the casts. 
 
 
 Instead of setting the whole Elixir syntax as our aim, we decided to focus on a restricted portion of the language -which is still Turing-complete, though- for two different reasons:
@@ -28,7 +14,7 @@ Instead of setting the whole Elixir syntax as our aim, we decided to focus on a 
 - The time and resources that were available prevent us from including a lot of extra portions of the full syntax that would nevertheless follow mostly straightforward from the current design.
 
 
-# Implementation Overview
+## Implementation Overview
 
 The implementation of the project can be considered as divided in these main components:
 - **The type checker** was implemented in python for personal convenience in the context of a tight schedule.
@@ -40,11 +26,17 @@ Even if it was possible to write the type checker and the cast enrichment as a s
 **Disclaimer:** The implementation is far from being ready to be used for real-world codebases, because it wasn't built with a focus on efficiency. My view is that its value lies more on the methodology than anything else.
 
 
-# Setup
-## Docker (recommended)
+## Setup
+### Docker (recommended)
 [Docker ](https://www.docker.com/) is a popular tool that allows to distribute and run software from lightweight containers easily and with complete independence from the host machine. 
 
 To carry out the docker-based setup, the OS-specific docker desktop application should be installed and running. Also, this repository should be cloned somewhere in the filesystem and renamed to `gradualelixir`.  
+
+The docker installation goes as simple as running 
+```bash
+$  docker compose up
+```
+within the root folder of the repository.
 
 In order to start the gradualelixir container, choose a `working_dir` folder to use
 as root for the gradualelixir cli. For example, I am using `/Users/damian/Documents` on my macos. 
@@ -81,49 +73,14 @@ This will also display all the available commands.
 $  ./gradualelixir <command_name> --help
 ```
 
-## Examples
+## Example Walkthrough
+
+
+
+## More Examples
 
 The project comes with a bunch of examples of valid (and some invalid) programs to be tried out.
 These are located under the `examples/` subfolder. The easiest way to use use them is by setting the working directory to that folder, by running:
 ```bash
 $  ./gradualelixir configure --working-dir examples/
 ```
-
-
-[comment]: <> (# Mini Elixir)
-
-[comment]: <> (## Allowed Expressions And Their Semantics)
-
-[comment]: <> (### Literals)
-
-[comment]: <> (### Pattern Match)
-
-[comment]: <> (#### Patterns)
-
-[comment]: <> (### Control Flow Operators)
-
-[comment]: <> (### Function Definitions)
-
-[comment]: <> (## Single Module Restriction)
-
-
-[comment]: <> (# The Type Checker)
-
-[comment]: <> (### Allowed Types And Their Semantics)
-
-[comment]: <> (### Subtyping)
-
-[comment]: <> (### Examples)
-
-[comment]: <> (# The Runtime Semantics for Type Checked Modules)
-
-[comment]: <> (## Annotations Under The Hood)
-
-[comment]: <> (## The Extended Semantics For Annotations)
-
-
-[comment]: <> (Lyskov Substitution Principle)
-
-[comment]: <> (## - Static Type Checker)
-
-[comment]: <> (## - Gradual Type Checker)
