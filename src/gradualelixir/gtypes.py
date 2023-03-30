@@ -198,6 +198,23 @@ def is_base_subtype(tau: BaseType, sigma: BaseType) -> bool:
     return False
 
 
+def is_static_type(tau: Type) -> bool:
+    if isinstance(tau, BaseType):
+        return True
+    elif isinstance(tau, ElistType):
+        return True
+    elif isinstance(tau, ListType):
+        return is_static_type(tau.type)
+    elif isinstance(tau, TupleType):
+        return all([is_static_type(sigma) for sigma in tau.types])
+    elif isinstance(tau, MapType):
+        return all([is_static_type(sigma) for sigma in tau.map_type.values()])
+    elif isinstance(tau, FunctionType):
+        return all([is_static_type(sigma) for sigma in tau.arg_types]) and is_static_type(tau.ret_type)
+    else:
+        assert isinstance(tau, AnyType)
+        return False
+
 def base_supremum(tau: BaseType, sigma: BaseType) -> t.Union[Type, TypingError]:
     if is_base_subtype(tau, sigma):
         return sigma

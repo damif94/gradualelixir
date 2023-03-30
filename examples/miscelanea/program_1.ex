@@ -1,27 +1,15 @@
 defmodule Program do
-  @spec sum_x_x(number, integer) :: number
-  def sum_x_x(y, x) do
+  @spec sum(number, number) :: number
+  def sum(x, y) do
     x + y
   end
 
-  def sum_x_x(x, y) do
-    x + x
+  def untyped_sum(x, y) do
+    x + y
   end
 
-  @spec sum_x_y(integer, number) :: integer
-  def sum_x_y(x, y) do
-    x + x
-  end
-
-  def sum_x_yz(x, y) do
-    (if true do
-       &sum_x_x/2
-     else
-       &sum_x_y/2
-     end).(x, y)
-  end
-
+  @spec main() :: integer
   def main do
-    sum_x_x(1, 2)
+    sum(1, 2)
   end
 end
