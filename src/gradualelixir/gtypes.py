@@ -215,6 +215,7 @@ def is_static_type(tau: Type) -> bool:
         assert isinstance(tau, AnyType)
         return False
 
+
 def base_supremum(tau: BaseType, sigma: BaseType) -> t.Union[Type, TypingError]:
     if is_base_subtype(tau, sigma):
         return sigma
