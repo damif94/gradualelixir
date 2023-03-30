@@ -7,9 +7,10 @@ if [ ! -f ".env" ]; then
 fi
 if [ ! -d "venv" ]; then
   echo "Virtual environment not installed: Installing first!"
+  python3 -m ensurepip --upgrade
   python3 -m venv venv
   source venv/bin/activate
-  pip3 install -r requirements.txt
+  python3 -m pip install -r requirements.txt
 fi
 export PYTHONPATH="${PWD}/src:${PYTHONPATH}"
 source venv/bin/activate
