@@ -94,7 +94,13 @@ defmodule Program do
 end
 ```
 
-And execute the gradual type checker:
+And execute the static type checker:
+```bash
+ ./gradualelixir type_check program.ex
+```
+
+Boring issues with the unspecified function `untyped`...  Let's go gradual!:
+
 ```bash
  ./gradualelixir type_check program.ex --gradual
 ```
@@ -112,6 +118,10 @@ Try making the type checker complain a little. Some ideas to run the checker aga
 - Change the main return type to `integer`
 - Change the second parameter for `sum` `y` with a literal `"y"`
 - Change all occurrences of `y` in `sum` (parameter and body) with a literal `"y"`
+- Do the following changes all across the file, iteratively
+  - `1` into `"1"`
+  - `@spec sum(number, number) :: number` into `@spec sum(string, number) :: number` 
+  - `x` into `1`,   
 - Replace the first argument of sum (`1`) with the string `"1"` 
 
 Do the errors make sense?
@@ -123,12 +133,21 @@ Let's stick with the last example. Try running it!
 
 You should be getting the error above. Let's cheat the type checker by making the `"1"` parameter _untyped_: replace `sum("1", 2)` with `sum(untyped("x"), 2)`.
 
-You should be getting a cast error when attempting the invocation (at `Program.main/0`):
+You will probably be getting a cast error at `Program.main/0` when attempting the invocation:
 ```bash
-  (Cast.CastError) Couldn\'t cast "1" from type string into number
+> (Cast.CastError) Couldn't cast "1" from type string into number
 ```
-So, even if the type checker was _cheated_ at compile time, it can't be cheated in runtime. 
+You see, even if the type checker was _cheated_ at compile time, it certainly can't be _cheated_ in runtime. 
 
+Now run without the aid of type checker
+```bash
+ ./gradualelixir run program.ex
+```
+You should get a plain old runtime error inside `Program.sum/2`:
+
+```bash
+> (ArithmeticError) bad argument in arithmetic expression: "1" + 2
+```
 
 ## More Examples
 
