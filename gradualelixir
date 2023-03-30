@@ -13,4 +13,4 @@ if [ ! -d "venv" ]; then
 fi
 export PYTHONPATH="${PWD}/src:${PYTHONPATH}"
 source venv/bin/activate
-python src/gradualelixir/cli.py "$@"
+python3 src/gradualelixir/cli.py "$@"

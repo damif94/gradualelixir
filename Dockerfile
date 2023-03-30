@@ -24,6 +24,7 @@ RUN touch /gradualelixir/.env
 RUN echo "PROJECT_PATH=/gradualelixir/" >> /gradualelixir/.env
 RUN echo "ELIXIR_PATH=$(which elixir)" >> /gradualelixir/.env
 RUN echo "WORKING_DIR=/resources" >> /gradualelixir/.env
+RUN echo "TYPE_CHECK_DEBUG_ENABLED=false" >> /gradualelixir/.env
 
 WORKDIR /resources/
 WORKDIR /
