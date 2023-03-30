@@ -117,12 +117,15 @@ class MapKey:
         return hash(self.value.__class__) + hash(self.value)
 
     def __str__(self):
-        if isinstance(self.value, str):
+        if isinstance(self.type, AtomLiteralType):
             return str(AtomLiteralType(self.value))
-        elif isinstance(self.value, bool):
-            return str(AtomLiteralType("true" if self.value else "false"))
+        if isinstance(self.type, IntegerType):
+            return str(int(self.value))
+        if isinstance(self.type, FloatType):
+            return str(float(self.value))
         else:
-            return str(self.value)
+            assert isinstance(self.type, StringType)
+            return f"\"{str(self.value)}\""
 
 
 @dataclass
@@ -273,6 +276,41 @@ def is_subtype(tau: Type, sigma: Type, consistent=True) -> bool:
             tau.ret_type, sigma.ret_type
         )
     else:
+        return False
+
+
+def is_materialization(tau: Type, sigma: Type) -> bool:
+    if isinstance(tau, AnyType):
+        return True
+    elif isinstance(tau, BaseType):
+        if isinstance(sigma, BaseType) and tau == sigma:
+            return True
+        return False
+    elif isinstance(tau, ElistType):
+        return isinstance(sigma, ElistType)
+    elif isinstance(tau, ListType):
+        return isinstance(sigma, ListType) and is_materialization(tau.type, sigma.type)
+    elif isinstance(tau, TupleType):
+        if isinstance(sigma, TupleType) and len(tau.types) == len(sigma.types):
+            for i in range(len(tau.types)):
+                if not is_materialization(tau.types[i], sigma.types[i]):
+                    return False
+            return True
+        return False
+    elif isinstance(tau, MapType):
+        if isinstance(sigma, MapType) and len(tau.map_type.keys()) == len(sigma.map_type.keys()):
+            for k in tau.map_type.keys():
+                if not is_materialization(tau.map_type[k], sigma.map_type[k]):
+                    return False
+            return True
+        return False
+    else:
+        assert isinstance(tau, FunctionType)
+        if isinstance(sigma, FunctionType) and len(tau.arg_types) == len(sigma.arg_types):
+            for i in range(len(tau.arg_types)):
+                if not is_materialization(tau.arg_types[i], sigma.arg_types[i]):
+                    return False
+            return is_materialization(tau.ret_type, sigma.ret_type)
         return False
 
 

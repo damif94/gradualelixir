@@ -54,7 +54,7 @@ class StringPattern(LiteralPattern):
         self.type = gtypes.StringType()
 
     def __str__(self):
-        return str(self.value)
+        return f"\"{str(self.value)}\""
 
 
 @dataclass
@@ -223,7 +223,7 @@ class PatternMatchError:
     def message(self, padding=""):
         pattern_msg = format_pattern_match(self.pattern, self.type, padding + "    ")
         return (
-            f"{padding}{Bcolors.OKBLUE}Pattern match type check failed on pattern match{Bcolors.ENDC} "
+            f"{padding}{Bcolors.OKBLUE}Pattern match type check failed on{Bcolors.ENDC} "
             f"{pattern_msg}\n"
             f"{self._message(padding)}\n"
         )
@@ -317,14 +317,11 @@ def collect_env_literal(
     if gtypes.is_subtype(pattern.type, type):
         return env
     else:
-        pattern_value = pattern.value
-        if isinstance(pattern, StringPattern):
-            pattern_value = [pattern.value]
         return BasePatternMatchError(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
-            args={"literal": gtypes.MapKey(pattern_value, pattern.type)},
+            args={"literal": gtypes.MapKey(pattern.value, pattern.type)},
         )
 
 
@@ -537,14 +534,11 @@ def refine_type_literal(
     if gtypes.is_subtype(pattern.type, type):
         return pattern.type
     else:
-        pattern_value = pattern.value
-        if isinstance(pattern.value, StringPattern):
-            pattern_value = [pattern_value]
         return BasePatternMatchError(
             pattern=pattern,
             type=type,
             kind=PatternErrorEnum.incompatible_type_for_literal,
-            args={"literal": gtypes.MapKey(pattern_value, pattern.type)},
+            args={"literal": gtypes.MapKey(pattern.value, pattern.type)},
         )
 
 

@@ -34,7 +34,7 @@ To carry out the docker-based setup, the OS-specific docker desktop application 
 
 The docker installation goes as simple as running 
 ```bash
-$  docker compose up
+docker compose up
 ```
 within the root folder of the repository.
 
@@ -43,14 +43,14 @@ as root for the gradualelixir cli. For example, I am using `/Users/damian/Docume
 
 Execute
 ```bash
-$  alias gradualelixir="docker run -it -v <working_dir>:/resources/ --rm gradualelixir"
+alias gradualelixir="docker run -it -v <working_dir>:/resources/ --rm gradualelixir"
 ```
 
 Every time you start a new session or want to change the `working_dir` folder, you must execute this command again.
 
 You can try interacting with the cli, by executing
 ```bash
-$  gradualelixir --help
+gradualelixir --help
 ```
 
 ## Standard
@@ -60,21 +60,74 @@ in your system.
 1. Clone this repository and open a terminal on the root directory.
 2. Turn the `gradualelixir` file into an executable by running
 ```bash
-$  chmod +x gradualelixir
+chmod +x gradualelixir
 ```
 3. Execute the cli for the first time to set up the python virtualenv with the project dependencies.
 ```bash
-$  ./gradualelixir --help
+./gradualelixir --help
 ```
 This will also display all the available commands.
 
 4. The usage of each command is also documented. Before using it, run:
 ```bash
-$  ./gradualelixir <command_name> --help
+./gradualelixir <command_name> --help
 ```
 
 ## Example Walkthrough
 
+Set the following module in a file called `program.ex` in your working directory:
+```elixir
+defmodule Program do
+  @spec sum(number, number) :: number
+  def sum(x, y) do
+    x + y
+  end
+
+  def untyped(x) do
+    x
+  end
+
+  @spec main() :: number
+  def main do
+    sum(1, 2)
+  end
+end
+```
+
+And execute the gradual type checker:
+```bash
+ ./gradualelixir type_check program.ex --gradual
+```
+
+It should be fine, so now run it with:
+```bash
+ ./gradualelixir run program.ex --gradual
+```
+
+That goes well, too!
+
+Try making the type checker complain a little. Some ideas to run the checker again:
+- Replace the `+` symbol by `<>`
+- Add an extra argument at the sum invocation
+- Change the main return type to `integer`
+- Change the second parameter for `sum` `y` with a literal `"y"`
+- Change all occurrences of `y` in `sum` (parameter and body) with a literal `"y"`
+- Replace the first argument of sum (`1`) with the string `"1"` 
+
+Do the errors make sense?
+
+Let's stick with the last example. Try running it!
+```bash
+> Failed to run with gradual semantics because Program has type errors
+```
+
+You should be getting the error above. Let's cheat the type checker by making the `"1"` parameter _untyped_: replace `sum("1", 2)` with `sum(untyped("x"), 2)`.
+
+You should be getting a cast error when attempting the invocation (at `Program.main/0`):
+```bash
+  (Cast.CastError) Couldn\'t cast "1" from type string into number
+```
+So, even if the type checker was _cheated_ at compile time, it can't be cheated in runtime. 
 
 
 ## More Examples
@@ -82,5 +135,5 @@ $  ./gradualelixir <command_name> --help
 The project comes with a bunch of examples of valid (and some invalid) programs to be tried out.
 These are located under the `examples/` subfolder. The easiest way to use use them is by setting the working directory to that folder, by running:
 ```bash
-$  ./gradualelixir configure --working-dir examples/
+./gradualelixir configure --working-dir examples/
 ```
