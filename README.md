@@ -54,7 +54,7 @@ gradualelixir --help
 ```
 
 ## Standard
-We assume that you have a recent version of `elixir` installed (>= 1.11) and a recent version of `python` (>= 3.8)
+We assume that you have a recent version of `elixir` installed (>= 1.11), plus a recent version of `python3` (>= 3.8) and pip3
 in your system. 
 
 1. Clone this repository and open a terminal on the root directory.
