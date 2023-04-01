@@ -245,18 +245,10 @@ def collect_specs(module: Module, static: bool) -> t.Union[CollectSpecsResultErr
             gradual_specs=gradual_specs,
         )
     else:
-
-        extended_module_specs = {
+        module_specs = {
             (spec.name, spec.arity): (spec.parameter_types, spec.return_type) for spec in module.specs
         }
-        for definition in module.definitions:
-            if len(specs_by_definition_dict[(definition.name, definition.arity)]) == 0:
-                extended_module_specs[(definition.name, definition.arity)] = (
-                    [gtypes.AnyType() for _ in range(definition.arity)],
-                    gtypes.AnyType(),
-                )
-        # relation is: (name, arity) - at most one spec exist
-        return gtypes.SpecsEnv(extended_module_specs)
+        return gtypes.SpecsEnv(module_specs)
 
 
 def type_check(
@@ -272,9 +264,20 @@ def type_check(
     ] = {}
     definition_type_check_results: t.Dict[Definition, expression.ExpressionTypeCheckSuccess] = {}
 
+    # enrich with dynamic signatures for expression typing
+    specs_env_for_definition = collect_result.copy()
+    for definition in module.definitions:
+        if specs_env_for_definition.get((definition.name, len(definition.parameters))) is None:
+            specs_env_for_definition[(definition.name, len(definition.parameters))] = (
+                [gtypes.AnyType() for _ in definition.parameters], gtypes.AnyType()
+            )
+
     for definition in module.definitions:
         parameters_env = gtypes.TypeEnv()
         definition_key = (definition.name, len(definition.parameters))
+        if specs_env.get(definition_key) is None:
+            continue
+
         for i in range(len(definition.parameters)):
             parameter_type = specs_env[definition_key][0][i]
             parameter_match_type_result = pattern.type_check(
@@ -286,16 +289,16 @@ def type_check(
             else:
                 definition_type_check_errors[definition] = DefinitionParameterTypeCheckError(
                     definition=definition,
-                    specs_env=specs_env,
+                    specs_env=specs_env_for_definition,
                     error=parameter_match_type_result,
                 )
 
-        body_type_check_result = expression.type_check(definition.body, parameters_env, specs_env)
+        body_type_check_result = expression.type_check(definition.body, parameters_env, specs_env_for_definition)
         if isinstance(body_type_check_result, expression.ExpressionTypeCheckError):
             definition_type_check_errors[definition] = DefinitionBodyTypeCheckError(
                 definition=definition,
                 env=parameters_env,
-                specs_env=specs_env,
+                specs_env=specs_env_for_definition,
                 error=body_type_check_result,
             )
         else:

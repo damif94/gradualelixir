@@ -42,7 +42,7 @@ class CastAnnotatedExpression(expression.Expression):
 @dataclass
 class AnnotatedModule:
     name: str
-    annotated_definitions: t.List[t.Tuple[module.Spec, module.Definition]]
+    annotated_definitions: t.List[t.Tuple[t.Optional[module.Spec], module.Definition]]
     specs: t.List[module.Spec]
 
     def __str__(self):
@@ -369,6 +369,10 @@ def translate_module(type_derivation: module.TypeCheckSuccess, casts: bool) -> A
     annotated_definitions = []
     for definition in type_derivation.module.definitions:
         collect_success = type_derivation.collect_success
+        if definition not in type_derivation.definitions_success.keys():
+            # definition was not checked
+            annotated_definitions.append((None, definition))
+            continue
         body_derivation = type_derivation.definitions_success[definition]
         spec = module.Spec(
             name=definition.name,

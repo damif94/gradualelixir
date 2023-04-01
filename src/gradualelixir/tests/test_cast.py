@@ -688,10 +688,143 @@ def test_translate_uninteresting_cases():
     )
 
 
+def test_translate_module__no_spec():
+    module = Module(
+        name="Program",
+        specs=[],
+        definitions=[
+            Definition(
+                name="foo",
+                parameters=[],
+                body=BinaryOpExpression(
+                    op=BinaryOpEnum.sum,
+                    left=IntegerExpression(1),
+                    right=AtomLiteralExpression("a")
+                )
+            ),
+            Definition(
+                name="main",
+                parameters=[],
+                body=FunctionCallExpression("foo", [])
+            )
+        ]
+    )
+    cast_annotated_module = AnnotatedModule(
+        name="Program",
+        specs=[],
+        annotated_definitions=[
+            (
+                None,
+                Definition(
+                    name="foo",
+                    parameters=[],
+                    body=BinaryOpExpression(
+                        op=BinaryOpEnum.sum,
+                        left=IntegerExpression(1),
+                        right=AtomLiteralExpression("a")
+                    )
+                )
+            ),
+            (
+                None,
+                Definition(
+                    name="main",
+                    parameters=[],
+                    body=FunctionCallExpression("foo", [])
+                )
+            )
+        ],
+    )
+    assert_cast_annotate_module_ok(module, cast_annotated_module)
+
+
+def test_translate_module__one_spec():
+    module = Module(
+        name="Program",
+        specs=[Spec("main", [], AnyType())],
+        definitions=[
+            Definition(
+                name="foo",
+                parameters=[],
+                body=BinaryOpExpression(
+                    op=BinaryOpEnum.sum,
+                    left=IntegerExpression(1),
+                    right=AtomLiteralExpression("a")
+                )
+            ),
+            Definition(
+                name="bar",
+                parameters=[IdentPattern("x"), IdentPattern("y")],
+                body=BinaryOpExpression(
+                    op=BinaryOpEnum.sum,
+                    left=IdentExpression("x"),
+                    right=IdentExpression("y")
+                )
+            ),
+            Definition(
+                name="main",
+                parameters=[],
+                body=SeqExpression(
+                    FunctionCallExpression("foo", []),
+                    FunctionCallExpression("bar", [IntegerExpression(1), AtomLiteralExpression("a")])
+                ),
+            )
+        ]
+    )
+    cast_annotated_module = AnnotatedModule(
+        name="Program",
+        specs=[Spec("main", [], AnyType())],
+        annotated_definitions=[
+            (
+                None,
+                Definition(
+                    name="foo",
+                    parameters=[],
+                    body=BinaryOpExpression(
+                        op=BinaryOpEnum.sum,
+                        left=IntegerExpression(1),
+                        right=AtomLiteralExpression("a")
+                    )
+                )
+            ),
+            (
+                None,
+                Definition(
+                     name="bar",
+                     parameters=[IdentPattern("x"), IdentPattern("y")],
+                     body=BinaryOpExpression(
+                         op=BinaryOpEnum.sum,
+                         left=IdentExpression("x"),
+                         right=IdentExpression("y")
+                     )
+                )
+             ),
+            (
+                Spec("main", [], AnyType()),
+                Definition(
+                    name="main",
+                    parameters=[],
+                    body=SeqExpression(
+                        FunctionCallExpression("foo", []),
+                        FunctionCallExpression("bar", [
+                            CastAnnotatedExpression(IntegerExpression(1), IntegerType(), AnyType()),
+                            CastAnnotatedExpression(AtomLiteralExpression("a"), AtomLiteralType("a"), AnyType())
+                        ])
+                    ),
+                )
+            )
+        ],
+    )
+    assert_cast_annotate_module_ok(module, cast_annotated_module)
+
+
 def test_translate_module__untyped_sum():
     module = Module(
-        name="Demo",
-        specs=[],
+        name="Program",
+        specs=[
+            Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
+            Spec("main", [], AnyType()),
+        ],
         definitions=[
             Definition(
                 name="untyped_sum",
@@ -709,7 +842,11 @@ def test_translate_module__untyped_sum():
         ]
     )
     cast_annotated_module = AnnotatedModule(
-        name="Demo",
+        name="Program",
+        specs=[
+            Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
+            Spec("main", [], AnyType()),
+        ],
         annotated_definitions=[
             (
                 Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
@@ -745,15 +882,18 @@ def test_translate_module__untyped_sum():
                 )
             )
         ],
-        specs=[]
     )
     assert_cast_annotate_module_ok(module, cast_annotated_module)
 
 
 def test_translate_module__untyped_sum_untyped():
     module = Module(
-        name="Demo",
-        specs=[],
+        name="Program",
+        specs=[
+            Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
+            Spec("untyped", [AnyType()], AnyType()),
+            Spec("main", [], AnyType()),
+        ],
         definitions=[
             Definition(
                 name="untyped_sum",
@@ -771,7 +911,8 @@ def test_translate_module__untyped_sum_untyped():
                 body=SeqExpression(
                     left=SeqExpression(
                         left=PatternMatchExpression(IdentPattern("x"), AnonymizedFunctionExpression("untyped_sum", 2)),
-                        right=PatternMatchExpression(IdentPattern("x"), FunctionCallExpression("untyped", [IdentExpression("x")]))
+                        right=PatternMatchExpression(IdentPattern("x"),
+                                                     FunctionCallExpression("untyped", [IdentExpression("x")]))
                     ),
                     right=AnonCallExpression(IdentExpression("x"), [IntegerExpression(1)])
                 )
@@ -779,7 +920,12 @@ def test_translate_module__untyped_sum_untyped():
         ]
     )
     cast_annotated_module = AnnotatedModule(
-        name="Demo",
+        name="Program",
+        specs=[
+            Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
+            Spec("untyped", [AnyType()], AnyType()),
+            Spec("main", [], AnyType()),
+        ],
         annotated_definitions=[
             (
                 Spec("untyped_sum", [AnyType(), AnyType()], AnyType()),
@@ -812,14 +958,16 @@ def test_translate_module__untyped_sum_untyped():
                     parameters=[],
                     body=SeqExpression(
                         left=SeqExpression(
-                            left=PatternMatchExpression(IdentPattern("x"), AnonymizedFunctionExpression("untyped_sum", 2)),
+                            left=PatternMatchExpression(IdentPattern("x"),
+                                                        AnonymizedFunctionExpression("untyped_sum", 2)),
                             right=PatternMatchExpression(
                                 IdentPattern("x"),
                                 FunctionCallExpression(
                                     "untyped",
                                     [
                                         CastAnnotatedExpression(
-                                            IdentExpression("x"), FunctionType([AnyType(), AnyType()], AnyType()), AnyType()
+                                            IdentExpression("x"), FunctionType([AnyType(), AnyType()], AnyType()),
+                                            AnyType()
                                         )
                                     ]
                                 )
@@ -837,14 +985,13 @@ def test_translate_module__untyped_sum_untyped():
                 )
             )
         ],
-        specs=[]
     )
     assert_cast_annotate_module_ok(module, cast_annotated_module)
 
 
 def test_translate_module__equal_x_differ_y():
     module = Module(
-        name="Demo",
+        name="Program",
         specs=[
             Spec("sum_x_x", [IntegerType(), NumberType()], IntegerType()),
             Spec("sum_x_y", [IntegerType(), NumberType()], NumberType())
@@ -863,7 +1010,7 @@ def test_translate_module__equal_x_differ_y():
         ]
     )
     cast_annotated_module = AnnotatedModule(
-        name="Demo",
+        name="Program",
         annotated_definitions=[
             (
                 Spec("sum_x_x", [IntegerType(), NumberType()], IntegerType()),

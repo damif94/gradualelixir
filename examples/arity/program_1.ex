@@ -13,6 +13,7 @@ defmodule Program do
     b
   end
 
+  @spec main() :: any
   def main do
     assert_function_arity_2(untyped(&foo/2))
   end

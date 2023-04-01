@@ -16,10 +16,6 @@ defmodule Program do
   end
 
   def main() do
-    assert_function_arity_2(
-      untyped((&foo/2) | (atom, atom -> atom) ~> any)
-      | any ~> (any, any -> any)
-    )
-    | {} ~> any
+    assert_function_arity_2(untyped(&foo/2))
   end
 end
