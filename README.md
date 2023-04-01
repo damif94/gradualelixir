@@ -68,7 +68,12 @@ chmod +x gradualelixir
 ```
 This will also display all the available commands.
 
-4. The usage of each command is also documented. Before using it, run:
+4. Install mix dependencies inside `elixir_port/`
+```bash
+mix deps.get
+```
+
+5. The usage of each command is also documented. Before using it, run in the root folder:
 ```bash
 ./gradualelixir <command_name> --help
 ```
