@@ -7,9 +7,11 @@ if [ ! -f ".env" ]; then
 fi
 if [ ! -d "venv" ]; then
   echo "Virtual environment not installed: Installing first!"
-  python3 -m ensurepip --upgrade
+  curl -o get-pip.py https://bootstrap.pypa.io/get-pip.py
+  python3 get-pip.py
+  rm get-pip.py
   python3 -m pip install virtualenv
-  virtualenv venv
+  python3 -m venv venv
   source venv/bin/activate
   python3 -m pip install -r requirements.txt
 fi
