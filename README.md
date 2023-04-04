@@ -54,8 +54,8 @@ gradualelixir --help
 ```
 
 ## Standard
-We assume that you have a recent version of `elixir` installed (>= 1.11), plus a recent version of `python3` (>= 3.8) and pip3
-in your system. 
+We assume that you have a recent version of `elixir` installed (>= 1.11), plus a recent version of `python3` (>= 3.8) and `pip3`
+in your system. For debian based distributions, an installation of `python3-venv` is also required.
 
 1. Clone this repository and open a terminal on the root directory.
 2. Turn the `gradualelixir` file into an executable by running
