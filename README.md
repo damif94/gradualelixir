@@ -1,4 +1,4 @@
-# A Gradual type checker for a fragment of the Elixir language
+# A gradual type checker for a fragment of the Elixir language
 
 ## Introduction
 
