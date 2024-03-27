@@ -6,7 +6,7 @@ This project was carried out in the context of my bachelor 's degree thesis at t
 - **The Static Gradual Guarantee**: This constitutes a crucial quality standard about gradual type-checkers, and implies "well-behavior" of the type-checked programs as they get more heavily type-annotated.
 - **A cast-based gradual evaluation semantics** for type-checked programs: This will transfer the type information to the runtime system, in order to make the execution errors of the typed portions of match with the optimistic guesses based on the dynamic type usage.   
 
-The proof for the Static Graduadl Guarantee was achieved by considering a formal syntax for the language and a set of algorithmic rules for the type system. On the other hand, the gradual semantics is based on the definition of a cast enrichment translation for the type-checked programs (as cast calculus from the literature) and a macro-based implementation for the casts. 
+The proof for the Static Gradual Guarantee was achieved by considering a formal syntax for the language and a set of algorithmic rules for the type system. On the other hand, the gradual semantics is based on the definition of a cast enrichment translation for the type-checked programs (as cast calculus from the literature) and a macro-based implementation for the casts. 
 
 
 Instead of setting the whole Elixir syntax as our aim, we decided to focus on a restricted portion of the language -which is still Turing-complete, though- for two different reasons:
